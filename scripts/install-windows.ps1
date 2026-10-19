@@ -51,7 +51,7 @@ $action = New-ScheduledTaskAction -Execute $exe -Argument $cmd -WorkingDirectory
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $id.Name
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0 `
 	-RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
-Register-ScheduledTask -TaskName $task -Action $action -Trigger $trigger -Settings $settings -User $id.Name -RunLevel Limited -Force | Out-Null
+Register-ScheduledTask -TaskName $task -Action $action -Trigger $trigger -Settings $settings -User $id.Name -RunLevel Limited -Force -ErrorAction Stop | Out-Null
 Write-Host "PhoneLab: logon task '$task' registered (start now: Start-ScheduledTask $task)"
 $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.PrefixOrigin -in 'Dhcp', 'Manual' -and $_.IPAddress -notlike '169.*' } | Select-Object -First 1).IPAddress
 Write-Host "PhoneLab: open http://${ip}:$Port/ from another machine on the LAN"
