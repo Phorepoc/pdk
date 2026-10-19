@@ -56,7 +56,7 @@ if "EPOCROOT" not in os.environ:
     _root = tempfile.mkdtemp(prefix="mifconv-")
     os.makedirs(os.path.join(_root, "epoc32", "build", "s60", "icons", "temp", "tmp"))
     os.environ["EPOCROOT"] = _root + "/"
-SVGTENC = shutil.which("svgtbinencode") or "svgtbinencode"
+SVGTENC = os.path.join(HERE, "svgtenc", "svgtbinencode")   # ours: the release ships the encoder as a binary only
 PALETTE = os.path.join(BASE, "oss.FCL.sf.mw.uitools", "uitools_pub", "third_party_bitmap_palette_api",
                        "inc", "ThirdPartyBitmap.pal")   # the S60 256-colour palette (-P)
 DEFAULT_DIRS = [os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.classicui", "uifw", "AvKon", "group"),

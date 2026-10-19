@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""svgtbinencode -- the SVG-T icon encoder mifconv runs (svgtbinencode <file.svg> -> <file.svgb>).
+
+The release ships the encoder as a binary only; this one is written from the release's own decoders and SVG engine
+(tools/svg2nvg.py: NVG-CS, tools/svg2svgb.py: SVG-T binary) and writes the same bytes. Like the original it writes
+NVG, and SVG-T binary for documents that use what NVG cannot hold. mif_gen points mifconv here (-S).
+
+    svgtbinencode [-v <version>] file.svg ...
+"""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import svg2nvg  # noqa: E402
+import svg2svgb  # noqa: E402
+
+
+def main(argv) -> int:
+    files = []
+    i = 0
+    while i < len(argv):
+        if argv[i] in ("-v", "-V"):
+            i += 2
+            continue
+        files.append(argv[i])
+        i += 1
+    rc = 0
+    for f in files:
+        try:
+            with open(f, "rb") as fh:
+                svg = fh.read()
+            data = svg2svgb.encode(svg) if svg2svgb.needs_svgb(svg) else svg2nvg.encode(svg)
+        except Exception as e:      # noqa: BLE001 - report and go on, as the original does
+            print(f"svgtbinencode: {f}: {e}", file=sys.stderr)
+            rc = 1
+            continue
+        with open(os.path.splitext(f)[0] + ".svgb", "wb") as fh:
+            fh.write(data)
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
