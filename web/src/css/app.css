@@ -1,0 +1,10 @@
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.logbox { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.35; }
+.logline { white-space: pre-wrap; word-break: break-all; padding: 0 6px; }
+.logline.bad { background: rgba(244, 67, 54, 0.22); color: inherit; font-weight: 600; }
+.logline .ts { opacity: 0.5; margin-right: 6px; }
+.bar { height: 8px; border-radius: 4px; background: rgba(128, 128, 128, 0.25); overflow: hidden; }
+.bar > div { height: 100%; background: var(--q-primary); transition: width 0.3s; }
+.page-pad { padding: 12px; }
+@media (min-width: 600px) { .page-pad { padding: 16px; } }
+.json { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; }

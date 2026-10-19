@@ -1,0 +1,37 @@
+{
+  "name": "phonelab-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PhoneLab web UI",
+  "type": "module",
+  "scripts": {
+    "dev": "quasar dev",
+    "build": "quasar build",
+    "test": "vitest run",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "engines": {
+    "node": ">= 20"
+  },
+  "dependencies": {
+    "@quasar/extras": "^2.1.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "pinia": "^4.0.3",
+    "quasar": "^2.35.0",
+    "vue": "^3.5.43",
+    "vue-router": "^5.4.0"
+  },
+  "devDependencies": {
+    "@quasar/app-vite": "^3.10.2",
+    "@types/node": "^26.6.4",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/test-utils": "^2.5.1",
+    "autoprefixer": "^10.6.1",
+    "jsdom": "^30.1.2",
+    "postcss": "^8.5.29",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3",
+    "vue-tsc": "^3.3.12"
+  }
+}

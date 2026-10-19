@@ -1,0 +1,1 @@
+import{lt as e}from"./use-router-link-Dr_41bNL.js";var t={name:String};function n(t){return(n,r,i)=>{n[r](e(`input`,{class:`hidden`+(i||``),...t===void 0?void 0:t()}))}}function r(e){return()=>e.name||e.for}export{r as n,t as r,n as t};

@@ -1,0 +1,86 @@
+@use 'ide-vars' as v;
+
+.ide {
+  --ide-bg: #{v.$ide-bg};
+  --ide-panel: #{v.$ide-panel};
+  --ide-border: #{v.$ide-border};
+  --ide-text: #{v.$ide-text};
+  --ide-dim: #{v.$ide-text-dim};
+  --ide-hover: #{v.$ide-hover};
+  --ide-selected: #{v.$ide-selected};
+  --ide-accent: #{v.$ide-accent};
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--ide-bg); color: var(--ide-text);
+  font-size: v.$ide-font-size;
+
+  &-body { flex: 1; min-height: 0; display: flex; }
+  &-center { flex: 1; min-width: 0; position: relative; }
+  .q-splitter__panel { overflow: hidden; }
+  &-dockarea { flex: 1; min-height: 0; }
+
+  // tool-window strip (icons only)
+  &-strip {
+    width: v.$ide-strip-w; flex: none; background: var(--ide-panel);
+    border-right: 1px solid var(--ide-border);
+    display: flex; flex-direction: column; align-items: center; padding: 4px 0; gap: 2px;
+    &.right { border-right: 0; border-left: 1px solid var(--ide-border); }
+    .spacer { flex: 1; }
+    .sep { width: 20px; border-top: 1px solid var(--ide-border); margin: 4px 0; }
+  }
+  &-stripbtn {
+    width: 30px; height: 30px; border-radius: 6px; color: var(--ide-dim);
+    &:hover { background: var(--ide-hover); color: var(--ide-text); }
+    &.active { background: var(--ide-selected); color: #fff; }
+    &.shown:not(.active) { color: var(--ide-text); }
+  }
+
+  // tool-window header
+  &-twhead {
+    height: v.$ide-header-h; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 4px 0 8px;
+    background: v.$ide-header; border-bottom: 1px solid var(--ide-border);
+    font-weight: 600; text-transform: none; color: var(--ide-text);
+    .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .q-btn { color: var(--ide-dim); &:hover { color: var(--ide-text); } }
+  }
+  &-tw { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--ide-bg); }
+  &-twbody { flex: 1; min-height: 0; position: relative; }
+
+  // editor tabs
+  &-tabs {
+    display: flex; height: 32px; flex: none; background: var(--ide-panel); border-bottom: 1px solid var(--ide-border);
+    overflow-x: auto; overflow-y: hidden;
+    .tab {
+      display: flex; align-items: center; gap: 6px; padding: 0 6px 0 10px; cursor: pointer; white-space: nowrap;
+      color: var(--ide-dim); border-bottom: 2px solid transparent;
+      &:hover { background: var(--ide-hover); color: var(--ide-text); }
+      &.active { color: var(--ide-text); border-bottom-color: var(--ide-accent); background: var(--ide-bg); }
+      .x { opacity: 0; } &:hover .x, &.active .x { opacity: 1; }
+    }
+  }
+  &-empty { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--ide-dim); }
+
+  // status bar
+  &-status {
+    height: v.$ide-status-h; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 8px;
+    background: v.$ide-panel; border-top: 1px solid var(--ide-border); color: var(--ide-dim);
+    .item { display: flex; align-items: center; gap: 4px; cursor: default; &.click { cursor: pointer; &:hover { color: var(--ide-text); } } }
+    .grow { flex: 1; }
+  }
+
+  // splitters
+  .q-splitter__separator { background: var(--ide-border) !important; }
+  .q-splitter--vertical > .q-splitter__separator { width: 1px; }
+  .q-splitter--horizontal > .q-splitter__separator { height: 1px; }
+  .q-splitter__separator-area { z-index: 5; }
+
+  // Quasar components made compact/flat inside the IDE
+  .q-field--dense .q-field__control, .q-field--dense .q-field__marginal { height: 28px; }
+  .q-btn { font-size: 12px; }
+  .q-card { box-shadow: none; border: 1px solid var(--ide-border); background: var(--ide-panel); }
+  .q-tree__node-header { padding: 0 4px; }
+  .q-tree__node--selected > .q-tree__node-header, .q-tree__node-header:hover { background: var(--ide-hover); }
+  .page-pad { padding: 8px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #4e5157; border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
+}

@@ -1,0 +1,15 @@
+// The one place the IDE look is defined (Darcula / JetBrains New UI). ide.scss consumes these; runtime
+// theming goes through the CSS custom properties emitted there.
+$ide-bg: #1e1f22;          // editor / page
+$ide-panel: #2b2d30;       // tool-window bodies, strips, status bar
+$ide-header: #2b2d30;
+$ide-border: #393b40;
+$ide-text: #dfe1e5;
+$ide-text-dim: #868a91;
+$ide-hover: #393b40;
+$ide-selected: #2e436e;
+$ide-accent: #3574f0;
+$ide-strip-w: 40px;
+$ide-header-h: 28px;
+$ide-status-h: 24px;
+$ide-font-size: 12px;

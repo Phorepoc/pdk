@@ -1,0 +1,14 @@
+# PhoneLab configuration (defaults; every key is optional). See ../README.md.
+listen = "0.0.0.0:8737"
+# data_dir = ""          # default: %LOCALAPPDATA%\phonelab (Windows), ~/.local/share/phonelab, $PHONELAB_DATA
+# token = ""             # set to require "Authorization: Bearer <token>" on /api and /mcp
+retention_days = 0       # 0 = keep every boot forever; pinned boots/blobs are always kept
+# workspace = ""         # where relative "file" paths (push) resolve; default: the working directory
+
+[[device]]
+id = "pinephone"
+driver = "pinephone"
+vid = "0E22"             # phlink's USB IDs (adaptation-a64, usbcc/)
+pid = "0666"
+# port = "COM5"          # pin a port instead of matching VID/PID
+# mock = "../testdata/boot-slotb-rearm.log"   # run against the fake phone

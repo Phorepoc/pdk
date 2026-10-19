@@ -1,0 +1,22 @@
+# Linux: docker compose -f docker/compose.yaml up -d   (from the repository root)
+# The phone re-enumerates on every reboot, so instead of passing one /dev/ttyACMn (which goes stale) the
+# container gets the whole USB-serial major (166 = ttyACM) through a cgroup rule plus a live /dev bind:
+# the service then finds the phone by VID/PID each time it comes back. Install 99-phonelab.rules on the host
+# for a stable /dev/phorepoc-pinephone name too.
+services:
+  phonelab:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: phonelab
+    restart: unless-stopped
+    ports:
+      - "8737:8737"
+    volumes:
+      - phonelab-data:/data
+      - /dev:/dev
+      - /run/udev:/run/udev:ro      # lets the VID/PID enumerator read device properties
+    device_cgroup_rules:
+      - "c 166:* rmw"               # ttyACM*
+volumes:
+  phonelab-data:
