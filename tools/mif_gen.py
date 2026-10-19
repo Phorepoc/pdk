@@ -36,6 +36,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -132,9 +133,16 @@ def copy_art(src: str, dst: str, stem: str) -> bool:
     return bool(n)
 
 
+def switch(s: str) -> str:
+    """a bld.inf depth switch (/c16,8) as mifconv on Linux takes it (-c16,8)"""
+    return "-" + s[1:] if s.startswith("/") else s
+
+
 def build(target: str, tokens: list[str], comp_dir: str) -> bool:
-    stage = os.path.join(OUT, os.path.splitext(target)[0] + "-src")
-    shutil.rmtree(stage, ignore_errors=True)
+    # staged (and mifconv run) in a local temp folder: the 32-bit mifconv cannot open files on a bind mount with
+    # 64-bit inodes, which BUILD usually is
+    tmp = tempfile.mkdtemp(prefix="mif-")
+    stage = os.path.join(tmp, "src")
     os.makedirs(stage)
     idx = art_index([os.path.dirname(comp_dir)])
     params, real, fake, depth = [], 0, 0, "/c8,8"
@@ -155,7 +163,7 @@ def build(target: str, tokens: list[str], comp_dir: str) -> bool:
                 with open(os.path.join(stage, stem + suffix + ".bmp"), "wb") as fh:
                     fh.write(bmp24(2, 20, (255, 255, 255)) if cursor else bmp24(8, 8, (0, 0, 0)))
             fake += 1
-            params.append(f"{depth} {stem}.bmp")
+            params.append(f"{switch(depth)} {stem}.bmp")
             continue
         dst = os.path.join(stage, stem + ".svg")
         if stem in idx:
@@ -165,22 +173,31 @@ def build(target: str, tokens: list[str], comp_dir: str) -> bool:
             with open(dst, "w", encoding="utf-8", newline="\n") as fh:
                 fh.write(PLACEHOLDER)
             fake += 1
-        params.append(f"{depth} {stem}.svg")
+        params.append(f"{switch(depth)} {stem}.svg")
     pfile = os.path.join(stage, "_params.txt")
     with open(pfile, "w", newline="\n") as fh:
         fh.write("\n".join(params) + "\n")
-    mif = os.path.join(OUT, target)
-    for stale in (mif, os.path.splitext(mif)[0] + ".mbm"):
+    for stale in (os.path.join(OUT, target), os.path.join(OUT, os.path.splitext(target)[0] + ".mbm")):
         if os.path.isfile(stale):
             os.remove(stale)
+    mif = os.path.join(tmp, target)
     # /I /T relative (cwd = stage): with absolute ones, long icon names (peninputgenericvkb's 53-char
     # qgn_indi_fep_button_case_numeric_arabic_indic_sel) overflowed the SVG encoder's temp paths
     # ("Error deleting file (svg conversion)")
-    r = subprocess.run([MIFCONV, mif, "/E", "/I.", "/T.", "/S" + os.path.dirname(SVGTENC),
-                        "/P" + PALETTE, "/F" + pfile],
+    shutil.copy(PALETTE, os.path.join(tmp, "palette.pal"))
+    r = subprocess.run([MIFCONV, mif, "-E", "-I.", "-T.", "-S" + os.path.dirname(SVGTENC),
+                        "-P" + os.path.join(tmp, "palette.pal"), "-F" + pfile],
                        cwd=stage, capture_output=True, text=True, errors="replace")
     ok = r.returncode == 0 and os.path.isfile(mif)
     size = os.path.getsize(mif) if ok else 0
+    if ok:
+        for ext in (".mif", ".mbm"):
+            f = os.path.splitext(mif)[0] + ext
+            if os.path.isfile(f):
+                shutil.copy(f, OUT)
+    if os.environ.get("MIF_KEEP"):        # keep the staged inputs (what mifconv got), for comparing encoders
+        shutil.copytree(stage, os.path.join(os.environ["MIF_KEEP"], os.path.splitext(target)[0]), dirs_exist_ok=True)
+    shutil.rmtree(tmp, ignore_errors=True)
     print(f"  {target}: {real} real + {fake} placeholder icons -> {size} B" if ok else
           f"  ! {target}: mifconv failed: {(r.stdout + r.stderr).strip()[-400:]}")
     return ok

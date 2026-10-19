@@ -62,6 +62,11 @@ def tofloat(v: int) -> float:
     return (m if v > 0 else -m) / ONE
 
 
+def out_fix_round(v: int) -> int:
+    """a circle's or ellipse's coordinate as written: through a rounding float conversion and back"""
+    return fix_from_float(f32(v / ONE))
+
+
 def out_fix(v: int) -> int:
     """a path coordinate as written: through the renderer's float (svgFixedToFloat) and back"""
     return fix_from_float(tofloat(v))
@@ -117,6 +122,7 @@ def attrs(el) -> dict:
 
 class Path:
     def __init__(self):
+        self.rounded = False
         self.segs: list[int] = []
         self.coords: list[int] = []
 
@@ -314,6 +320,7 @@ def shape_path(tag: str, a: dict) -> Path | None:
         rx, ry = (g("r"), g("r")) if tag == "circle" else (g("rx"), g("ry"))
         if rx <= 0 or ry <= 0:
             return None
+        p.rounded = True
         p.add(MOVE, cx + rx, cy)
         p.add(SCCWARC | 1, rx, ry, 0, -2 * rx, 0)
         p.add(SCCWARC | 1, rx, ry, 0, 2 * rx, 0)
@@ -560,6 +567,7 @@ class Encoder:
         self.cur = None                    # the element being drawn
         self.ctm = IDENTITY                # the transform last set in the command list
         self.pending = {}                  # gradient element -> ramps waiting for it
+        self.stroke_state = {}             # stroke width, join/cap, miter limit last written
         self.paints: list[bytes] = []      # paint + ramp sections, shared
         self.paths: list[bytes] = []
         self.cmds: list[bytes] = []
@@ -641,7 +649,8 @@ class Encoder:
     def path_section(self, p: Path) -> bytes:
         b = struct.pack("<H", len(p.segs)) + bytes(p.segs)
         b += b"\0" * ((-len(b)) % 4)
-        b += struct.pack(f"<{len(p.coords)}i", *map(out_fix, p.coords))
+        conv = out_fix_round if p.rounded else out_fix
+        b += struct.pack(f"<{len(p.coords)}i", *map(conv, p.coords))
         # the encoder sizes an arc segment as 6 coordinates and writes 5
         b += b"\0" * (4 * sum(1 for s in p.segs if (s & ~1) in (SCCWARC, SCWARC, LCCWARC, LCWARC)))
         return b
@@ -700,12 +709,17 @@ class Encoder:
                 flags = 0xcc       # the encoder leaves the flags byte unset (MSVC heap fill) for a stroke-only path
             words += stroke
             sw = fix(st.get("stroke-width", "1"))
-            words.append(struct.pack("<If", CMD_SWIDTH << 24, tofloat(sw)))
+            # stroke width, join/cap and miter limit are written when they change from the last stroke
+            if sw != self.stroke_state.get("width"):
+                words.append(struct.pack("<If", CMD_SWIDTH << 24, tofloat(sw)))
             join = {"bevel": 1, "miter": 2, "round": 3}.get(st.get("stroke-linejoin", "miter"), 2)
             cap = {"butt": 1, "square": 2, "round": 3}.get(st.get("stroke-linecap", "butt"), 1)
-            if join != 2 or cap != 1:
+            if (join, cap) != self.stroke_state.get("joincap", (2, 1)):
                 words.append(struct.pack("<I", (CMD_JOINCAP << 24) | (join << 8) | cap))
-            words.append(struct.pack("<If", CMD_MITER << 24, tofloat(fix(st.get("stroke-miterlimit", "4")))))
+            miter = fix(st.get("stroke-miterlimit", "4"))
+            if miter != self.stroke_state.get("miter"):
+                words.append(struct.pack("<If", CMD_MITER << 24, tofloat(miter)))
+            self.stroke_state = {"width": sw, "joincap": (join, cap), "miter": miter}
             flags |= 1
         if not flags:
             return
