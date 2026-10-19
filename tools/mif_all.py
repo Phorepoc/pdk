@@ -53,10 +53,33 @@ def group_dirs() -> dict[str, list[str]]:
     return out
 
 
+def listed_dirs() -> list[str]:
+    """mif_gen's default dirs (AvKon, VariatedBitmaps), then core's registry/mif_dirs.txt, in their order: the
+    icon targets of the ROM that no registered component's own group declares (Phonebook2's #included bld.infs
+    must come after it)"""
+    sys.path.insert(0, HERE)
+    import mif_gen
+    out = [os.path.normpath(d) for d in mif_gen.DEFAULT_DIRS]
+    lst = os.path.join(os.path.dirname(C.__file__), "mif_dirs.txt")
+    if os.path.isfile(lst):
+        for line in open(lst, encoding="utf-8"):
+            line = line.split("#", 1)[0].strip()
+            if line:
+                out.append(os.path.normpath(resolve(line)))
+    return out
+
+
 def main() -> None:
     have = {f.lower() for f in os.listdir(ICON_GEN)} if os.path.isdir(ICON_GEN) else set()
     dirs = group_dirs()
-    todo = sorted(d for d, ts in dirs.items() if "--all" in sys.argv or any(t not in have for t in ts))
+    listed = [d for d in listed_dirs() if os.path.isfile(os.path.join(d, "bld.inf"))]
+    for d in listed:
+        text = open(os.path.join(d, "bld.inf"), encoding="utf-8", errors="replace").read()
+        dirs.setdefault(d, [t.lower() for blk in BLOCK.findall(text) for t in TARGET.findall(blk)
+                            if t.lower().endswith(".mif")])
+    want = lambda d: "--all" in sys.argv or any(t not in have for t in dirs[d])   # noqa: E731
+    todo = [d for d in listed if want(d)]
+    todo += sorted(d for d in dirs if d not in listed and want(d))
     print(f"mif_all: {len(dirs)} component groups declare icons, {len(todo)} to generate")
     if todo:
         subprocess.run([sys.executable, os.path.join(HERE, "mif_gen.py")] + todo, check=False)

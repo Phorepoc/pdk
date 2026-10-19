@@ -139,6 +139,7 @@ def switch(s: str) -> str:
 
 
 def build(target: str, tokens: list[str], comp_dir: str) -> bool:
+    target = os.path.splitext(target)[0] + ".mif"     # a TARGETFILE x.mbm (mce_aif) still gives x.mif
     # staged (and mifconv run) in a local temp folder: the 32-bit mifconv cannot open files on a bind mount with
     # 64-bit inodes, which BUILD usually is
     tmp = tempfile.mkdtemp(prefix="mif-")
@@ -147,6 +148,9 @@ def build(target: str, tokens: list[str], comp_dir: str) -> bool:
     idx = art_index([os.path.dirname(comp_dir)])
     params, real, fake, depth = [], 0, 0, "/c8,8"
     for t in tokens:
+        t = t.rstrip("\\")              # list files continue lines with a backslash (browser: qgn_x.bmp\)
+        if not t:
+            continue
         if MBG.DEPTH.match(t):
             depth = t
             continue
@@ -253,6 +257,7 @@ def mmp_bitmaps(mmp: str) -> int:
         if not re.match(r"^[\w.-]+$", mbm):
             continue
         spath, args = os.path.dirname(mmp), []
+        tmp = tempfile.mkdtemp(prefix="mbm-")       # local copies: the 32-bit mifconv cannot read bind mounts
         for line in blk.splitlines():
             m = re.match(r"\s*SOURCEPATH\s+(\S+)", line, re.I)
             if m:
@@ -266,15 +271,20 @@ def mmp_bitmaps(mmp: str) -> int:
                         print(f"  ! {mbm}: {f} missing")
                         bad += 1
                         continue
-                    args += ["-" + m.group(1).lower(), os.path.relpath(src, OUT)]
+                    local = f"{len(args) // 2:03d}_" + os.path.basename(src)
+                    shutil.copy(src, os.path.join(tmp, local))
+                    args += ["-" + m.group(1).lower(), local]
         if not args:
+            shutil.rmtree(tmp, ignore_errors=True)
             continue
-        r = subprocess.run([MIFCONV, mbm.lower(), "-P" + os.path.relpath(PALETTE, OUT), *args],
-                           cwd=OUT, capture_output=True, text=True)
-        mif = os.path.join(OUT, os.path.splitext(mbm.lower())[0] + ".mif")
-        if os.path.exists(mif) and os.path.getsize(mif) < 64:   # mifconv's empty index beside it
-            os.remove(mif)
-        ok = r.returncode == 0
+        shutil.copy(PALETTE, os.path.join(tmp, "palette.pal"))
+        r = subprocess.run([MIFCONV, mbm.lower(), "-Ppalette.pal", *args],
+                           cwd=tmp, capture_output=True, text=True)
+        out = os.path.join(tmp, mbm.lower())
+        ok = r.returncode == 0 and os.path.isfile(out)
+        if ok:
+            shutil.copy(out, OUT)       # (mifconv's empty .mif index beside it is left behind)
+        shutil.rmtree(tmp, ignore_errors=True)
         bad += 0 if ok else 1
         print(f"  {mbm.lower()}: {len(args) // 2} bitmaps" + ("" if ok else " FAILED " + r.stdout[-200:]))
     return bad

@@ -135,7 +135,12 @@ def mk_mifconv(path: str) -> list[tuple[str, str, list[str]]]:
         return s
     out = []
     for m in re.finditer(r"^\s*mifconv\s+(.*)$", text, re.M | re.I):
-        toks = expand(m.group(1)).split()
+        line = m.group(1)
+        # $< = the rule's first prerequisite (AvKon: `$(TARGETS_AVKON) ... : iconlist.txt ...` then `mifconv ... /F$<`)
+        rule = [r for r in re.finditer(r"^[^\s#][^:=\n]*:(?!=)\s*(\S+)", text[:m.start()], re.M)]
+        if rule:
+            line = line.replace("$<", expand(rule[-1].group(1)))
+        toks = expand(line).split()
         if not toks:
             continue
         mif = re.split(r"[\\/]", toks[0])[-1]
@@ -149,6 +154,10 @@ def mk_mifconv(path: str) -> list[tuple[str, str, list[str]]]:
             # index (EIKCTL 42, EEikPanicColumnListInvalidBitmapIndex) in any folder holding .sis/.zip/.jar files (2026-10-12).
             if t[:2].lower() in ("/f", "-f"):
                 rf = os.path.join(os.path.dirname(path), t[2:])
+                if not os.path.exists(rf):      # the makefile's case may not be the file's (iconlist.txt / Iconlist.txt)
+                    d = os.path.dirname(rf) or "."
+                    rf = next((os.path.join(d, f) for f in (os.listdir(d) if os.path.isdir(d) else [])
+                               if f.lower() == os.path.basename(rf).lower()), rf)
                 if os.path.exists(rf):
                     rest += open(rf, errors="replace").read().split()
                     continue
