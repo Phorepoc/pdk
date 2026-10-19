@@ -391,6 +391,7 @@ class Encoder:
         self.pos = {el: k for k, el in enumerate(root.iter())}   # document order
         self.cur = None                    # the element being drawn
         self.ctm = IDENTITY                # the transform last set in the command list
+        self.pending = {}                  # gradient element -> ramps waiting for it
         self.paints: list[bytes] = []      # paint + ramp sections, shared
         self.paths: list[bytes] = []
         self.cmds: list[bytes] = []
@@ -455,8 +456,10 @@ class Encoder:
                 a_, b_, c_, d_, e_, f_ = mat
                 b += struct.pack("<6f", *map(tofloat, (a_, c_, e_, b_, d_, f_)))
             words = [(op << 24) | (alpha << 16) | self.paint_ix(b)]
-            # a gradient defined after the element that uses it gets its ramp section numbered last
+            # a gradient defined after the element that uses it: its ramp section is numbered when the gradient
+            # element is reached
             if self.pos.get(el, 0) > self.pos.get(self.cur, 0):
+                self.pending.setdefault(el, []).append(self.ramp(stops))
                 words.append(("ramp", self.ramp(stops)))
             else:
                 words.append((CMD_RAMP << 24) | self.paint_ix(self.ramp(stops)))
@@ -477,8 +480,15 @@ class Encoder:
 
     def walk(self, el, style: dict, opacity: int, ctm=None):
         tag = el.tag.split("}")[-1]
-        if tag in ("defs", "linearGradient", "radialGradient", "title", "desc", "metadata", "switch",
-                   "foreignObject", "text"):
+        if tag in ("linearGradient", "radialGradient"):
+            for r in self.pending.pop(el, []):
+                self.paint_ix(r)
+            return
+        if tag == "defs":
+            for ch in el:
+                self.walk(ch, style, opacity, ctm)
+            return
+        if tag in ("title", "desc", "metadata", "switch", "foreignObject", "text"):
             return
         a = attrs(el)
         if a.get("display") == "none":
@@ -501,14 +511,21 @@ class Encoder:
             return
         if st.get("visibility") == "hidden":
             return
+        # the transform is set when the next shape is rendered, drawn or not (fill and stroke none)
+        if (ctm or IDENTITY) != self.ctm:
+            self.ctm = ctm or IDENTITY
+            self.cmds.append(xform(self.ctm))
         flags = 0
         words = []
         fill = self.paint(st.get("fill", "black"), fmul(opacity, fix(st.get("fill-opacity", "1"))), False)
         if fill:
             words += fill
             flags |= 2
-        # a line has no inside: without a stroke of its own it is stroked with its fill
-        stroke = self.paint(st.get("stroke", st.get("fill", "black") if tag == "line" else "none"), fmul(opacity, fix(st.get("stroke-opacity", "1"))), True)
+        # a line has no inside: without a stroke of its own it is stroked with its fill colour (not a gradient)
+        dstroke = "none"
+        if tag == "line" and not st.get("fill", "black").startswith("url("):
+            dstroke = st.get("fill", "black")
+        stroke = self.paint(st.get("stroke", dstroke), fmul(opacity, fix(st.get("stroke-opacity", "1"))), True)
         if stroke:
             if not fill:
                 flags = 0xcc       # the encoder leaves the flags byte unset (MSVC heap fill) for a stroke-only path
@@ -523,9 +540,6 @@ class Encoder:
             flags |= 1
         if not flags:
             return
-        if (ctm or IDENTITY) != self.ctm:
-            self.ctm = ctm or IDENTITY
-            words.insert(0, xform(self.ctm))
         self.paths.append(self.path_section(p))
         words.append(("path", flags, len(self.paths) - 1))
         self.cmds.extend(words)
@@ -556,7 +570,8 @@ class Encoder:
         if nofs % 2 == 0:
             cmd_at += 2
         cmd_at += 4
-        body_at = cmd_at + sum(len(w) for w in words) + 4
+        body_at = cmd_at + sum(len(w) for w in words) + 2
+        body_at += (-body_at) % 4 if self.paths or self.paints else 0
         offs = {}
         pos = body_at
         data = b""
@@ -574,7 +589,8 @@ class Encoder:
         out += struct.pack("<HH", len(words), 0)
         for w in words:
             out += w
-        out += struct.pack("<I", len(self.paths))
+        out += struct.pack("<H", len(self.paths))
+        out += bytes(body_at - len(out))
         out += data
         return bytes(out)
 
