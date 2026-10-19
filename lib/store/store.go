@@ -173,7 +173,10 @@ type LineQuery struct {
 	After  int64
 	Before int64
 	Grep   string
-	Limit  int
+	// Any: at least one of these substrings; Exclude: none of them (both case-insensitive, as Grep)
+	Any     []string
+	Exclude []string
+	Limit   int
 }
 
 func (s *Store) Lines(q LineQuery) ([]Line, error) {
@@ -194,6 +197,18 @@ func (s *Store) Lines(q LineQuery) ([]Line, error) {
 	if q.Grep != "" {
 		where = append(where, "text LIKE ? ESCAPE '\\'")
 		args = append(args, "%"+likeEscape(q.Grep)+"%")
+	}
+	if len(q.Any) > 0 {
+		var or []string
+		for _, g := range q.Any {
+			or = append(or, "text LIKE ? ESCAPE '\\'")
+			args = append(args, "%"+likeEscape(g)+"%")
+		}
+		where = append(where, "("+strings.Join(or, " OR ")+")")
+	}
+	for _, g := range q.Exclude {
+		where = append(where, "text NOT LIKE ? ESCAPE '\\'")
+		args = append(args, "%"+likeEscape(g)+"%")
 	}
 	order := "DESC"
 	if q.After > 0 {

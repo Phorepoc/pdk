@@ -103,7 +103,28 @@ func (m *Manager) Exec(ctx context.Context, ss *Session, caller, op string, args
 		defer cancel()
 		ctx = c
 	}
-	return ss.Exec(ctx, caller, op, args)
+	// op wait=<pattern> on an op that reboots: after it, wait for the new boot (outside the op lock, so the live view
+	// and the rest keep working) and return its report with the op's result
+	wait, hasWait := args["wait"].(string)
+	waitS, _ := args.UintOr("wait_timeout_s", 32, 240)
+	delete(args, "wait")
+	delete(args, "wait_timeout_s")
+	before := ss.Health().Boot
+	res, err := ss.Exec(ctx, caller, op, args)
+	// a screenshot can miss its slot while the link is busy: try again a couple of times before failing the caller
+	for i := 0; err != nil && op == "screenshot" && caller != QuietCaller && i < 2 && ctx.Err() == nil; i++ {
+		time.Sleep(400 * time.Millisecond)
+		res, err = ss.Exec(ctx, caller, op, args)
+	}
+	if err != nil || !hasWait || wait == "" {
+		return res, err
+	}
+	pat := wait
+	if pat == "." {
+		pat = ""
+	}
+	rep, werr := ss.Exec(ctx, caller, "wait_boot", device.Args{"after": before, "pattern": pat, "timeout_s": waitS})
+	return map[string]any{"result": res, "boot": rep}, werr
 }
 
 // HealthReport: the service and every device.

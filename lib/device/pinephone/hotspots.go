@@ -373,3 +373,13 @@ func summarizeHot(raw *hotRaw, tab *symTab, top int, secs float64, note string) 
 	}
 	return h
 }
+
+// Symbolize maps a run address to (function, image) with a symbol file (core.Symbolizer: fault addresses in reports).
+func (d *Driver) Symbolize(symbols string, pc uint64) (string, string, error) {
+	t, err := loadSyms(symbols)
+	if err != nil {
+		return "", "", err
+	}
+	img, fn := t.lookup(pc)
+	return fn, img, nil
+}

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -136,7 +137,11 @@ func NewServer(mgr *core.Manager, version string) *mcp.Server {
 		}
 		desc := o.Description
 		if o.Reboots {
-			desc += " (The phone resets: the link drops and comes back; use wait_for to follow the new boot.)"
+			desc += " (The phone resets: the link drops and comes back; pass wait to get the new boot's report, or use wait_boot.)"
+		}
+		hasBlob := o.Name == "screenshot"
+		if hasBlob {
+			props["inline"] = map[string]any{"type": "boolean", "description": "return the picture itself (an image) besides its blob id"}
 		}
 		srv.AddTool(&mcp.Tool{Name: o.Name, Description: desc, InputSchema: objSchema(props, req)},
 			func(ctx context.Context, r *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -146,7 +151,16 @@ func NewServer(mgr *core.Manager, version string) *mcp.Server {
 					return result(nil, err)
 				}
 				delete(m, "device")
-				return result(mgr.Exec(ctx, s, "mcp", o.Name, device.Args(m)))
+				inline, _ := m["inline"].(bool)
+				delete(m, "inline")
+				res, err := mgr.Exec(ctx, s, "mcp", o.Name, device.Args(m))
+				out, rerr := result(res, err)
+				if err == nil && hasBlob && inline {
+					if img := blobImage(mgr.Store, res); img != nil {
+						out.Content = append(out.Content, img)
+					}
+				}
+				return out, rerr
 			})
 	}
 
@@ -168,10 +182,12 @@ func NewServer(mgr *core.Manager, version string) *mcp.Server {
 		})
 
 	srv.AddTool(&mcp.Tool{Name: "log_lines", Description: "Read stored log lines. Newest `limit` (default 200, max 2000) " +
-		"unless `after` is given (then the lines after that id, oldest first). `grep` = case-insensitive substring. " +
-		"`boot` = a boot id from boots (0 = all).",
+		"unless `after` is given (then the lines after that id, oldest first). `grep` = case-insensitive substring; " +
+		"`any` = several substrings separated by | (a line needs one); `exclude` = substrings separated by | to drop. " +
+		"`boot` = a boot id from boots (0 = all, -1 = the current boot).",
 		InputSchema: objSchema(map[string]any{"device": deviceProp(),
 			"grep": map[string]any{"type": "string"}, "boot": map[string]any{"type": "integer"},
+			"any": map[string]any{"type": "string"}, "exclude": map[string]any{"type": "string"},
 			"after": map[string]any{"type": "integer"}, "before": map[string]any{"type": "integer"},
 			"limit": map[string]any{"type": "integer"}}, nil)},
 		func(ctx context.Context, r *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -184,8 +200,13 @@ func NewServer(mgr *core.Manager, version string) *mcp.Server {
 			if lim <= 0 {
 				lim = 200
 			}
-			lines, err := mgr.Store.Lines(store.LineQuery{Device: s.ID, Boot: num(m, "boot"), After: num(m, "after"),
-				Before: num(m, "before"), Grep: fmt.Sprint(orEmpty(m["grep"])), Limit: min(lim, 2000)})
+			boot := num(m, "boot")
+			if boot < 0 {
+				boot = s.Health().Boot
+			}
+			lines, err := mgr.Store.Lines(store.LineQuery{Device: s.ID, Boot: boot, After: num(m, "after"),
+				Before: num(m, "before"), Grep: fmt.Sprint(orEmpty(m["grep"])), Any: splitBar(m["any"]),
+				Exclude: splitBar(m["exclude"]), Limit: min(lim, 2000)})
 			if err != nil {
 				return result(nil, err)
 			}
@@ -253,4 +274,37 @@ func orEmpty(v any) any {
 func Handler(mgr *core.Manager, version string) http.Handler {
 	srv := NewServer(mgr, version)
 	return mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return srv }, nil)
+}
+
+// splitBar: "a|b|c" -> [a b c] (empty parts dropped).
+func splitBar(v any) []string {
+	t, _ := v.(string)
+	var out []string
+	for _, p := range strings.Split(t, "|") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// blobImage: the PNG a result names in its "blob" field, as MCP image content (nil when there is none).
+func blobImage(st *store.Store, res any) mcp.Content {
+	b, _ := json.Marshal(res)
+	var r struct {
+		Blob string `json:"blob"`
+	}
+	if json.Unmarshal(b, &r) != nil || r.Blob == "" {
+		return nil
+	}
+	rc, _, err := st.OpenBlob(r.Blob)
+	if err != nil {
+		return nil
+	}
+	defer rc.Close()
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		return nil
+	}
+	return &mcp.ImageContent{Data: data, MIMEType: "image/png"}
 }

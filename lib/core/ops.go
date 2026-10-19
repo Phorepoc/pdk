@@ -31,8 +31,20 @@ var builtins = []device.OpSpec{
 }
 
 func (s *Session) Ops() []device.OpSpec {
-	return append(append([]device.OpSpec{}, s.Driver.Ops()...), builtins...)
+	var out []device.OpSpec
+	for _, o := range s.Driver.Ops() {
+		if o.Reboots { // push ... wait=<pattern>: the new boot's report comes back with the result (Manager.Exec)
+			o.Params = append(append([]device.Param{}, o.Params...), waitParams...)
+		}
+		out = append(out, o)
+	}
+	out = append(out, builtins...)
+	return append(out, workflowOps...)
 }
+
+// logOnly: built-in ops that read the store or wait for lines; they never touch the port, so they do not take the
+// op lock (they can watch an op in progress, e.g. wait_boot during a push)
+var logOnly = map[string]bool{"wait_for": true, "wait_boot": true, "boot_report": true, "diff_boots": true}
 
 // QuietCaller marks high-rate calls (the live view) that are not written to the op history when they succeed.
 const QuietCaller = "live"
@@ -62,7 +74,7 @@ func (s *Session) Exec(ctx context.Context, caller, op string, args device.Args)
 		}
 	}
 	// wait_for does not touch the port, so it does not take the op lock (it can watch an op in progress)
-	exclusive := op != "wait_for"
+	exclusive := !logOnly[op]
 	if exclusive {
 		select {
 		case s.opCh <- struct{}{}:
@@ -85,6 +97,8 @@ func (s *Session) Exec(ctx context.Context, caller, op string, args device.Args)
 		res, err = s.waitFor(ctx, args)
 	case "send":
 		res, err = nil, s.send(ctx, args)
+	case "wait_boot", "boot_report", "diff_boots", "input":
+		res, _, err = s.workflow(ctx, op, args)
 	default:
 		wc, cancel := context.WithTimeout(ctx, 30*time.Second)
 		err = s.WaitConnected(wc)

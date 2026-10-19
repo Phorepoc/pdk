@@ -77,7 +77,7 @@ var (
 	reUpload   = regexp.MustCompile(`phlink: UPLOAD (OK|FAILED) len=([0-9a-fA-F]+) sum=([0-9a-fA-F]+)`)
 	reUpProg   = regexp.MustCompile(`phlink: upload ([0-9a-fA-F]{8})$`)
 	reExc      = regexp.MustCompile(`\*\*\* ExcFault|\[EKERN\]\[exc\] iR15 faulting PC=(0x[0-9a-fA-F]+)`)
-	reCat      = regexp.MustCompile(`\[EKERN\]\s+category='([^']*)'`)
+	reCat      = regexp.MustCompile(`\[EKERN\]\s+category='([^']+)'`) // a panic has a category; '' = a normal exit
 	reCpu      = regexp.MustCompile(`\[EKERN\]\[mon\] busy% cpu0\.\.3 = (\d+) (\d+) (\d+) (\d+)`)
 	reRAM      = regexp.MustCompile(`\[EKERN\]\[mon\] free RAM KB=0x([0-9a-fA-F]+)`)
 	reSdIO     = regexp.MustCompile(`\[EKERN\]\[mon\] sd io: calls=0x([0-9a-fA-F]+)(?: sectors=0x([0-9a-fA-F]+))?(?: ms=0x([0-9a-fA-F]+))?`)

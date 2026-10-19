@@ -281,8 +281,22 @@ func (s *Server) lines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	out, err := s.M.Store.Lines(store.LineQuery{Device: ss.ID, Boot: qInt(r, "boot"), After: qInt(r, "after"),
-		Before: qInt(r, "before"), Grep: q.Get("grep"), Limit: int(qInt(r, "limit"))})
+	boot := qInt(r, "boot")
+	if q.Get("boot") == "current" || boot < 0 {
+		boot = ss.Health().Boot
+	}
+	bar := func(k string) []string {
+		var out []string
+		for _, p := range strings.Split(q.Get(k), "|") {
+			if p = strings.TrimSpace(p); p != "" {
+				out = append(out, p)
+			}
+		}
+		return out
+	}
+	// any / exclude: substrings separated by |
+	out, err := s.M.Store.Lines(store.LineQuery{Device: ss.ID, Boot: boot, After: qInt(r, "after"),
+		Before: qInt(r, "before"), Grep: q.Get("grep"), Any: bar("any"), Exclude: bar("exclude"), Limit: int(qInt(r, "limit"))})
 	if err != nil {
 		writeErr(w, 500, err)
 		return
