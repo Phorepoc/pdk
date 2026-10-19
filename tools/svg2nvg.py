@@ -462,7 +462,7 @@ class Affine:
         t = T_IDENTITY
         if self.m02 or self.m12:
             t |= T_TRANSLATE
-        if self.m00 or self.m11:
+        if self.m00 != ONE or self.m11 != ONE:     # the encoder's build: scale only when it is not 1
             t |= T_SCALE
         if self.m01 or self.m10:
             t |= T_SHEAR

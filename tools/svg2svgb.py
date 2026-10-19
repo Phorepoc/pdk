@@ -166,6 +166,15 @@ def element(el, out: bytearray):
         if k not in ATTRS:
             continue
         aid, kind = ATTRS[k]
+        if k == "xlink:href" and v.lstrip().startswith("data:"):
+            # an embedded image (KXlinkhrefImageEmbedded): the data URI itself, length-prefixed
+            data = v.encode("ascii", "replace")
+            out += struct.pack("<Hi", 111 + O, len(data)) + data
+            continue
+        if k == "xlink:href" and tag == "use":
+            # a use element's reference: the href as written, then the id it names (Svgdecoder reads both)
+            out += struct.pack("<H", aid) + s16(v.strip()) + s16(v.strip().lstrip("#"))
+            continue
         if kind == "points":
             b = points_value(tag, v)
         elif tag == "svg" and k in ("width", "height"):
@@ -184,7 +193,7 @@ def element(el, out: bytearray):
     out += bytes([END_ELEM])
 
 
-FALLBACK_ELEMENTS = {"switch", "foreignObject", "text", "desc", "style"}
+FALLBACK_ELEMENTS = {"switch", "foreignObject", "text", "desc", "style", "image"}
 FALLBACK_ATTRS = {"requiredExtensions", "content", "class", "display", "opacity"}
 
 
