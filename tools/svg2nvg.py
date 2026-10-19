@@ -336,34 +336,202 @@ def shape_path(tag: str, a: dict) -> Path | None:
     return None
 
 
-# ---------------------------------------------------------------- transforms (16.16, a b c d e f)
+# ---------------------------------------------------------------- transforms (gfx2d TGfxAffineTransform, 16.16)
+
+T_IDENTITY, T_TRANSLATE, T_SCALE, T_SHEAR = 0, 1, 2, 4
+
+
+def _s32(x: int) -> int:
+    x &= 0xffffffff
+    return x - (1 << 32) if x & 0x80000000 else x
+
+
+def _mul64(a: int, b: int):
+    """GfxMath::hgMul64: signed 32x32 -> 64 as (high, low), in 32-bit pieces"""
+    hh = _s32((a >> 16) * (b >> 16)) & 0xffffffff
+    lh = _s32((a & 0xffff) * (b >> 16)) & 0xffffffff
+    hl = _s32((a >> 16) * (b & 0xffff)) & 0xffffffff
+    ll = ((a & 0xffff) * (b & 0xffff)) & 0xffffffff
+    hh = (hh + (_s32(lh) >> 16)) & 0xffffffff
+    hh = (hh + (_s32(hl) >> 16)) & 0xffffffff
+    old = ll
+    ll = (ll + (lh << 16)) & 0xffffffff
+    if ll < old:
+        hh = (hh + 1) & 0xffffffff
+    old = ll
+    ll = (ll + (hl << 16)) & 0xffffffff
+    if ll < old:
+        hh = (hh + 1) & 0xffffffff
+    return _s32(hh), _s32(ll)
+
+
+def _mulu64(a: int, b: int):
+    a &= 0xffffffff
+    b &= 0xffffffff
+    p = a * b
+    return _s32(p >> 32), _s32(p)
+
+
+def _mulu64h(a: int, b: int) -> int:
+    return ((a & 0xffffffff) * (b & 0xffffffff)) >> 32
+
+
+def _lsl64h(a, sh: int) -> int:
+    h, l = a
+    return _s32((h << sh) | ((l & 0xffffffff) >> (32 - sh)))
+
+
+def _add64(a, b):
+    hi = _s32(a[0] + b[0])
+    lo = _s32(a[1] + b[1])
+    if (lo & 0xffffffff) < (a[1] & 0xffffffff):
+        hi = _s32(hi + 1)
+    return hi, lo
+
+
+def _rcos(xx: int) -> int:
+    """GfxMath::svgiRCos"""
+    fpi = 0x6487ED51
+    x = abs(xx) & 0xffffffff
+    y = x
+    if y > fpi >> 1:
+        y = (fpi - y) & 0xffffffff
+    y = (y << 1) & 0xffffffff
+    c = _mulu64(y, (y << 1) & 0xffffffff)
+    x2 = _lsl64h(c, 1)
+    t = _mulu64h(x2, x2)
+    for k in (-(0x55555555 >> 1) - 1, 0x5B05B05B >> 4, -(0x68068068 >> 8) + 1, (0x49F93EDD >> 12) + 1,
+              -(0x47BB63BF >> 17)):
+        c = _add64(c, _mul64(_s32(t), k))
+        t = _mulu64h(t, x2)
+    r = (0x40000000 - c[0]) >> 1
+    return -r if x > (fpi >> 1) else r
+
+
+def scalar_cos(r1: int) -> int:
+    foo = _lsl64h(_mul64(_s32(r1), 0x517CC1B7), 15)
+    foo = _s32(_mulu64h(foo, 0x6487ED51))
+    if foo >= 0x6487ED51 >> 1:
+        foo = _s32(foo - 0x6487ED51)
+    return _rcos(_s32(foo << 1)) >> 13
+
+
+def _scalar_sin(r1: int) -> int:
+    r1 = _s32(r1 - (0x6487ED51 >> 14))
+    foo = _lsl64h(_mul64(r1, 0x517CC1B7), 15)
+    foo = _s32(_mulu64h(foo, 0x6487ED51))
+    if foo >= 0x6487ED51 >> 1:
+        foo = _s32(foo - 0x6487ED51)
+    return _rcos(_s32(foo << 1)) >> 13
+
+
+def scalar_tan(r1: int) -> int:
+    s = _scalar_sin(r1)
+    if not s:
+        return -1
+    c = scalar_cos(r1)
+    if not c:
+        return -1
+    q = abs(s << 15) // abs(c)
+    return _s32((q if (s < 0) == (c < 0) else -q) << 1)
+
+
+DEG = f32(f32(3.1415926) / f32(180.0))      # KGradiansPerDegree
+
+
+class Affine:
+    """TGfxAffineTransform: m00 m10 m01 m11 m02 m12 in 16.16 and the transform type it keeps"""
+
+    def __init__(self, m00=ONE, m10=0, m01=0, m11=ONE, m02=0, m12=0, t=T_IDENTITY):
+        self.m00, self.m10, self.m01, self.m11, self.m02, self.m12, self.type = m00, m10, m01, m11, m02, m12, t
+
+    def key(self):
+        return (self.m00, self.m10, self.m01, self.m11, self.m02, self.m12)
+
+    def copy(self):
+        return Affine(*self.key(), self.type)
+
+    def update_state(self):
+        t = T_IDENTITY
+        if self.m02 or self.m12:
+            t |= T_TRANSLATE
+        if self.m00 or self.m11:
+            t |= T_SCALE
+        if self.m01 or self.m10:
+            t |= T_SHEAR
+        if t == T_SCALE and self.m00 == ONE and self.m11 == ONE:
+            t = T_IDENTITY
+        self.type = t
+
+    def concatenate(self, a: "Affine"):
+        if self.type == T_IDENTITY:
+            self.m00, self.m01, self.m02, self.m11, self.m10, self.m12 = a.m00, a.m01, a.m02, a.m11, a.m10, a.m12
+            self.type = a.type
+        elif a.type == T_IDENTITY:
+            pass
+        else:
+            m0, m1 = self.m00, self.m01
+            self.m00 = fmul(a.m00, m0) + fmul(a.m10, m1)
+            self.m01 = fmul(a.m01, m0) + fmul(a.m11, m1)
+            self.m02 += fmul(a.m02, m0) + fmul(a.m12, m1)
+            m0, m1 = self.m10, self.m11
+            self.m11 = fmul(a.m01, m0) + fmul(a.m11, m1)
+            self.m10 = fmul(a.m00, m0) + fmul(a.m10, m1)
+            self.m12 += fmul(a.m02, m0) + fmul(a.m12, m1)
+            self.type |= a.type
+
+    @staticmethod
+    def rotation(theta: float):
+        r = int(theta * 0x10000)            # (TInt32)(aTheta * TReal(0x10000))
+        cs, sn = scalar_cos(r), _scalar_sin(r)
+        return Affine(cs, sn, -sn, cs, 0, 0, T_SHEAR | T_SCALE)
+
+
+def parse_transform(t: str) -> Affine:
+    """CSvgElementImpl's transform attribute: each item concatenated onto the running transform"""
+    m = Affine()
+    for name, args in re.findall(r"(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)", t):
+        v = [f32(float(x)) for x in NUM.findall(args)]
+        if name == "matrix" and len(v) >= 6:
+            n = Affine(*(fix_from_float(x) for x in v[:6]))
+            n.update_state()
+            m.concatenate(n)
+        elif name == "translate" and v:
+            m.concatenate(Affine(ONE, 0, 0, ONE, fix_from_float(v[0]), fix_from_float(v[1] if len(v) > 1 else 0.0),
+                                 T_TRANSLATE))
+            m.type |= T_TRANSLATE
+        elif name == "scale" and v:
+            sx = v[0]
+            sy = v[1] if len(v) > 1 else sx
+            m.concatenate(Affine(fix_from_float(sx), 0, 0, fix_from_float(sy), 0, 0, T_SCALE))
+            m.type |= T_SCALE
+        elif name == "rotate" and v:
+            theta = f32(v[0] * DEG)
+            r = Affine.rotation(theta)
+            if len(v) >= 3:
+                x, y = fix_from_float(v[1]), fix_from_float(v[2])
+                r.m02 = fmul(x, ONE - r.m00) + fmul(y, r.m10)
+                r.m12 = fmul(y, ONE - r.m00) - fmul(x, r.m10)
+                r.type |= T_TRANSLATE
+                m.concatenate(r)
+                m.type |= T_SHEAR | T_SCALE | T_TRANSLATE
+            else:
+                m.concatenate(r)
+                m.type |= T_SHEAR | T_SCALE
+        elif name in ("skewX", "skewY") and v:
+            tn = scalar_tan(int(f32(v[0] * DEG) * 0x10000))
+            sh = Affine(ONE, tn if name == "skewY" else 0, tn if name == "skewX" else 0, ONE, 0, 0, T_SHEAR)
+            m.concatenate(sh)
+            m.type |= T_SHEAR
+    return m
+
 
 IDENTITY = (ONE, 0, 0, ONE, 0, 0)
 
 
-def mat_mul(m, n):
-    a, b, c, d, e, f = m
-    A, B, C, D, E, F = n
-    return (fmul(a, A) + fmul(c, B), fmul(b, A) + fmul(d, B), fmul(a, C) + fmul(c, D), fmul(b, C) + fmul(d, D),
-            fmul(a, E) + fmul(c, F) + e, fmul(b, E) + fmul(d, F) + f)
-
-
-def parse_transform(t: str):
-    m = IDENTITY
-    for name, args in re.findall(r"(matrix|translate|scale)\s*\(([^)]*)\)", t):
-        v = nums(args)
-        if name == "matrix" and len(v) == 6:
-            n = tuple(v)
-        elif name == "translate":
-            n = (ONE, 0, 0, ONE, v[0], v[1] if len(v) > 1 else 0)
-        else:
-            n = (v[0], 0, 0, v[1] if len(v) > 1 else v[0], 0, 0)
-        m = mat_mul(m, n)
-    return m
-
-
 def xform(m) -> bytes:
-    """KCMD_SET_TRANSFORMATION: type 1 = identity; scale, translation or both; 0 = the whole matrix"""
+    """KCMD_SET_TRANSFORMATION: type 1 = identity; scale, translation or both; 0 = the whole matrix.
+    m = (a b c d e f) = (m00 m10 m01 m11 m02 m12)"""
     a, b, c, d, e, f = m
     if m == IDENTITY:
         return struct.pack("<I", (CMD_XFORM << 24) | (1 << 16))
@@ -500,7 +668,8 @@ class Encoder:
         if "opacity" in a:
             opacity = fmul(opacity, fix(a["opacity"]))
         if "transform" in a:
-            ctm = mat_mul(ctm or IDENTITY, parse_transform(a["transform"]))
+            ctm = ctm.copy() if ctm else Affine()
+            ctm.concatenate(parse_transform(a["transform"]))
         if tag in ("svg", "g", "a"):
             for ch in el:
                 self.walk(ch, st, opacity, ctm)
@@ -512,8 +681,8 @@ class Encoder:
         if st.get("visibility") == "hidden":
             return
         # the transform is set when the next shape is rendered, drawn or not (fill and stroke none)
-        if (ctm or IDENTITY) != self.ctm:
-            self.ctm = ctm or IDENTITY
+        if (ctm.key() if ctm else IDENTITY) != self.ctm:
+            self.ctm = ctm.key() if ctm else IDENTITY
             self.cmds.append(xform(self.ctm))
         flags = 0
         words = []
