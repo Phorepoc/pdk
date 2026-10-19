@@ -5,7 +5,8 @@
 # - a scheduled task "PhoneLab" starts it at logon (the phone's COM port belongs to the logged-on user's session),
 #   restarting it if it dies; logs to %LOCALAPPDATA%\phonelab\phonelab.log
 # -Uninstall removes the rule and the task.
-param([int]$Port = 8737, [switch]$NoBuild, [switch]$Uninstall, [switch]$TaskOnly)
+param([int]$Port = 8737, [switch]$NoBuild, [switch]$Uninstall, [switch]$TaskOnly, [string]$Config = '')
+# -Config: a phonelab.toml of your own (devices, workspace, token); default: the repository's phonelab.toml
 # -TaskOnly: rebuild + re-register the logon task only (no admin needed; the firewall rules stay as they are)
 $ErrorActionPreference = 'Stop'
 $id = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -44,7 +45,7 @@ if ($prof -and $prof.NetworkCategory -ne 'Private') {
 
 $data = Join-Path $env:LOCALAPPDATA 'phonelab'
 New-Item -ItemType Directory -Force $data | Out-Null
-$cfg = Join-Path $server 'phonelab.toml'
+$cfg = if ($Config) { Resolve-Path $Config } else { Join-Path $server 'phonelab.toml' }
 $cmd = "-config `"$cfg`" -listen 0.0.0.0:$Port -log `"$data\phonelab.log`""
 $action = New-ScheduledTaskAction -Execute $exe -Argument $cmd -WorkingDirectory $server
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $id.Name
