@@ -72,12 +72,21 @@ def listed_dirs() -> list[str]:
 def main() -> None:
     have = {f.lower() for f in os.listdir(ICON_GEN)} if os.path.isdir(ICON_GEN) else set()
     dirs = group_dirs()
-    listed = [d for d in listed_dirs() if os.path.isfile(os.path.join(d, "bld.inf"))]
-    for d in listed:
-        text = open(os.path.join(d, "bld.inf"), encoding="utf-8", errors="replace").read()
+    listed = []
+    for d in listed_dirs():
+        if d.lower().endswith(".mmp"):          # an .mmp line: its START BITMAP .mbm files (always rebuilt, they are quick)
+            if os.path.isfile(d):
+                listed.append(d)
+                dirs.setdefault(d, [])
+            continue
+        inf = next((f for f in (os.listdir(d) if os.path.isdir(d) else []) if f.lower() == "bld.inf"), None)
+        if not inf:
+            continue
+        listed.append(d)
+        text = open(os.path.join(d, inf), encoding="utf-8", errors="replace").read()
         dirs.setdefault(d, [t.lower() for blk in BLOCK.findall(text) for t in TARGET.findall(blk)
                             if t.lower().endswith(".mif")])
-    want = lambda d: "--all" in sys.argv or any(t not in have for t in dirs[d])   # noqa: E731
+    want = lambda d: "--all" in sys.argv or not dirs[d] or any(t not in have for t in dirs[d])   # noqa: E731
     todo = [d for d in listed if want(d)]
     todo += sorted(d for d in dirs if d not in listed and want(d))
     print(f"mif_all: {len(dirs)} component groups declare icons, {len(todo)} to generate")
