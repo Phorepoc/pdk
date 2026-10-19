@@ -124,8 +124,29 @@ export type StreamMsg =
   | { type: 'progress'; device: string; data: Progress }
   | { type: 'op'; device: string; data: OpRecord };
 
-export interface LineQuery { boot?: number | undefined; after?: number | undefined; before?: number | undefined; grep?: string | undefined; limit?: number | undefined }
+/** boot -1 = the current boot; any / exclude = substrings separated by | */
+export interface LineQuery { boot?: number | undefined; after?: number | undefined; before?: number | undefined; grep?: string | undefined; any?: string | undefined; exclude?: string | undefined; limit?: number | undefined }
 export interface EventQuery { boot?: number; kind?: string; before?: number; limit?: number }
 
 /** One entry of GET /api/devices/{id}/fs?path= (device op fs_list). */
 export interface FsEntry { name: string; type: 'd' | 'f'; size: number; mtime?: number }
+
+/** boot_report / wait_boot (and push wait=): how a boot went. */
+export interface BootReport {
+  boot: number;
+  slot?: string;
+  outcome?: string;
+  started: string;
+  lines: number;
+  matched?: string;
+  faults: { line: string; pc?: string; function?: string; image?: string }[];
+  panics: string[];
+  tests: { pass: number; fail: number; lines: string[] };
+  events: Record<string, number>;
+}
+
+/** diff_boots: lines only in a / only in b, event kinds whose counts differ ([a, b]). */
+export interface BootDiff { a: number; b: number; only_a: string[]; only_b: string[]; events: Record<string, [number, number]> }
+
+/** One step of an input script. */
+export interface InputStep { step: string; result?: unknown; error?: string }

@@ -35,7 +35,10 @@ How it works, the operations and the phone side: [docs/phonelab.md](docs/phonela
 ```sh
 go build -o ph ./cmd/ph
 ph health
-ph push symbian.img -wait 'running slot B'
+ph push symbian.img -wait 'running slot B'     # prints the new boot's report
+ph report -symbols symbian.syms               # faults with function names, panics, PASS/FAIL
+ph diff 1094 1095
+ph input 'key menu; wait 1000; shot'
 ph log -grep fault -n 50
 ph shot -o screen.png
 ph op peek addr=0x01c20000 count=4

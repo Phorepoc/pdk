@@ -1,0 +1,1 @@
+import{Rt as e}from"./use-router-link-Dr_41bNL.js";var t={secs:e(10),symbols:e(`.pinephone-build/symbian.syms`),running:e(!1),busy:e(!1),since:e(``),error:e(``),res:e(null)};export{t};

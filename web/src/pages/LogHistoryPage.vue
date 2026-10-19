@@ -1,9 +1,11 @@
 <template>
   <q-page class="page-pad">
     <div class="row q-col-gutter-sm items-center q-mb-sm">
-      <q-select v-model="boot" :options="bootOptions" emit-value map-options dense outlined label="Boot" class="col-12 col-sm-5" />
-      <q-input v-model="grep" dense outlined clearable label="grep (server side)" class="col-12 col-sm-4" @keyup.enter="newest" />
-      <div class="col-12 col-sm-3 row q-gutter-x-xs no-wrap">
+      <q-select v-model="boot" :options="bootOptions" emit-value map-options dense outlined label="Boot" class="col-12 col-sm-3" />
+      <q-input v-model="grep" dense outlined clearable label="contains" class="col-12 col-sm-2" @keyup.enter="newest" />
+      <q-input v-model="any" dense outlined clearable label="any of (a|b|c)" class="col-12 col-sm-2" @keyup.enter="newest" />
+      <q-input v-model="exclude" dense outlined clearable label="none of (a|b)" class="col-12 col-sm-2" @keyup.enter="newest" />
+      <div class="col-12 col-sm-3 row q-gutter-x-xs no-wrap justify-end">
         <q-btn dense flat icon="first_page" no-caps label="Older" :disable="!lines.length" @click="older" />
         <q-btn dense flat icon="last_page" no-caps label="Newer" :disable="!lines.length" @click="newer" />
         <q-btn dense color="primary" no-caps label="Newest" icon="vertical_align_bottom" @click="newest" />
@@ -30,11 +32,14 @@ const route = useRoute();
 const boots = ref<Boot[]>([]);
 const boot = ref(0);
 const grep = ref<string | null>('');
+const any = ref<string | null>('');
+const exclude = ref<string | null>('');
 const lines = ref<Line[]>([]);
 const error = ref('');
 
 const bootOptions = computed(() => [
   { label: 'all boots', value: 0 },
+  { label: 'the current boot', value: -1 },
   ...boots.value.map((b) => ({ label: `#${b.id}  slot ${b.slot || '?'}  ${b.outcome || ''}  ${fmtTs(b.started)}  (${b.lines} lines${b.faults ? ', ' + b.faults + ' faults' : ''})`, value: b.id })),
 ]);
 
@@ -43,7 +48,7 @@ async function run(q: { after?: number | undefined; before?: number | undefined 
   if (!id) return;
   error.value = '';
   try {
-    const r = await api.lines(id, { boot: boot.value, grep: grep.value ?? '', limit: PAGE, ...q });
+    const r = await api.lines(id, { boot: boot.value, grep: grep.value ?? '', any: any.value ?? '', exclude: exclude.value ?? '', limit: PAGE, ...q });
     if (r.length) lines.value = r;
     else if (!q.after && !q.before) lines.value = [];
   } catch (e) { error.value = (e as Error).message; }

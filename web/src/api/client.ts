@@ -76,7 +76,7 @@ async function request<T>(path: string, init: RequestInit = {}, okStatuses: numb
 
 function qs(o: object): string {
   const p = new URLSearchParams();
-  for (const [k, v] of Object.entries(o)) if (v !== undefined && v !== null && v !== '' && v !== 0) p.set(k, String(v));
+  for (const [k, v] of Object.entries(o)) if (v !== undefined && v !== null && v !== '' && v !== 0) p.set(k, k === 'boot' && v === -1 ? 'current' : String(v));
   const s = p.toString();
   return s ? `?${s}` : '';
 }

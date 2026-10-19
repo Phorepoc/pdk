@@ -4,7 +4,10 @@
 //	ph health                          service + device health
 //	ph ops                             the device's operations
 //	ph op <name> [key=value ...]       run any operation (values: numbers, true/false, else strings)
-//	ph push <image> [-wait <regexp>]   upload into slot B, reboot, optionally wait for a boot line
+//	ph push <image> [-wait <regexp>]   upload into slot B, reboot, wait for the new boot (and a line) and report it
+//	ph report [boot] [-symbols file]   how a boot went: faults, panics, test lines (default: the current boot)
+//	ph diff <a> [b]                    lines in one boot and not the other (b default: the current boot)
+//	ph input "<script>"                key/text/tap/long/swipe/wait/shot steps (';' or newlines between them)
 //	ph log [-grep s] [-boot n] [-n N]  stored log lines
 //	ph shot [-which 0|1|2] [-o file]   a screenshot as PNG
 //
@@ -46,7 +49,10 @@ func usage() {
   health                          service + device health
   ops                             the device's operations
   op <name> [key=value ...]       run any operation
-  push <image> [-wait <regexp>]   upload into slot B, reboot, optionally wait for a boot line
+  push <image> [-wait <regexp>]   upload into slot B, reboot, wait for the new boot (and a line); prints its report
+  report [boot] [-symbols file]   how a boot went (default: the current boot)
+  diff <a> [b]                    lines in one boot and not the other (b default: the current boot)
+  input "<script>"                key/text/tap/long/swipe/wait/shot steps
   log [-grep s] [-boot n] [-n N]  stored log lines
   shot [-which 0|1|2] [-o file]   a screenshot as PNG (default shot.png)
 `)
@@ -109,13 +115,48 @@ func run(c *client.Client, dev, cmd string, args []string) error {
 		if *mode != "" {
 			a["mode"] = *mode
 		}
-		if err := result(c.Op(dev, "push", a)); err != nil {
-			return err
+		if *wait == "" {
+			*wait = "." // the new boot's first line: still waits for it and reports
 		}
-		if *wait != "" {
-			return result(c.Op(dev, "wait_for", map[string]any{"pattern": *wait, "timeout_s": *timeout}))
+		a["wait"], a["wait_timeout_s"] = *wait, *timeout
+		return result(c.Op(dev, "push", a))
+	case "report":
+		fs := flag.NewFlagSet("report", flag.ExitOnError)
+		syms := fs.String("symbols", "", "symbol file for fault addresses")
+		b, rest := splitFirst(args)
+		_ = fs.Parse(rest)
+		a := map[string]any{}
+		if b != "" {
+			n, err := strconv.ParseInt(b, 10, 64)
+			if err != nil {
+				return fmt.Errorf("report: boot id, not %q", b)
+			}
+			a["boot"] = n
 		}
-		return nil
+		if *syms != "" {
+			a["symbols"] = *syms
+		}
+		return result(c.Op(dev, "boot_report", a))
+	case "diff":
+		if len(args) == 0 {
+			return fmt.Errorf("diff: which boots?")
+		}
+		a := map[string]any{}
+		for i, k := range []string{"a", "b"} {
+			if i < len(args) {
+				n, err := strconv.ParseInt(args[i], 10, 64)
+				if err != nil {
+					return fmt.Errorf("diff: boot id, not %q", args[i])
+				}
+				a[k] = n
+			}
+		}
+		return result(c.Op(dev, "diff_boots", a))
+	case "input":
+		if len(args) == 0 {
+			return fmt.Errorf("input: which steps?")
+		}
+		return result(c.Op(dev, "input", map[string]any{"script": strings.Join(args, " ")}))
 	case "log":
 		fs := flag.NewFlagSet("log", flag.ExitOnError)
 		grep := fs.String("grep", "", "substring (case-insensitive)")

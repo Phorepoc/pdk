@@ -44,9 +44,18 @@ so the port is found again after each reboot; `docker/99-phonelab.rules` gives i
 | `profile`, `hotspots`, `threads` | CPU per thread, RAM per process, sampled program counters, thread states |
 | `version` | the protocol and capabilities of the running image |
 | `wait_for` {pattern, timeout_s, since_line} | wait for a log line (built in, for every device) |
+| `wait_boot` {after, pattern, timeout_s, symbols} | wait for the next boot (and a line in it); returns its report (built in) |
+| `boot_report` {boot, pass, fail, symbols} | how a boot went: slot, outcome, faults with function names, panics, PASS/FAIL lines (built in) |
+| `diff_boots` {a, b, grep} | lines in one boot and not the other, numbers and addresses masked; event counts that differ (built in) |
+| `input` {script} | `key`, `text`, `tap`, `long`, `swipe`, `wait`, `shot` steps in one call (built in) |
 | `send` {data, hex} | raw bytes, the escape hatch |
 
-MCP adds `health`, `ops_list`, `log_lines`, `events`, `boots` and `op_history`, which read the stored history.
+Every op that reboots the device (`push`, `rearm`, `reboot`) also takes `wait` (a pattern; `.` = any line): the call
+then returns the new boot's report too. The wait runs after the device is free again, so the live view keeps going.
+
+MCP adds `health`, `ops_list`, `log_lines` (`any` / `exclude` = substrings separated by `|`, `boot` -1 = the current
+boot), `events`, `boots` and `op_history`, which read the stored history; its `screenshot` takes `inline` to return the
+picture itself.
 
 ## The phone side
 
@@ -67,7 +76,8 @@ the driver adapts to older images.
 
 An IDE-style layout: tool windows on the left (Project = the phone's files, Device, Views, Hotspots), a full-width
 bottom area (Live log + events, Log history, Timeline, Terminal) and editor tabs in the middle (Live screen, Phone
-controls, Ops console, Profile, Push image, Screenshots, files). Tabs and terminal tabs split by dragging onto an edge
+controls with an input-script box, Ops console, Profile, Push image with the new boot's report, Boots = a boot's report
+and the difference between two boots, Screenshots, files). Tabs and terminal tabs split by dragging onto an edge
 of a group. The layout is kept in the browser.
 
 ## Open

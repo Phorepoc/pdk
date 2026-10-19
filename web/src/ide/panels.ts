@@ -31,6 +31,7 @@ export const PANELS: PanelDef[] = [
   { id: 'ops', title: 'Ops console', icon: 'build', dock: 'editor', page: true, component: lazy(() => import('@/pages/OpsPage.vue')) },
   { id: 'profile', title: 'Profile', icon: 'speed', dock: 'editor', page: true, component: lazy(() => import('@/pages/ProfilePage.vue')) },
   { id: 'push', title: 'Push image', icon: 'upload', dock: 'editor', page: true, component: lazy(() => import('@/pages/PushPage.vue')) },
+  { id: 'boots', title: 'Boots', icon: 'restart_alt', dock: 'editor', component: lazy(() => import('@/pages/BootsPage.vue')) },
   { id: 'screenshots', title: 'Screenshots', icon: 'photo_camera', dock: 'editor', page: true, component: lazy(() => import('@/pages/ScreenshotsPage.vue')) },
   { id: 'livelog', title: 'Live log', icon: 'receipt_long', dock: 'bottom', component: lazy(() => import('@/components/LiveLogPanel.vue')) },
   { id: 'log', title: 'Log history', icon: 'article', dock: 'bottom', page: true, component: lazy(() => import('@/pages/LogHistoryPage.vue')) },

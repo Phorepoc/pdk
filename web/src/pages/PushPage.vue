@@ -21,6 +21,8 @@
                        placeholder=".pinephone-build/symbian.img" />
             </div>
             <q-checkbox v-model="reboot" class="q-mt-sm" label="Reboot into the new image after a good upload" :disable="busy" />
+            <q-input v-if="reboot" v-model="waitFor" dense outlined class="q-mt-xs" :disable="busy" label="Then wait for a log line (regular expression; empty = the first line of the new boot)"
+                     placeholder="e.g. running slot B" />
             <div>
               <q-btn color="primary" no-caps icon="upload" label="Push" :loading="busy" :disable="!ready" @click="push" />
             </div>
@@ -42,14 +44,14 @@
             <div v-if="error" class="text-negative q-mt-sm">{{ error }}</div>
             <pre v-if="result !== undefined" class="json mono q-mt-sm">{{ pretty(result) }}</pre>
 
-            <div v-if="startedAt" class="q-mt-md">
-              <div class="text-subtitle2">Boot after push</div>
-              <div v-if="bootEvent">
-                <q-icon name="check_circle" color="positive" /> booted <b>slot {{ bootEvent.data?.slot }}</b>
-                <span class="text-grey"> {{ bootEvent.data?.detail }}</span> (boot #{{ bootEvent.boot }})
-                <q-btn flat dense no-caps color="primary" label="view log" :to="{ path: '/log', query: { boot: String(bootEvent.boot) } }" />
+            <div v-if="startedAt && reboot" class="q-mt-md">
+              <div class="text-subtitle2">The new boot</div>
+              <div v-if="report">
+                <boot-report-card :report="report" />
+                <q-btn flat dense no-caps color="primary" icon="restart_alt" label="Open in Boots" class="q-mt-xs" @click="openBoots" />
               </div>
-              <div v-else-if="busy || awaitingBoot"><q-spinner size="16px" /> waiting for the boot.slot event...</div>
+              <div v-else-if="bootEvent"><q-spinner size="16px" /> booted <b>slot {{ bootEvent.data?.slot }}</b> (boot #{{ bootEvent.boot }}), waiting for the line...</div>
+              <div v-else-if="busy"><q-spinner size="16px" /> waiting for the boot...</div>
             </div>
           </q-card-section>
         </q-card>
@@ -62,7 +64,10 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { Notify } from 'quasar';
 import { ApiError, api } from '@/api/client';
-import type { Blob as BlobInfo, DeviceEvent } from '@/api/types';
+import type { Blob as BlobInfo, BootReport, DeviceEvent } from '@/api/types';
+import BootReportCard from '@/components/BootReportCard.vue';
+import { useIdeStore } from '@/ide/layout';
+import { focusBoot } from '@/stores/focus';
 import { useDevicesStore } from '@/stores/devices';
 import { useLiveStore } from '@/stores/live';
 import { useTransfersStore } from '@/stores/transfers';
@@ -71,6 +76,7 @@ import { fmtSize, pretty } from '@/utils';
 const devices = useDevicesStore();
 const live = useLiveStore();
 const transfers = useTransfersStore();
+const ide = useIdeStore();
 
 const pushSpec = computed(() => devices.current?.ops.find((o) => o.name === 'push'));
 const canPush = computed(() => !!pushSpec.value);
@@ -86,7 +92,8 @@ const result = ref<unknown>(undefined);
 const error = ref('');
 const startedAt = ref(0);
 const bootEvent = ref<DeviceEvent | null>(null);
-const awaitingBoot = ref(false);
+const waitFor = ref('');
+const report = ref<BootReport | null>(null);
 
 const ready = computed(() => (source.value === 'upload' ? !!file.value : !!path.value.trim()));
 const prog = computed(() => live.progress[devices.currentId]);
@@ -100,9 +107,10 @@ async function push(): Promise<void> {
   error.value = '';
   result.value = undefined;
   bootEvent.value = null;
-  awaitingBoot.value = false;
+  report.value = null;
   try {
-    const args: Record<string, unknown> = { reboot: reboot.value };
+    // with a reboot the op also waits for the new boot and returns its report (push wait=)
+    const args: Record<string, unknown> = { reboot: reboot.value, ...(reboot.value ? { wait: waitFor.value.trim() || '.' } : {}) };
     if (source.value === 'upload') {
       upProgress.value = 0;
       const f = file.value as File;
@@ -115,16 +123,24 @@ async function push(): Promise<void> {
     startedAt.value = Date.now();
     off?.();
     off = live.onEvent((e) => {
-      if (e.device === id && e.kind === 'boot.slot' && e.ts >= startedAt.value - 1000) { bootEvent.value = e; awaitingBoot.value = false; }
+      if (e.device === id && e.kind === 'boot.slot' && e.ts >= startedAt.value - 1000) bootEvent.value = e;
     });
-    result.value = await api.op(id, 'push', args);
-    awaitingBoot.value = reboot.value;
+    const r = await api.op(id, 'push', args) as { result?: unknown; boot?: BootReport };
+    if (r && r.boot) { result.value = r.result; report.value = r.boot; } else result.value = r;
     Notify.create({ type: 'positive', message: 'push finished', timeout: 1500 });
   } catch (e) {
     error.value = (e as Error).message;
-    if (e instanceof ApiError && e.result !== undefined) result.value = e.result;
+    if (e instanceof ApiError && e.result !== undefined) {
+      const r = e.result as { result?: unknown; boot?: BootReport } | null;
+      if (r && typeof r === 'object' && 'boot' in r) { result.value = r.result; report.value = r.boot ?? null; } else result.value = e.result;
+    }
   } finally {
     busy.value = false;
   }
+}
+
+function openBoots(): void {
+  if (report.value) focusBoot.value = report.value.boot;
+  ide.openTab('boots');
 }
 </script>
