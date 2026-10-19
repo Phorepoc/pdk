@@ -48,6 +48,14 @@ from mmp import _isfile_nocase  # noqa: E402
 BASE = MBG.BASE
 OUT = os.path.join(BUILD, "icon-gen")
 MIFCONV = shutil.which("mifconv") or "mifconv"
+# mifconv's Linux path reads EPOCROOT before every SVG it encodes (std::string(getenv("EPOCROOT"))): unset, it throws
+# and mifconv stops with "Unknown error". Its SVG temp files go to $EPOCROOT/epoc32/build/s60/icons/temp/tmp/<x>, and it
+# only creates the last level: a temp root with the rest made.
+if "EPOCROOT" not in os.environ:
+    import tempfile
+    _root = tempfile.mkdtemp(prefix="mifconv-")
+    os.makedirs(os.path.join(_root, "epoc32", "build", "s60", "icons", "temp", "tmp"))
+    os.environ["EPOCROOT"] = _root + "/"
 SVGTENC = shutil.which("svgtbinencode") or "svgtbinencode"
 PALETTE = os.path.join(BASE, "oss.FCL.sf.mw.uitools", "uitools_pub", "third_party_bitmap_palette_api",
                        "inc", "ThirdPartyBitmap.pal")   # the S60 256-colour palette (-P)

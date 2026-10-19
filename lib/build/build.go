@@ -177,6 +177,7 @@ const Commands = ` SOURCE
   rom [ssm|@|@app]        build the ROM section (default ssm = the phone's real System State Manager boot; @ = bootui)
   stale                   images linked before a provider of theirs existed (need a relink)
   sis <key> [key...]      package components as an installable SIS (tools/make_sis.py)
+  skin                    the default skin package (series60skin .skn + .mif; tools/skin_gen.py)
   icons                   the icon files (.mif) of every registered component (tools/mif_all.py)
   zdata                   the Z: data the packages' bld.inf files export (tools/zdata_gen.py)
 
@@ -196,7 +197,7 @@ const Commands = ` SOURCE
 // IsCommand reports whether name is a build command.
 func IsCommand(name string) bool {
 	switch name {
-	case "fetch", "export", "casefix", "build", "closure", "all", "arm", "rsc", "rom", "stale", "sis", "icons",
+	case "fetch", "export", "casefix", "build", "closure", "all", "arm", "rsc", "rom", "stale", "sis", "skin", "icons",
 		"zdata", "tests", "shell":
 		return true
 	}
@@ -265,6 +266,8 @@ func Run(cmd string, args []string) error {
 		return e.InContainer("python3", "tools/stale_stubs.py")
 	case "sis":
 		return py("tools/make_sis.py")
+	case "skin":
+		return py("tools/skin_gen.py")
 	case "icons":
 		return py("tools/mif_all.py")
 	case "zdata":
