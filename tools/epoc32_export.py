@@ -38,6 +38,16 @@ SKIP_DIRS = {"test", "tsrc", "tests", "documentation", "examples", "internal"}
 SECTION = re.compile(r"^\s*PRJ_(\w+)", re.I)
 
 
+def all_packages():
+    """the default set first, then every other package of both trees (symbian-2010, then symbian-rcl3: a later
+    package replaces a same-named header of an earlier one, so the RCL_3 line wins as it does in the build)"""
+    base = os.path.dirname(BASE)
+    rest = [os.path.join("..", t, d) for t in ("symbian-2010", "symbian-rcl3")
+            for d in sorted(os.listdir(os.path.join(base, t)))]
+    have = {os.path.normpath(os.path.join(BASE, p)) for p in DEFAULT_PKGS}
+    return DEFAULT_PKGS + [p for p in rest if os.path.normpath(os.path.join(BASE, p)) not in have]
+
+
 def _variant(path):
     s60 = os.path.join(OUT, "variant", "s60_variant.hrh")
     if re.search(r"oss\.FCL\.sf\.(mw|app)\.", path.replace("\\", "/")) and os.path.isfile(s60):
@@ -56,6 +66,9 @@ def preprocess(path):
         full = os.path.normpath(os.path.join(d, m.group(2).replace("\\", "/")))
         if os.path.exists(full):
             return m.group(0)
+        ci = _MMP.nocase(full)          # written for a case-insensitive file system (sf.mw.web: Browser_platform_variant.hrh)
+        if ci:
+            return m.group(1) + ci.replace("\\", "/") + m.group(3)
         mapped = _MMP.map_sf_path(full, d)
         return m.group(1) + mapped.replace("\\", "/") + m.group(3) if mapped != full else m.group(0)
     fixed = _MMP._REL_INCLUDE.sub(fix, text)
@@ -67,7 +80,8 @@ def preprocess(path):
                         # the product-variant feature flags gate some exports
                         # (e.g. SYMBIAN_ENABLE_64_BIT_FILE_SERVER_API -> f32file64.h)
                         "-include", _variant(path),
-                        *_MMP.sf_mirror_incs(), "-include", os.path.join(PATHS_DIR, "platform_paths.hrh"), src],
+                        *_MMP.sf_mirror_incs(), "-idirafter", os.path.join(os.path.dirname(EPOC32_ROOT), "casefix"),
+                        "-include", os.path.join(PATHS_DIR, "platform_paths.hrh"), src],
                        input=stdin, cwd=d if stdin is not None else None,
                        capture_output=True, text=True, errors="replace")
     out = r.stdout
@@ -269,12 +283,13 @@ if __name__ == "__main__":
              for d in sorted(os.listdir(os.path.join(base, t)))], scan_only=True)
     else:
         if sys.argv[1:2] == ["--all"]:
-            # the default set first, then every other package of both trees (symbian-2010, then symbian-rcl3: a later
-            # package replaces a same-named header of an earlier one, so the RCL_3 line wins as it does in the build)
-            base = os.path.dirname(BASE)
-            rest = [os.path.join("..", t, d) for t in ("symbian-2010", "symbian-rcl3")
-                    for d in sorted(os.listdir(os.path.join(base, t)))]
-            have = {os.path.normpath(os.path.join(BASE, p)) for p in DEFAULT_PKGS}
-            run(DEFAULT_PKGS + [p for p in rest if os.path.normpath(os.path.join(BASE, p)) not in have])
+            # Two passes around casefix: a bld.inf that includes a header under another case (bldvariant.hrh's
+            # "ProductVariant.hrh", sf.mw.web's browser_platform_variant.hrh) stops cpp on a case-sensitive file
+            # system and exports nothing until casefix has linked that spelling.
+            import casefix
+            pkgs = all_packages()
+            run(pkgs)
+            casefix.main(pkgs)
+            run(pkgs)
         else:
             run(sys.argv[1:] or DEFAULT_PKGS)

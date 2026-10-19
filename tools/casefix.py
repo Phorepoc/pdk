@@ -7,6 +7,7 @@ The 2010 source was written for Windows: `#include <f32plugin.h>` finds `F32plug
 (-idirafter), so it only supplies a header the exact-case search did not find. No source file is touched.
 
     python3 tools/casefix.py [package ...]    (after tools/epoc32_export.py: the exported headers are indexed too)
+    python3 tools/casefix.py --all            every package of both source trees (epoc32_export.py --all runs this itself)
 
 The packages (directories of symbian-2010/ or ../symbian-rcl3/<package>) default to the set epoc32_export.py exports;
 name more to cover further components. The links go to $PHOREPOC_BUILD/casefix (add it to the compiler with -idirafter).
@@ -25,9 +26,10 @@ SCAN_EXT = HEADER_EXT | {".cpp", ".c", ".cia", ".rss", ".mmp", ".cc", ".s"}
 INCLUDE = re.compile(rb'^\s*#\s*include\s*[<"]([^>"\r\n]+)[>"]', re.M)
 
 
-def main() -> None:
+def main(pkgs: list[str] | None = None) -> None:
     import epoc32_export
-    pkgs = sys.argv[1:] or epoc32_export.DEFAULT_PKGS
+    if pkgs is None:
+        pkgs = epoc32_export.all_packages() if sys.argv[1:2] == ["--all"] else sys.argv[1:] or epoc32_export.DEFAULT_PKGS
     roots = [os.path.join(EPOC32_ROOT, "include")] + [os.path.normpath(os.path.join(SYMBIAN, "symbian-2010", p)) for p in pkgs]
     by_base, by_tail = {}, {}
     scan = []
