@@ -3,3 +3,5 @@
 /ph
 /ph.exe
 *.exe~
+.work/
+__pycache__/

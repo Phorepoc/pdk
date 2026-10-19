@@ -1,5 +1,5 @@
-// ph -- the Phorepoc platform development kit's command line. Device work goes through a running PhoneLab service
-// (it owns the phone's link); build commands join here as the build tools move into the pdk library.
+// ph -- the Phorepoc platform development kit's command line: the build commands (lib/build: the tools in a container)
+// and the device commands, which go through a running PhoneLab service (it owns the phone's link).
 //
 //	ph health                          service + device health
 //	ph ops                             the device's operations
@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Phorepoc/pdk/lib/build"
 	"github.com/Phorepoc/pdk/lib/client"
 )
 
@@ -32,9 +33,20 @@ func main() {
 	dev := flag.String("device", "", "device id (default: the only device)")
 	flag.Usage = usage
 	flag.Parse()
+	if flag.NArg() > 0 && flag.Arg(0) == "help" {
+		usage()
+		return
+	}
 	if flag.NArg() == 0 {
 		usage()
 		os.Exit(2)
+	}
+	if build.IsCommand(flag.Arg(0)) {
+		if err := build.Run(flag.Arg(0), flag.Args()[1:]); err != nil {
+			fmt.Fprintln(os.Stderr, "ph:", err)
+			os.Exit(1)
+		}
+		return
 	}
 	c := client.New(*base, *token)
 	if err := run(c, *dev, flag.Arg(0), flag.Args()[1:]); err != nil {
@@ -55,7 +67,10 @@ func usage() {
   input "<script>"                key/text/tap/long/swipe/wait/shot steps
   log [-grep s] [-boot n] [-n N]  stored log lines
   shot [-which 0|1|2] [-o file]   a screenshot as PNG (default shot.png)
+
+Build commands (each runs its tool in the toolchain container):
 `)
+	fmt.Fprint(os.Stderr, build.Commands)
 }
 
 func envOr(k, d string) string {

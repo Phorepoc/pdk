@@ -1,0 +1,12 @@
+palette	x32	.phorepoc-x86-build/x32img/palette.dll	x32img/palette.dll	built with X32_LD=bfd (the private images were GNU-ld linked; the core default is ld.lld which differs only in code padding 0xCC vs nop); .pcrel + .exports.json identical too
+estor	x32	.phorepoc-x86-build/x32img/estor.dll	x32img/estor.dll	built with X32_LD=bfd (the private images were GNU-ld linked; the core default is ld.lld which differs only in code padding 0xCC vs nop); .pcrel + .exports.json identical too
+bafl	x32	.phorepoc-x86-build/x32img/bafl.dll	x32img/bafl.dll	built with X32_LD=bfd (the private images were GNU-ld linked; the core default is ld.lld which differs only in code padding 0xCC vs nop); .pcrel + .exports.json identical too
+centralrepository	x32	.phorepoc-x86-build/x32img/centralrepository.dll	x32img/centralrepository.dll	built with X32_LD=bfd (the private images were GNU-ld linked; the core default is ld.lld which differs only in code padding 0xCC vs nop); .pcrel + .exports.json identical too
+ecomserver	x32	.phorepoc-x86-build/x32img/ecomserver.exe	x32img/ecomserver.exe	built with X32_LD=bfd (the private images were GNU-ld linked; the core default is ld.lld which differs only in code padding 0xCC vs nop); .pcrel + .exports.json identical too
+cenrepsourceplugin	x32	.phorepoc-x86-build/x32img/cenrepsourceplugin.dll	x32img/cenrepsourceplugin.dll	expected: differs by 4 bytes (815 bytes differ); not analysed, probably an absolute __FILE__ path (/symbian vs /repo/baseline) as in the ARM gdi case
+centralrepositorysrv	x32	.phorepoc-x86-build/x32img/centralrepositorysrv.exe	x32img/centralrepositorysrv.exe	image identical; only the .stubs sidecar differed in run 1 (same provider bug, fixed)
+euser	x32	emitter/euser_x32.dll	x32core/euser_x32.dll	identical (also .pcrel); bespoke builder
+efsrv	x32	emitter/efsrv_x32.dll	x32core/efsrv_x32.dll	identical (also .pcrel); bespoke builder
+hal	x32	emitter/hal_x32.dll	x32core/hal_x32.dll	identical (also .pcrel); bespoke builder
+efile	x32	emitter/efile_x32.exe	x32core/efile_x32.exe	identical (also .pcrel); bespoke builder
+estart	x32	emitter/estart_x32.exe	x32core/estart_x32.exe	identical (also .pcrel); bespoke builder

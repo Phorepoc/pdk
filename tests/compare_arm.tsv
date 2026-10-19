@@ -1,0 +1,23 @@
+estor	arm	emitter/estor.dll	arm/img/estor.dll	identical
+bafl	arm	emitter/bafl.dll	arm/img/bafl.dll	identical
+fbscli	arm	emitter/fbscli.dll	arm/img/fbscli.dll	identical
+ecom	arm	emitter/ecom.dll	arm/img/ecom.dll	identical
+charconv	arm	emitter/charconv.dll	arm/img/charconv.dll	identical
+efat32	arm	emitter/efat32.fsy	arm/img/efat32.fsy	identical
+peninputcrp	arm	emitter/2000b5e7.dll	arm/img/2000b5e7.dll	identical
+clock	arm	emitter/clock.dll	arm/img/clock.dll	identical
+c32	arm	emitter/c32.dll	arm/img/c32.dll	identical
+drtaeabi	arm	emitter/drtaeabi.dll	arm/img/drtaeabi.dll	identical
+ecomserver	arm	emitter/ecomserver.exe	arm/img/ecomserver.exe	identical
+c32exe	arm	emitter/c32exe.exe	arm/img/c32exe.exe	identical
+gdi	arm	emitter/gdi.dll	arm/img/gdi.dll	differs only in __FILE__ strings (KPanicFileName, 6 objects; build-path dependent, macro-prefix-mapped in core)
+euser_device	arm	emitter/euser_dev.dll	arm/device/euser.dll	differs by 64 B: __FILE__ path strings (build-path dependent)
+efsrv_device	arm	emitter/efsrv_dev.dll	arm/device/efsrv.dll	identical
+hal_device	arm	emitter/hal_dev.dll	arm/device/hal.dll	identical
+efile_exe	arm	emitter/efile.exe	arm/device/efile.exe	identical
+estart_exe	arm	emitter/estart.exe	arm/device/estart.exe	identical
+elocal_fsy	arm	emitter/elocal.fsy	arm/device/elocal.fsy	identical
+ekdata_dll	arm	emitter/ekdata.dll	arm/device/ekdata.dll	identical
+eshell_exe	arm	emitter/eshell.exe	arm/device/eshell.exe	identical
+peninputcrp-registration	arm	emitter/2000b5e7.rsc	plugins/2000b5e7.rsc	identical
+eikctl-rsc	arm	emitter/rsc/resource/eikctl.rsc	rsc/resource/eikctl.rsc	identical

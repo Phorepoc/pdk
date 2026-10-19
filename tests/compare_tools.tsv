@@ -1,0 +1,6 @@
+a3ffourccconvertorplugin	x32	emitter/a3ffourccconvertorplugin.rsc	rsctest/plugins/a3ffourccconvertorplugin.rsc	ECOM registration
+aiwresolver	x32	emitter/aiwresolver.rsc	rsctest/plugins/aiwresolver.rsc	ECOM registration
+aknpriv	x32	emitter/rsc/resource/aknpriv.rsc	rsctest/rsc/resource/aknpriv.rsc	resource with .rsg header
+smiley	x32	emitter/rsc/resource/smiley.rsc	rsctest/rsc/resource/smiley.rsc	resource
+psln	x32	emitter/rsc/resource/apps/pslncommon.rsc	rsctest/rsc/resource/apps/pslncommon.rsc	Avkon app resource, .loc strings
+psln	x32	emitter/rsc/resource/apps/pslnskinnames.rsc	rsctest/rsc/resource/apps/pslnskinnames.rsc	multi-language source (LANGUAGE_SC)
