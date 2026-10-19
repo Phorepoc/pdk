@@ -16,7 +16,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import SYMBIAN, BUILD, resolve  # noqa: E402
+from paths import SYMBIAN, BUILD, EPOC32_ROOT, resolve  # noqa: E402
 import components as C  # noqa: E402
 
 ICON_GEN = os.path.join(BUILD, "icon-gen")
@@ -70,6 +70,10 @@ def listed_dirs() -> list[str]:
 
 
 def main() -> None:
+    # bld.infs with #ifdef'd icon blocks are read through cpp + the variant headers `ph export` writes; without
+    # them those targets silently vanish (the platform macros are all undefined)
+    if not os.path.isfile(os.path.join(EPOC32_ROOT, "include", "bldvariant.hrh")):
+        sys.exit(f"mif_all: {EPOC32_ROOT}/include has no bldvariant.hrh -- run `ph export` first")
     have = {f.lower() for f in os.listdir(ICON_GEN)} if os.path.isdir(ICON_GEN) else set()
     dirs = group_dirs()
     listed = []
