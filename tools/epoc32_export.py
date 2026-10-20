@@ -297,5 +297,7 @@ if __name__ == "__main__":
             run(pkgs)
             casefix.main(pkgs)
             run(pkgs)
+            import cdl_headers                     # the CDL client headers no bld.inf exports (MifHeader ...)
+            cdl_headers.main()
         else:
             run(sys.argv[1:] or DEFAULT_PKGS)
