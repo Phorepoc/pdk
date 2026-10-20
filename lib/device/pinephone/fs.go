@@ -38,6 +38,9 @@ const (
 	ttyOpKill   = 10
 
 	fsMaxChunk = 3072 // a write chunk / read length the link takes in one request
+	// fsHeaderGap: between a file request's header and its payload, for a log transfer in flight to finish (a 1 KB
+	// bulk IN takes well under a millisecond at high speed; 20 ms leaves room for a busy DFC thread)
+	fsHeaderGap = 20 * time.Millisecond
 )
 
 func fsOps() []device.OpSpec {
@@ -103,8 +106,17 @@ func symbianErr(code int32) string {
 func (d *Driver) fsRequest(ctx context.Context, l device.Link, op uint32, payload []byte) ([]byte, error) {
 	frames, stop := l.Frames()
 	defer stop()
-	if err := l.Write(ctx, append(cmd9('F', uint32(len(payload)), op), payload...)); err != nil {
+	// the header alone first, as a push does: the phone switches to receiving the request (phlink EUpFs) and holds its
+	// log; a payload arriving in the same write met a log transfer still in flight, and concurrent IN/OUT at high speed
+	// wedges the link with a core spinning (2026-10-20, ph package install: 3 KB writes, every few requests)
+	if err := l.Write(ctx, cmd9('F', uint32(len(payload)), op)); err != nil {
 		return nil, err
+	}
+	if len(payload) > 0 {
+		time.Sleep(fsHeaderGap)
+		if err := l.Write(ctx, payload); err != nil {
+			return nil, err
+		}
 	}
 	var buf bytes.Buffer
 	idle := time.NewTimer(8 * time.Second)
