@@ -1,3 +1,6 @@
+/* Copyright The Phorepoc Authors
+ * SPDX-License-Identifier: Apache-2.0 */
+
 // gen.c -- host test generator for the phone's LZ4 encoder (phlz4.h, unmodified: the PinePhone debug link in
 // adaptation-a64, usbcc/). Writes ../testdata/cases.bin for lz4_test.go, and with a raw RGB file argument also reports
 // live-view numbers.

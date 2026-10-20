@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """x32_client_dll -- build an x32 E32Image DLL that sits ON TOP of euser.
 
 euser.dll is special: nothing is underneath it, so `build_euser_x32.py` has no imports to

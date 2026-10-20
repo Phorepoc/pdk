@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """cenrep_set.py -- write a copy of a CenRep initialisation text file (UTF-16, as BUILD/cenrep-gen/*.txt) with some int keys changed.
 
     python3 tools/cenrep_set.py <in.txt> <out.txt> 0x6=3600 0x8=3600

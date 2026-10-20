@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { defineRouter } from '#q-app';
 import { createMemoryHistory, createRouter, createWebHistory } from 'vue-router';
 import routes from './routes';

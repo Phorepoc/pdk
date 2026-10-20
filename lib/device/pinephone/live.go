@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package pinephone
 
 // The live view (protocol v3, 'L'; phlink.cpp "Protocol v3", docs/phonelab.md): the phone sends only the

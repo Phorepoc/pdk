@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """stale_stubs -- images linked BEFORE a provider of theirs existed.
 
     python3 tools/stale_stubs.py        # lists them; relink with build_mmp_x32.py <key> ...

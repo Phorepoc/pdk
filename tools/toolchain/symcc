@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # symcc — compile unmodified Symbian 2010 baseline C++ with a MODERN GNU ARM
 # compiler (arm-none-eabi-g++ 14.x). Proves we need neither RVCT nor GCCE:
 # a current upstream toolchain + our prefix shim digests the OS source, and the

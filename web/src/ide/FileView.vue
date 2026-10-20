@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="column fit no-wrap" data-test="file-view">
     <div class="row items-center no-wrap q-px-sm q-gutter-x-sm file-head">

@@ -83,4 +83,6 @@ cd web && npm ci && npm test && npx vue-tsc --noEmit
 
 ## Licence
 
-[EPL-1.0](LICENSE), as the rest of Phorepoc.
+[Apache-2.0](LICENSE), copyright The Phorepoc Authors ([AUTHORS](AUTHORS), [NOTICE](NOTICE)). Two files derived from
+the Symbian source stay under [EPL-1.0](LICENSES/EPL-1.0.txt); each file's header says which licence it is under.
+Contributions are welcome under the same terms: add yourself to `AUTHORS`.

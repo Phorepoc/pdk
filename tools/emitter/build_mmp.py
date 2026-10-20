@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 r"""build_mmp -- build ANY registered component for ARM from its REAL 2010 .mmp, unmodified.
 
 For a component key in components.py:

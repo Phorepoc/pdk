@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # install-windows.ps1 -- run PhoneLab at logon and open it to the LAN (run ONCE, elevated):
 #   powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
 # - builds phonelab.exe at the repository root (needs Go) unless -NoBuild

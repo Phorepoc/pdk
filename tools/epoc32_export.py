@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """epoc32_export -- build a real epoc32/include tree from bld.inf PRJ_EXPORTS.
 
 The 2010 source has no epoc32/include: every component EXPORTS its public /

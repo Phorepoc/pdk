@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-page class="page-pad">
     <div v-if="!supported" class="text-grey">This device has no <code>profile</code> op.</div>

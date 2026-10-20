@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_efile_x32 -- EFILE.EXE (the F32 file server) as an x32 E32Image.
 
 The first x32 image that is not a DLL: 48/48 TUs compile unmodified (surface = euser 436 /

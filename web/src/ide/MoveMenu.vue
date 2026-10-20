@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-menu auto-close dense>
     <q-list dense style="min-width: 150px">

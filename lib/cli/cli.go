@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package cli is the command framework of ph: every command is defined once (group, name, operands, summary,
 // description, options, examples), and the overview, `ph help <command>`, the Markdown manual pages (docs/ph/) and the
 // option parsing all come from that one definition, so the documentation cannot drift from the code.

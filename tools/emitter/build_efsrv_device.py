@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_efsrv_device -- the from-source EFSRV.DLL (F32 client library).
 
 The second OS DLL built from unmodified 2010 source with the modern toolchain,

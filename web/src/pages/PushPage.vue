@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-page class="page-pad">
     <div v-if="!canPush" class="text-grey">This device has no <code>push</code> op.</div>

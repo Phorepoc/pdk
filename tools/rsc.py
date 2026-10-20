@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """rsc -- compile a Symbian resource source (.rss) with the REAL rcomp.
 
 What abld's resource step does: cpp-preprocess the .rss (LANGUAGE_SC, the mmp's

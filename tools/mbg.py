@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """mbg -- generate the icon-ID headers (<x>.mbg) that S60's mifconv build step emits.
 
 Sources compile against `#include <avkon.mbg>` etc. -- an enum of MIF icon ids.

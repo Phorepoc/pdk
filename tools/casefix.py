@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """casefix -- make the case-insensitive source tree usable on a case-sensitive file system.
 
 The 2010 source was written for Windows: `#include <f32plugin.h>` finds `F32plugin.h`, `"FbsMessage.h"` finds

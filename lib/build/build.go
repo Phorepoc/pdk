@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package build runs the Phorepoc build tools (tools/ in the pdk) on the OS tree (the core repository).
 //
 // Every command runs its tool inside the toolchain image (ghcr.io/phorepoc/base) with the pdk mounted at /pdk,

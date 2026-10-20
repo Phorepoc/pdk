@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <editor-group v-if="node.kind === 'group'" :group="node" />
   <div v-else ref="box" class="ide-split fit" :class="node.dir">

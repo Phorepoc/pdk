@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # make_phorepoc_rom.sh -- build the prelinked XIP ROM section that the x86-64 (x32) kernel carries as its ROM.
 # Runs on Linux inside the toolchain container (ph image rom does that). Steps:
 #

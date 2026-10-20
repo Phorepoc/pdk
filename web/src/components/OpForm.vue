@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="op-row" :class="{ open: shown !== undefined }">
     <form class="row items-center no-wrap q-gutter-x-sm" @submit.prevent="run">

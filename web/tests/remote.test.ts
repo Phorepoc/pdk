@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FramePoller, Gesture, InputQueue, centreSwipe, mapKeyboardKey, mapPoint, type FrameResult } from '@/api/remote';
 

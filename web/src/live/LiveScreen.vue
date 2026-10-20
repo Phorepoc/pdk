@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="column fit no-wrap" data-test="live">
     <div v-if="!supported" class="text-grey q-pa-md">

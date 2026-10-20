@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """ecom_rsc -- compile an ECOM registration .rss (RESOURCE REGISTRY_INFO) to .rsc.
 
 We have no rcomp; ECOM registration files are one fixed struct family

@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """zdata_gen -- ROM data files straight from the packages' bld.inf PRJ_EXPORTS.
 
 A bld.inf export whose destination is on the Z: drive (`z:/private/...`, or the equivalent

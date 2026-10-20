@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_estart_x32 -- ESTART (e32strt.exe, the base startup process) as an x32 E32Image.
 
 The file server's startup ends in `RProcess::Create(Z:\\Sys\\Bin\\ESTART.EXE)`. This is the real

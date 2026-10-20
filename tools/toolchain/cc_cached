@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # cc_cached -- a compile cache in front of any compiler invocation that has `-o <obj>`.
 #   tools/toolchain/cc_cached <compiler> <args...> -o out.o        (or: . toolchain/cc_cached; cc_cached_run <compiler> ...)
 # Skips the compile when out.o exists, the command line is the one that produced it (out.o.cmd) and no file the

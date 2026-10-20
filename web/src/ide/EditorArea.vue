@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template><editor-node :node="ide.st.editor" /></template>
 
 <script setup lang="ts">

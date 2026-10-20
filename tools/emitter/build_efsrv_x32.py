@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_efsrv_x32 -- efsrv.dll (the F32 CLIENT library) as an x32 E32Image.
 
 The first x32 DLL that IMPORTS: euser.dll had nothing below it,

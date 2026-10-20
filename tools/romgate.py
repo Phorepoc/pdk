@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """romgate -- static "who will hit an unimpl stub" report for the XIP bundle.
 
 For every built ARM image (BUILD/arm/device for the core set, BUILD/arm/img for the registry components), walk its import table and flag each import

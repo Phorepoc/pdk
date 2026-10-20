@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """devlink -- shared import-link machinery for DEVICE images (RAM-loaded ARM images for a stock Symbian loader).
 
 Used by build_efile_exe.py / build_efsrv_device.py / build_hal_device.py: an

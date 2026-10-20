@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { describe, expect, it } from 'vitest';
 import { buildArgs, fieldsFor, validate } from '@/api/opform';
 import type { OpSpec } from '@/api/types';

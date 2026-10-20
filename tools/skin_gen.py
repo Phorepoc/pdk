@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """skin_gen -- compile the S60 default skin package (series60skin, PID 101f84b9).
 
 The skin server (aknskinsrv) only initialises its shared item-def chunk when it merges a skin package; with no default

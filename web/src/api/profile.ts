@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Profile op result, the in-memory sample history, sorting and CSV export (no DOM).
 
 export interface ProcInfo { id: number; name: string; cpu: number; ram: number; threads: number; chunks: number }

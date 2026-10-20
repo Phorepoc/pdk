@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_efile_exe -- emit EFILE.EXE (the F32 file server) as an E32Image from the unmodified 2010 source.
 
 The link surface is closed (489 imports, all with a from-source provider). This script compiles the EFILE TUs

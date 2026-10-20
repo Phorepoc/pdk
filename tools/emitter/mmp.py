@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """mmp -- parse a Symbian .mmp project file the way the real build does.
 
 The .mmp is run through the C preprocessor (platform_paths.hrh macros, the

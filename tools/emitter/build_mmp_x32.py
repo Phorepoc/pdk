@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_mmp_x32 -- build a registered component from its REAL 2010 .mmp for the amd64 / x32 port.
 
 The x32 sibling of build_mmp.py (the ARM builder). Same registry (components.py), same .mmp parser

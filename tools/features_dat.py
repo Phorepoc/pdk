@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """features_dat -- generate the Feature Manager ROM database Z:\\private\\10205054\\features.dat.
 
 The real ROM build derives it from the feature database; we derive the same facts from

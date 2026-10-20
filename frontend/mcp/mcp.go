@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package mcp exposes the same operations as the REST API as MCP tools (streamable HTTP at /mcp). Tools are
 // generated from the devices' op specs, plus read-only history tools. Every tool takes an optional "device"
 // (defaults to the only device when there is one).

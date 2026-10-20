@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-splitter
     v-if="show" :model-value="size" unit="px" :limits="[120, Infinity]" :horizontal="horizontal" :reverse="!dockFirst"

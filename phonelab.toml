@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # PhoneLab configuration (defaults; every key is optional). See ../README.md.
 listen = "0.0.0.0:8737"
 # data_dir = ""          # default: %LOCALAPPDATA%\phonelab (Windows), ~/.local/share/phonelab, $PHONELAB_DATA

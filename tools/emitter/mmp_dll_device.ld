@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 /* mmp_dll_device.ld -- mmp_dll.ld for a `device` DLL (the REAL phone; C++ exceptions on). The phone's unwinder
  * (drtaeabi, kernel/eka/compsupp/symaehabi) finds a RAM-loaded image's tables only through the E32 header's
  * iExceptionDescriptor -> TExceptionDescriptor {exidx base, exidx limit, RO base (+1 = EHABI v2), RO limit}, all of it

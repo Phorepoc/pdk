@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-scroll-area class="fit" data-test="boots">
     <div class="q-pa-sm">

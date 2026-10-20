@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { Notify } from 'quasar';

@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pinephone drives the PinePhone running Phorepoc over phlink: the kernel-side CDC ACM function in
 // phlink.cpp in adaptation-a64 (usbcc/) (A/B slots: a64_glue.cpp, boot.cmd). Wire protocol, host -> phone:
 //

@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package pinephone
 
 // The threads op: phlink 'D' prints the kernel's thread dump into the log (a64_glue.cpp A64ThreadDump): per thread

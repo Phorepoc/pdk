@@ -1,3 +1,6 @@
+/* Copyright The Phorepoc Authors
+ * SPDX-License-Identifier: Apache-2.0 */
+
 // The one place the IDE look is defined (Darcula / JetBrains New UI). ide.scss consumes these; runtime
 // theming goes through the CSS custom properties emitted there.
 $ide-bg: #1e1f22;          // editor / page

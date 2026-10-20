@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="column" :style="{ height }">
     <div class="row items-center q-gutter-x-sm q-mb-xs no-wrap">

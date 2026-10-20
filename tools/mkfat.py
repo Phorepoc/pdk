@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """mkfat -- build a FAT16 "superfloppy" image (no MBR) pre-populated with files.
 
 The Syborg non-volatile memory device backs drive C: with one raw image

@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="row items-center no-wrap q-pl-sm" style="flex: none">
     <q-icon name="terminal" size="16px" />

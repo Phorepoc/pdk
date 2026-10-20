@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Wire types of the PhoneLab API (server/internal/{api,core,store,device}).
 export type ParamType = 'string' | 'uint32' | 'int' | 'bool' | 'blob' | 'file';
 

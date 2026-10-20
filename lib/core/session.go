@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package core runs one Session per device: it alone owns the port, reconnects after every reset, splits the
 // stream into lines, records everything, and runs ops one at a time.
 package core

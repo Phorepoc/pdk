@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // WebSocket stream with reconnect + exponential backoff. Dispatches parsed JSON messages by callback.
 import { getToken } from './client';
 import type { StreamMsg } from './types';

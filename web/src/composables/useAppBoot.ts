@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { onBeforeUnmount, onMounted, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { api, onUnauthorized } from '@/api/client';

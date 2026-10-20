@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-card flat bordered class="device-card">
     <q-card-section class="row items-center no-wrap q-pb-none">

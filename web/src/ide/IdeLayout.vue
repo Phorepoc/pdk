@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="ide" data-test="ide">
     <div class="ide-twhead" style="height: 32px; padding-left: 10px">

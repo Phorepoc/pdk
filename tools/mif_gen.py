@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """mif_gen -- build S60 icon files (.mif) with the REAL mifconv.
 
 What the `START EXTENSION s60/mifconv` build step does (the same bld.inf blocks

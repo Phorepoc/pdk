@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """euser_def — parse a Symbian EABI .def export map (ordinal -> mangled symbol).
 
 The frozen export ordinals of a Symbian DLL live in its `.def` file; for a GCC

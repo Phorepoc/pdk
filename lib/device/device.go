@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package device is the multi-phone seam. A Driver knows one family of devices: the operations it supports
 // (described as data, so the REST API, the MCP server and the web UI are all generated from the same list),
 // how to run them over a Link, and how to turn its log lines into structured events. Adding a phone = adding

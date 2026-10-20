@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """compare_images -- byte-compare images built by the pdk tools with images built by another build of the same keys.
 
     compare_images.py [--ref ROOT] [--build DIR] [--table tests/compare_*.tsv ...]

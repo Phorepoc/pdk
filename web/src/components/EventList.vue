@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-list dense separator class="mono" style="font-size: 12px">
     <q-item v-if="!events.length"><q-item-section class="text-grey">no events</q-item-section></q-item>

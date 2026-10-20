@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import { getToken, loadStoredToken, setToken } from '@/api/client';

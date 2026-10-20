@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { onBeforeUnmount, ref } from 'vue';
 
 /** A ref of Date.now() ticking once a second, for "up for ..." and "last byte ... ago" displays. */

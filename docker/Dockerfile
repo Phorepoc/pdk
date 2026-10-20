@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # PhoneLab for Linux hosts (build context = the repository root):
 #   docker build -f docker/Dockerfile -t phonelab .
 # The web UI is built in the first stage and embedded into the static Go binary.

@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package pinephone
 
 // The hotspots op: phlink 'H' 1 starts the kernel's PC sampler on every busy core (a64_glue.cpp A64HotStart, every

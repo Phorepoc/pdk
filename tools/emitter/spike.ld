@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 ENTRY(spike_value)
 SECTIONS {
   . = 0x8000;

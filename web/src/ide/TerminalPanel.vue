@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="column fit no-wrap" data-test="terminal">
     <!-- no tabs to show (phetty unreachable): the merged header alone -->

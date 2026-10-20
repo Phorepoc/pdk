@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Typed REST client. All URLs are relative so the SPA works from any host.
 import type {
   Blob, Boot, FsEntry, DeviceEvent, DeviceInfo, EventQuery, HealthReport, Line, LineQuery, OpRecord,

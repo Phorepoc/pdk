@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="column fit no-wrap" data-test="files" @dragover.prevent @drop.prevent="onDrop">
     <div class="row items-center no-wrap q-px-xs q-gutter-x-xs" style="border-bottom: 1px solid var(--ide-border)">

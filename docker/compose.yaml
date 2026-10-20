@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Linux: docker compose -f docker/compose.yaml up -d   (from the repository root)
 # The phone re-enumerates on every reboot, so instead of passing one /dev/ttyACMn (which goes stale) the
 # container gets the whole USB-serial major (166 = ttyACM) through a cgroup rule plus a live /dev bind:

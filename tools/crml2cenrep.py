@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """crml2cenrep -- generate Central Repository initialisation files from S60 crml/confml.
 
 S60 components describe their repositories as XML: `<x>_<UID>.crml` (keys, types, access

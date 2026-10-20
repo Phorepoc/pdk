@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 export const BAD_LINE = /Fault|panic|FAILED/i;
 
 export function fmtDur(sec: number): string {

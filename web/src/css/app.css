@@ -1,3 +1,6 @@
+/* Copyright The Phorepoc Authors
+ * SPDX-License-Identifier: Apache-2.0 */
+
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .logbox { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.35; }
 .logline { white-space: pre-wrap; word-break: break-all; padding: 0 6px; }

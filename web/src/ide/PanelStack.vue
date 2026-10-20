@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="ide-twbody">
     <div v-for="p in rendered" v-show="p.id === active" :key="p.id" class="absolute-full">

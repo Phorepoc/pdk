@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { defineStore } from 'pinia';
 import { computed, reactive, ref, watch } from 'vue';
 import { DOCKS, PANELS, isDynamic, type DockId } from './panels';

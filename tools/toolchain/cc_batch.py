@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 r"""cc_batch.py -- a compile batch for ARM TUs: many TUs, one process, only the stale ones compiled.
 
     python3 cc_batch.py <jobfile> [-j N]

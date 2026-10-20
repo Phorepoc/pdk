@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-list dense data-test="views">
     <q-item v-for="p in views" :key="p.id" clickable :active="ide.shown.has(p.id)" @click="ide.openTab(p.id)">

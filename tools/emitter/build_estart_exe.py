@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_estart_exe -- emit the REAL ESTART.EXE as an E32Image.
 
 Compiles the genuine 2010 estart, unmodified:

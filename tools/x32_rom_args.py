@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """x32_rom_args -- rombuild arguments for every built registry component.
 
     python3 tools/x32_rom_args.py > args.txt      (one argument per line, for rombuild @args.txt)

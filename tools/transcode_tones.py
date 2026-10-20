@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """transcode_tones -- the release's AAC alarm tones as WAV, made on the BUILD HOST.
 
 The 2010 organizer ships two AAC tones (alarmui/DataSrc: clock.aac = Clock's default alarm, alarm.aac = Calendar's)

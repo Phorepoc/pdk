@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """mif_all -- generate the icon files (.mif) of EVERY registered component whose bld.inf declares them (mifconv), so the
 ROM never ships a component without its icons (without wsficons.mif the WLAN app died, without
 gsaccplugin/gssenplugin.mif Control Panel > Device crashed in CArrayPtr<CGulIcon>::ResetAndDestroy).

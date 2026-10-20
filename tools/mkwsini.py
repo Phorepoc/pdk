@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """mkwsini -- write a minimal WSERV wsini.ini (UTF-16LE + BOM) that starts <app> (- = nothing).
 
     python3 tools/mkwsini.py <out.ini> <app> [extra wsini line ...]

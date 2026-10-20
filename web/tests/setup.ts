@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { config } from '@vue/test-utils';
 import * as Q from 'quasar';
 

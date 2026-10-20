@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package pinephone
 
 // The delta push (2026-10-09, user idea): re-send only the 64 KB blocks of the image that differ from what slot B

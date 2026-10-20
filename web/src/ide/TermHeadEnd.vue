@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="row items-center no-wrap" style="flex: none">
     <q-btn v-if="ttys" flat dense round size="sm" icon="menu" aria-label="ttys on the phone">

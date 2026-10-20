@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-splitter v-model="split" class="fit" :limits="[30, 90]" data-test="livelog">
     <template #before>

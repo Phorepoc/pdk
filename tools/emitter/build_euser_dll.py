@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_euser_dll -- shared helpers for building the user-side OS images (euser, efsrv, hal, efile ...) for ARM
 from the unmodified 2010 source with the modern toolchain: compile (tools/toolchain/symcc), link (--gc-sections from
 the .def exports), unimplemented-export stubs, the "fill-in" collision rule. build_euser_device.py is the euser image

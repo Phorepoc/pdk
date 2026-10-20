@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import type { InjectionKey, Ref } from 'vue';
 import type { Tree, Zone } from './splitTree';
 

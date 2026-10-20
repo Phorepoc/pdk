@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { ref } from 'vue';
 
 // Hotspots panel state, kept outside the component: the panel lives in a side dialog that unmounts when closed,

@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-scroll-area class="fit">
     <div class="row q-pa-md q-gutter-lg items-start">

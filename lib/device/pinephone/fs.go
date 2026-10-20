@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package pinephone
 
 // File access on the phone (the IDE view's Project panel): phlink's 'F' command. The PC sends {len LE32, op LE32}

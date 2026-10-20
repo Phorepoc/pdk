@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """make_sis -- package a registered component as an installable, self-signed SIS.
 
     python3 tools/make_sis.py <key> [<key> ...] [--uid 0x...] [--name "Caption"] [--out x.sis] [--unsigned] [--arm]

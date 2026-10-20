@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """cdl_headers -- generate the S60 CDL client headers that no bld.inf exports.
 
 S60's layout, skin and icon customisation interfaces are declared in .cdl files. The original build ran CdlCompiler

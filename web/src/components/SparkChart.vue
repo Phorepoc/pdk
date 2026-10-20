@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <svg :viewBox="`0 0 ${w} ${h}`" :width="width" :height="height" preserveAspectRatio="none" class="spark" role="img" :aria-label="label">
     <g v-for="(s, i) in series" :key="i">

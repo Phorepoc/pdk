@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """iby_data_args -- stage the plain data files the source's ROM recipe (.iby) lists for every component we ship.
 
 The release's buildrom took each component's .iby: its binaries AND its data (DBMS policies .spd, backup registrations,

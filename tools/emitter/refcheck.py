@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """refcheck -- sanity check of an emitted E32Image: the signature, the UID checksum, the header CRC, and that every
 section offset the header names lies inside the file. A guard against a writer bug, not a substitute for the loader."""
 

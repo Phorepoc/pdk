@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """svg2nvg -- encode an SVG-Tiny icon as NVG-CS, the vector format AknIcon renders (nvgdecoder).
 
 What svgtbinencode does, written from its outputs and the release's decoder (svgt/svgtopt/nvgdecoder/src/nvg.cpp):

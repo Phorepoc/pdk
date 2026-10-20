@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_hal_device -- the from-source HAL.DLL (user-side HAL client).
 
 The third device DLL after euser/efsrv. EFILE imports `HAL::Get` (ord 1);

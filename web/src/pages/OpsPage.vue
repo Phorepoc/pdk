@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-page class="q-pa-sm">
     <div v-if="!ops.length" class="text-grey">No device / ops.</div>

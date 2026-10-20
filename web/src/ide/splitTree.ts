@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // A split tree of tab groups, independent of any store: the Terminal panel's own splits (the editor area has the same
 // shape in layout.ts). Tabs are string keys; the functions mutate the tree in place and return the (possibly new) root.
 

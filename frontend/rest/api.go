@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package api is the REST + WebSocket surface (see api/README in docs). Every device action goes through
 // POST /api/devices/{id}/ops/{op}, so the op list (GET .../ops) is the whole contract; the web UI and the MCP
 // server are generated from it.

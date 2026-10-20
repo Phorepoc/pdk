@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package pinephone
 
 // Protocol v2 ops (phlink.cpp "Protocol v2"): version, screenshot (binary frames), key and touch injection.

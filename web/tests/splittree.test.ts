@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { describe, expect, it } from 'vitest';
 import { addTab, dropTab, groupsOf, newTree, removeTab } from '@/ide/splitTree';
 

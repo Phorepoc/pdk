@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package mock is a fake PinePhone speaking phlink (phlink.cpp in adaptation-a64 (usbcc/)), for unit tests and
 // for running the service + web UI without hardware. It replays a recorded boot transcript (testdata/) on every
 // "boot", answers U/R/B/P/W the way the phone does, and drops off the bus on reboot like the real CDC device.

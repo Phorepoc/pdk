@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <!-- pages built on q-page need a q-layout: give each its own container layout -->
   <q-layout v-if="def.page" container view="hhh lpr fff" class="ide-host">

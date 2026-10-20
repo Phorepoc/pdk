@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_euser_x32 -- euser.dll as a real x32 E32Image (amd64 CPU / x32 ABI).
 
 euser is built as a separate module the way the platform actually ships it -- an E32Image DLL

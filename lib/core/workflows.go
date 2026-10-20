@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package core
 
 // Workflows: the multi-step things a developer (or an agent) otherwise does by hand with several calls -- wait for the

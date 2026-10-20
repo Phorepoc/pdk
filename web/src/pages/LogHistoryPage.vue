@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-page class="page-pad">
     <div class="row q-col-gutter-sm items-center q-mb-sm">

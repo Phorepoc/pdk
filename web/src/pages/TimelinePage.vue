@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-page class="page-pad">
     <q-tabs v-model="tab" dense align="left" no-caps class="q-mb-sm">

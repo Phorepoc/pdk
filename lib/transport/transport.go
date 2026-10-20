@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package transport opens the byte pipe to a device. A Device driver never opens ports itself: the core
 // Session owns exactly one Port per device, so nothing else can grab it (the reason PhoneLab exists).
 package transport

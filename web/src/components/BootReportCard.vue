@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="boot-report" data-test="boot-report">
     <div class="row items-center q-gutter-sm">

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 #
 # Emits the ROM container (TRomHeader, TRomImageHeader + payload per XIP file, the directory tree)
 # and prelinks our emitted E32Images into it (imports resolved by ordinal, relocations applied

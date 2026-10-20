@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <q-dialog v-model="settings.dialog">
     <q-card style="min-width: 320px; max-width: 95vw">

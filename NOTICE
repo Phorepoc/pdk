@@ -1,0 +1,11 @@
+Phorepoc PDK
+Copyright The Phorepoc Authors (see AUTHORS)
+
+Phorepoc was founded by Kyriakos.
+
+This product includes software developed by The Phorepoc Authors, licensed under the Apache License 2.0 (LICENSE).
+
+Two files are derived from the Symbian source released by Nokia Corporation and/or its subsidiary(-ies) and the
+Symbian Foundation, and stay under the Eclipse Public License 1.0 (LICENSES/EPL-1.0.txt):
+  tools/toolchain/genexec.pl
+  tools/emitter/loadercheck.py

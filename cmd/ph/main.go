@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // ph -- the Phorepoc platform development kit's command line.
 //
 // The commands are defined in commands.go (one definition each: options, help text, examples); lib/cli turns them into

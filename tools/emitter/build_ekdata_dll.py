@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_ekdata_dll -- the from-source EKDATA.DLL (keyboard map data).
 
 EWSRV's CKeyTranslator loads EKDATA.DLL at runtime (ky_tran.cpp: default key

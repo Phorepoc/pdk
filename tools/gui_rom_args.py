@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """gui_rom_args -- rombuild arguments for every built registry component.
 
 Prints one argument per line (`--xip` / spec / `--data` / spec ...) for the ARM GUI ROM: every

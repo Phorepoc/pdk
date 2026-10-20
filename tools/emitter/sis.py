@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Minimal SISx package writer - emit an installable Symbian SIS from scratch.
 
 A signed/unsigned SIS registers an executable (and its data files) with the software-install subsystem so

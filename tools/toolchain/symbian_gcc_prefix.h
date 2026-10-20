@@ -1,3 +1,6 @@
+/* Copyright The Phorepoc Authors
+ * SPDX-License-Identifier: Apache-2.0 */
+
 /*
  * symbian_gcc_prefix.h — force-include prefix that lets a MODERN GNU ARM
  * compiler (arm-none-eabi-g++ 14.x) consume unmodified Symbian 2010 source.

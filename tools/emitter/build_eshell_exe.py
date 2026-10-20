@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """build_eshell_exe -- the REAL ESHELL.EXE (text shell) as an E32Image.
 
 EWSRV spawns ESHELL ("/p" command line) right before starting its scheduler and

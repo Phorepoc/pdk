@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Pure logic of the Live page: coordinate mapping, the frame poll scheduler, the touch gesture
 // recogniser and the serialised input queue. No DOM here so it is unit-testable.
 

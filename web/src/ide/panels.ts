@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import { defineAsyncComponent, type Component } from 'vue';
 
 export type DockId = 'left' | 'bottom' | 'right' | 'editor';

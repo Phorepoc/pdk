@@ -1,3 +1,6 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """paths -- where everything lives, for every tool in tools/emitter (and tools/*.py).
 
     PDK       the pdk checkout (this repository)

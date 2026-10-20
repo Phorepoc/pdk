@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="column fit no-wrap" :class="{ focused: ctx.tree.focus === group.id && many }" @pointerdown.capture="ctx.tree.focus = group.id">
     <div class="ide-tabs" :class="{ 'drop-strip': stripOver }" @dragover="onStripOver" @dragleave="stripOver = false" @drop="onStripDrop">

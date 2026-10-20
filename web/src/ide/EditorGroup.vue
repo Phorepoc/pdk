@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="ide-tw" :class="{ focused: ide.st.focus === group.id && ide.groupCount > 1 }" @pointerdown.capture="ide.st.focus = group.id">
     <div class="ide-tabs" :class="{ 'drop-strip': stripOver }" @dragover="onStripOver" @dragleave="stripOver = false" @drop="onStripDrop">

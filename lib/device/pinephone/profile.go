@@ -1,3 +1,6 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package pinephone
 
 // The profile op: phlink 'Q' streams a snapshot of every thread's CPU time, every process and every chunk

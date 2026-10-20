@@ -1,3 +1,6 @@
+<!-- Copyright The Phorepoc Authors
+     SPDX-License-Identifier: Apache-2.0 -->
+
 <template>
   <div class="phone-keypad" data-test="keypad">
     <!-- softkeys, call / end, menu / clear around the navigation ring -->
