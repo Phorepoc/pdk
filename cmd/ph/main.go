@@ -30,6 +30,7 @@ func newApp() *cli.App {
 			{Name: "component", Title: "Components", Summary: "The registry's components: list them, build them."},
 			{Name: "image", Title: "Images", Summary: "What goes onto a device: the ROM, its data, installable packages."},
 			{Name: "board", Title: "Boards", Summary: "The devices ph builds for, made of core plus adaptation repositories."},
+			{Name: "package", Title: "Packages", Summary: "Installable items from the Phorepoc index and others: list, inspect, download."},
 			{Name: "device", Title: "Device", Summary: "A device on the PhoneLab service: push images, read logs, take screenshots."},
 			{Name: "", Title: "Other", Summary: "Everything else."},
 		},

@@ -553,6 +553,7 @@ func commands(app *cli.App) []*cli.Command {
 			},
 		},
 	}
+	cmds = append(cmds, packageCommands()...)
 	cmds = append(cmds, deviceCommands()...)
 	return append(cmds, otherCommands(app)...)
 }

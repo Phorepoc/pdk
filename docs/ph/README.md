@@ -51,6 +51,16 @@ The devices ph builds for, made of core plus adaptation repositories.
 | [`ph board list`](ph-board-list.md) | List the boards ph builds for |
 | [`ph board info`](ph-board-info.md) | Show a board's adaptation repositories |
 
+## Packages
+
+Installable items from the Phorepoc index and others: list, inspect, download.
+
+| command | what it does |
+|---|---|
+| [`ph package list`](ph-package-list.md) | List the installable items of the indexes |
+| [`ph package info`](ph-package-info.md) | Show an item: description, compatibility, approved releases |
+| [`ph package fetch`](ph-package-fetch.md) | Download approved releases into the package cache |
+
 ## Device
 
 A device on the PhoneLab service: push images, read logs, take screenshots.
