@@ -199,15 +199,15 @@ func packageCommands() []*cli.Command {
 	}
 }
 
-// installCommand: fetch, upload through PhoneLab, run pheinstall in a device shell, wait for its log line.
+// installCommand: fetch, upload through PhoneLab, run sisinst in a device shell, wait for its log line.
 func installCommand() *cli.Command {
 	return &cli.Command{
 		Group: "package", Name: "install", Operands: "<id>[@<tag>]",
 		Summary: "Install an item on a device through PhoneLab",
 		Description: "Fetches the release as \"package fetch\" does (SHA-256 checked), uploads it to the device's " +
-			"C:\\Data\\Installs, and runs pheinstall in a device shell (the phetty daemon), which installs it " +
-			"silently through the software installer. Waits for pheinstall's log line and reports the result.\n\n" +
-			"Needs a device whose image carries pheinstall, phfs (files) and phettyd (shells).",
+			"C:\\Data\\Installs, and runs sisinst in a device shell (the phetty daemon), which installs it " +
+			"silently through the software installer. Waits for sisinst's log line and reports the result.\n\n" +
+			"Needs a device whose image carries sisinst, phfs (files) and phettyd (shells).",
 		Flags: with(func(fs *flag.FlagSet) {
 			fs.String("drive", "c", "install to this `drive`")
 			fs.String("o", "", "the cache `directory` (as for fetch)")
@@ -272,9 +272,9 @@ func installCommand() *cli.Command {
 				}
 			}
 			fmt.Printf("uploaded %s (%d bytes)\n", remote, len(data))
-			// pheinstall's log lines seen so far: the answer is a newer one naming this file
+			// sisinst's log lines seen so far: the answer is a newer one naming this file
 			last := int64(0)
-			if lines, err := c.Lines(dev, "[pheinstall]", 0, 200); err == nil {
+			if lines, err := c.Lines(dev, "[sisinst]", 0, 200); err == nil {
 				for _, l := range lines {
 					if l.ID > last {
 						last = l.ID
@@ -295,28 +295,29 @@ func installCommand() *cli.Command {
 				return fmt.Errorf("tty_new: %w", err)
 			}
 			defer c.Op(dev, "tty_kill", map[string]any{"id": tty.ID})
-			cmd := fmt.Sprintf("pheinstall C:\\Data\\Installs\\%s %s\r", name, str(fs, "drive"))
+			cmd := fmt.Sprintf("sisinst C:\\Data\\Installs\\%s %s\r", name, str(fs, "drive"))
 			if _, err := c.Op(dev, "tty_write", map[string]any{"id": tty.ID, "text": cmd}); err != nil {
 				return err
 			}
 			deadline := time.Now().Add(time.Duration(intFlag(fs, "wait")) * time.Second)
 			for time.Now().Before(deadline) {
 				time.Sleep(2 * time.Second)
-				lines, err := c.Lines(dev, "[pheinstall]", 0, 50)
+				lines, err := c.Lines(dev, "[sisinst]", 0, 50)
 				if err != nil {
 					continue
 				}
 				for _, l := range lines {
-					if l.ID > last && strings.Contains(strings.ToLower(l.Text), strings.ToLower(name)) {
+					if l.ID > last && strings.Contains(strings.ToLower(l.Text), strings.ToLower(name)) &&
+						(strings.Contains(l.Text, "INSTALLED") || strings.Contains(l.Text, "FAILED")) {
 						fmt.Println(strings.TrimSpace(l.Text))
-						if strings.Contains(l.Text, ": installed") {
+						if strings.Contains(l.Text, "INSTALLED") {
 							return nil
 						}
 						return fmt.Errorf("%s %s: not installed", it.ID, rel.Tag)
 					}
 				}
 			}
-			return fmt.Errorf("no answer from pheinstall within %ds (is it in the image?)", intFlag(fs, "wait"))
+			return fmt.Errorf("no answer from sisinst within %ds (is it in the image?)", intFlag(fs, "wait"))
 		},
 	}
 }

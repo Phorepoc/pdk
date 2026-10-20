@@ -10,9 +10,9 @@ ph package install [-no-default] [-chunk <bytes>] [-d <device>] [-drive <drive>]
 
 ## Description
 
-Fetches the release as "package fetch" does (SHA-256 checked), uploads it to the device's C:\Data\Installs, and runs pheinstall in a device shell (the phetty daemon), which installs it silently through the software installer. Waits for pheinstall's log line and reports the result.
+Fetches the release as "package fetch" does (SHA-256 checked), uploads it to the device's C:\Data\Installs, and runs sisinst in a device shell (the phetty daemon), which installs it silently through the software installer. Waits for sisinst's log line and reports the result.
 
-Needs a device whose image carries pheinstall, phfs (files) and phettyd (shells).
+Needs a device whose image carries sisinst, phfs (files) and phettyd (shells).
 
 ## Options
 
