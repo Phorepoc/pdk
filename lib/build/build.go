@@ -167,6 +167,7 @@ const Commands = ` SOURCE
   fetch                   the Symbian source: pinned commits of the Phorepoc forks -> <core>/symbian (core's fetch.sh, on the host)
   export [pkg...]         the epoc32/include tree from the bld.inf exports (tools/epoc32_export.py; --all = every package)
   casefix                 case-insensitive include links for the case-sensitive file system (tools/casefix.py)
+  mbg [--all|pkg...]      the icon-id headers (.mbg) components include (tools/mbg.py; before build)
 
  BUILD
   build <key> [key...]    build components for x32 (tools/emitter/build_mmp_x32.py; keys = core's registry/components*.py)
@@ -197,7 +198,7 @@ const Commands = ` SOURCE
 // IsCommand reports whether name is a build command.
 func IsCommand(name string) bool {
 	switch name {
-	case "fetch", "export", "casefix", "build", "closure", "all", "arm", "rsc", "rom", "stale", "sis", "skin", "icons",
+	case "fetch", "export", "casefix", "mbg", "build", "closure", "all", "arm", "rsc", "rom", "stale", "sis", "skin", "icons",
 		"zdata", "tests", "shell":
 		return true
 	}
@@ -246,6 +247,8 @@ func Run(cmd string, args []string) error {
 		return py("tools/epoc32_export.py")
 	case "casefix":
 		return py("tools/casefix.py")
+	case "mbg":
+		return py("tools/mbg.py")
 	case "build":
 		return py("tools/emitter/build_mmp_x32.py")
 	case "closure":

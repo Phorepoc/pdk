@@ -14,6 +14,7 @@ icon takes TWO ids -- bitmap + mask slot -- the `_mask` enumerator only when the
 depth spec has a mask depth, e.g. `/c8,8`).
 
     python3 tools/mbg.py [package ...]      # default: the mw packages we build from (writes BUILD/epoc32/include)
+    python3 tools/mbg.py --all              # every package of both source trees
 """
 from __future__ import annotations
 
@@ -212,4 +213,8 @@ def run(pkgs: list[str]) -> None:
 
 
 if __name__ == "__main__":
-    run(sys.argv[1:] or DEFAULT_PKGS)
+    if sys.argv[1:2] == ["--all"]:
+        import epoc32_export
+        run(epoc32_export.all_packages())
+    else:
+        run(sys.argv[1:] or DEFAULT_PKGS)
