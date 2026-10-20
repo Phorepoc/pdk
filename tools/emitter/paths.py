@@ -86,6 +86,15 @@ if ADAPTATIONS:
     OS_ROOT = _osview([OS_ROOT] + [os.path.join(a, "os") for a in ADAPTATIONS if os.path.isdir(os.path.join(a, "os"))])
 
 
+def prefix_maps() -> list:
+    """-fmacro-prefix-map flags: __FILE__ (panic file names, asserts) the same whatever the checkout or mount points,
+    so builds from different machines compare byte for byte. GCC tries the LAST map first: the general ones go
+    first (BUILD before the osview inside it)."""
+    layers = [os.path.join(a, "os") for a in ADAPTATIONS] + [_dir("PHOREPOC_OS_ROOT", os.path.join(CORE, "os")), OS_ROOT]
+    maps = [(SYMBIAN, ""), (BUILD, "build/")] + [(d, "os/") for d in layers]
+    return [f"-fmacro-prefix-map={d}/={to}" for d, to in maps]
+
+
 def resolve(rel: str) -> str:
     if os.path.isabs(rel):
         return rel

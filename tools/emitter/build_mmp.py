@@ -46,7 +46,7 @@ import mmp as MMP
 from e32image import build_dll
 from elf import extract
 from euser_def import parse_def
-from paths import PDK, OS_ROOT, SYMBIAN, BUILD, resolve as rpath
+from paths import PDK, OS_ROOT, SYMBIAN, BUILD, prefix_maps, resolve as rpath
 from refcheck import check_image, format_result
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -451,7 +451,7 @@ def build(key: str, rsc_only: bool = False) -> int:
               # macros instead of per-TU dynamic-init globals (= DLL WSD, estor).
               "-D__NO_CLASS_CONSTS__",
               "-D__DLL__" if not m.is_exe else "-D__EXE__"]
-             + [f"-fmacro-prefix-map={SYMBIAN}/="]      # __FILE__ (KPanicFileName ...) independent of the mount point
+             + prefix_maps()      # __FILE__ (KPanicFileName ...) independent of the checkout and mount points
              + [f"-D{x}" for x in m.macros + comp.get("defs", [])]
              # X32_DEFS="<key>:<MACRO>[,...]" -- opt-in diagnostic defines, as build_mmp_x32.py
              + [f"-D{d.split(':', 1)[1]}" for d in os.environ.get("X32_DEFS", "").split(",")

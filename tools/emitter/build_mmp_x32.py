@@ -44,7 +44,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from paths import OS_ROOT, BUILD, resolve as pathres           # noqa: E402
+from paths import OS_ROOT, BUILD, prefix_maps, resolve as pathres           # noqa: E402
 import mmp as MMP                                   # noqa: E402
 MMP.CPP = "cpp"                                     # same -undef -nostdinc run as the ARM build
 # Some mmps `#include <vg\openvguids.hrh>` (backslash): a Linux cpp rejects that. Preprocess such a file from a
@@ -119,7 +119,7 @@ BASE_FLAGS = ["-mx32", "-ffreestanding", "-fno-pic", "-fno-stack-protector", "-n
               # server reads garbage. ~20 sites across the tree (skins, tz, alarms, ESOCK,
               # nifman, contacts...). named_vars = never reuse a temporary's slot: the RVCT behaviour, no
               # source change. (Named locals still share slots.)
-              "-fstack-reuse=named_vars"]
+              "-fstack-reuse=named_vars"] + prefix_maps()
 BASE_DEFS = ["-D__CPU_X86", "-D__GCC32__", "-D__EPOC32__", "-D__SYMBIAN32__", "-D_UNICODE",
              "-D__NO_CLASS_CONSTS__", "-DSYMBIAN_ENABLE_64_BIT_FILE_SERVER_API",
              "-D__IEEE_LITTLE_ENDIAN"]   # libc machine/ieeefp.h knows __i386__ and __arm__, not x86-64
