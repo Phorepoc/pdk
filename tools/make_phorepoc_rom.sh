@@ -212,14 +212,15 @@ if [ -n "${BOOT:-}" ]; then
   [ "${MIF_ALL:-1}" = 0 ] || python3 "$TOOLS/mif_all.py" | grep -v "^  " || true
   python3 "$TOOLS/x32_rom_args.py" > "$ARGS"
   CGEN="$BUILD/cenrep-gen"
-  [ -d "$CGEN" ] || python3 "$TOOLS/crml2cenrep.py" "$CGEN" >/dev/null
+  # the base set once (.base = complete; a folder holding only the media apps used to skip it: no 102858f2)
+  [ -f "$CGEN/.base" ] || { python3 "$TOOLS/crml2cenrep.py" "$CGEN" >/dev/null && touch "$CGEN/.base"; }
   # the media apps (Voice Recorder, FM Radio, Video Player, Photos): their crml/confml repositories (RCL_3 app packages are not in the default set)
   python3 "$TOOLS/crml2cenrep.py" "$CGEN" ../symbian-rcl3/oss.FCL.sf.app.voicerec ../symbian-rcl3/oss.FCL.sf.app.radio oss.FCL.sf.app.videoplayer ../symbian-rcl3/oss.FCL.sf.app.photos >/dev/null
   declare -A CENREP=()
   for f in "$CGEN"/*.txt; do u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; done
   while IFS= read -r f; do
     case "$f" in ''|'#'*) continue ;; esac
-    u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$SYM10/$f"
+    u=${f##*/}; u=${u%.txt}; case "$f" in ../../*) p="$OS_ROOT/${f#../../}" ;; *) p="$SYM10/$f" ;; esac; CENREP[${u,,}]="$p"   # ../../ = ours, in OS_ROOT
   done < <(tr -d '\r' < "$OS_ROOT/tools/kernel/cenrep_files.txt")
   # the board's own repositories (whole files)
   if [ "${ROM_ARCH:-}" = arm ]; then for f in "$OS_ROOT"/src/phorepoc-arm/board/cenrep/*.txt; do [ -f "$f" ] && { u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; }; done; fi
@@ -347,12 +348,13 @@ elif [ "${GUI:-0}" = 1 ]; then
     # central repository initialisation files, Z:\private\10202be9\<uid>.txt (tools/crml2cenrep.py's output,
     # overridden by OS_ROOT/tools/kernel/cenrep_files.txt)
     CGEN="$BUILD/cenrep-gen"
-    [ -d "$CGEN" ] || python3 "$TOOLS/crml2cenrep.py" "$CGEN" >/dev/null
+    # the base set once (.base = complete; a folder holding only the media apps used to skip it: no 102858f2)
+    [ -f "$CGEN/.base" ] || { python3 "$TOOLS/crml2cenrep.py" "$CGEN" >/dev/null && touch "$CGEN/.base"; }
     declare -A CENREP=()
     for f in "$CGEN"/*.txt; do u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; done
     while IFS= read -r f; do
       case "$f" in ''|'#'*) continue ;; esac
-      u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$SYM10/$f"
+      u=${f##*/}; u=${u%.txt}; case "$f" in ../../*) p="$OS_ROOT/${f#../../}" ;; *) p="$SYM10/$f" ;; esac; CENREP[${u,,}]="$p"   # ../../ = ours, in OS_ROOT
     done < <(tr -d '\r' < "$OS_ROOT/tools/kernel/cenrep_files.txt")
     if [ "${ROM_ARCH:-}" = arm ]; then for f in "$OS_ROOT"/src/phorepoc-arm/board/cenrep/*.txt; do [ -f "$f" ] && { u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; }; done; fi
     for f in ${CENREP_EXTRA:-}; do u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; done

@@ -34,16 +34,18 @@ DEFAULT_PKGS = [
     "../symbian-rcl3/oss.FCL.sf.mw.classicui", "../symbian-rcl3/oss.FCL.sf.mw.appsupport", "../symbian-rcl3/oss.FCL.sf.mw.inputmethods",
     "../symbian-rcl3/oss.FCL.sf.mw.uiresources",
 ]
+HOST_ONLY_PKGS = {"oss.FCL.sf.adapt.SimulatorGraphics"}
 SKIP_DIRS = {"test", "tsrc", "tests", "documentation", "examples", "internal"}
 SECTION = re.compile(r"^\s*PRJ_(\w+)", re.I)
 
 
 def all_packages():
     """the default set first, then every other package of both trees (symbian-2010, then symbian-rcl3: a later
-    package replaces a same-named header of an earlier one, so the RCL_3 line wins as it does in the build)"""
+    package replaces a same-named header of an earlier one, so the RCL_3 line wins as it does in the build).
+    Not the PC emulator's host graphics (its EGL/eglplatform.h, found through casefix, broke sfopenvg's EGLint)."""
     base = os.path.dirname(BASE)
     rest = [os.path.join("..", t, d) for t in ("symbian-2010", "symbian-rcl3")
-            for d in sorted(os.listdir(os.path.join(base, t)))]
+            for d in sorted(os.listdir(os.path.join(base, t))) if d not in HOST_ONLY_PKGS]
     have = {os.path.normpath(os.path.join(BASE, p)) for p in DEFAULT_PKGS}
     return DEFAULT_PKGS + [p for p in rest if os.path.normpath(os.path.join(BASE, p)) not in have]
 

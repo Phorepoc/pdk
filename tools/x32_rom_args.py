@@ -270,7 +270,9 @@ def main() -> None:
                 out += ssm_cmdlists(key)
             continue
         # extra Z: copies of staged files (`<rom path>=<host path>`): a resource two readers open at two paths
-        out += data_args(comp.get("rom_data", []))
+        # (a test component's data only with the test itself: phevidtest's videos were in every ROM)
+        if not comp.get("test") or os.environ.get("SSM_TEST") == key or key in ROM_TAIL:
+            out += data_args(comp.get("rom_data", []))
         if comp.get("rsc_only"):
             # no image, but its resources are real ROM content (errorres.rsc: without it any CTextResolver
             # error note left KErrNotFound)

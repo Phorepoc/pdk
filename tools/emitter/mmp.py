@@ -17,7 +17,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 
-from paths import SYMBIAN, BUILD, EPOC32_ROOT
+from paths import SYMBIAN, BUILD, EPOC32_ROOT, OS_ROOT
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.join(SYMBIAN, "symbian-2010")
@@ -205,7 +205,12 @@ def map_sf_path(path: str, mdir: str) -> str:
     """Nokia's tree is sf/<layer>/<package>/..., ours is <tree>/oss.FCL.sf.<layer>.<package>/...: a
     package reaching into a sibling by relative path (IMCM: ../../../../../../mw/messagingmw/...) lands
     outside the source tree. Map such a path onto the sibling checkout -- the includer's own tree first
-    (an RCL_3 package pairs with its RCL_3 siblings), then the others."""
+    (an RCL_3 package pairs with its RCL_3 siblings), then the others.
+    Our own mmps in OS_ROOT reach the source as <repo>/baseline/<tree>/... (the layout they were written in):
+    that maps onto SYMBIAN, which a checkout of core keeps elsewhere."""
+    rel = os.path.relpath(path, os.path.join(OS_ROOT, "baseline")).replace("\\", "/")
+    if not rel.startswith("../"):
+        path = os.path.normpath(os.path.join(SYMBIAN, rel))
     if nocase(path):
         return path
     m = _SF_REL.search(path)
@@ -385,6 +390,9 @@ def _preprocess(path: str, extra_defs=(), markers: bool = False) -> str:
             mapped = _package_unique(full, mdir) or full
         return m.group(1) + mapped.replace("\\", "/") + m.group(3) if mapped != full else m.group(0)
     fixed = _REL_INCLUDE.sub(fix, text)
+    # `#include <vg\openvguids.hrh>` (sfopenvg): a Windows separator in a system include
+    fixed = re.sub(r'^(\s*#\s*include\s*<)([^>]*\\[^>]*)(>)', lambda m: m.group(1) + m.group(2).replace("\\", "/") + m.group(3),
+                   fixed, flags=re.M)
     src, stdin = (path, None) if fixed == text else ("-", fixed)
     r = subprocess.run([CPP, "-undef", "-nostdinc", "-x", "c", "-w", *([] if markers else ["-P"]), *PLATFORM_DEFS,
                         *extra_defs, "-I", CEDAR, "-I", os.path.join(EPOC32, "include"),
