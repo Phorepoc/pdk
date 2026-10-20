@@ -327,6 +327,23 @@ func commands(app *cli.App) []*cli.Command {
 				return python(fs, "tools/stale_stubs.py")
 			},
 		},
+		{
+			Group: "component", Name: "check",
+			Summary: "Check that the registry's paths exist",
+			Description: "Every .mmp, added source file and include path or forced include each registered component " +
+				"names (core's registry and the adaptations') must exist in the merged OS tree or the Symbian " +
+				"source. Lists the ones that do not; exits non-zero when there are any.",
+			Flags: boardFlag,
+			Examples: []cli.Example{
+				{What: "Check the PC board's registry:", Cmd: "component check -b pc"},
+			},
+			Run: func(fs *flag.FlagSet, args []string) error {
+				if err := noArgs(args); err != nil {
+					return err
+				}
+				return python(fs, "tools/registry_check.py")
+			},
+		},
 		// ----------------------------------------------------------------- image
 		{
 			Group: "image", Name: "rom",

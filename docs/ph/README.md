@@ -27,6 +27,7 @@ The registry's components: list them, build them.
 | [`ph component build`](ph-component-build.md) | Build components into images |
 | [`ph component resources`](ph-component-resources.md) | Compile components' resources (.rsc) and their headers (.rsg) |
 | [`ph component stale`](ph-component-stale.md) | List images linked before a provider of theirs existed |
+| [`ph component check`](ph-component-check.md) | Check that the registry's paths exist |
 
 ## Images
 
