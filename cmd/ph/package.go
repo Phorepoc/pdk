@@ -5,12 +5,16 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/Phorepoc/pdk/lib/cli"
 	"github.com/Phorepoc/pdk/lib/pkgindex"
@@ -191,7 +195,131 @@ func packageCommands() []*cli.Command {
 				return nil
 			},
 		},
+		installCommand(),
 	}
+}
+
+// installCommand: fetch, upload through PhoneLab, run pheinstall in a device shell, wait for its log line.
+func installCommand() *cli.Command {
+	return &cli.Command{
+		Group: "package", Name: "install", Operands: "<id>[@<tag>]",
+		Summary: "Install an item on a device through PhoneLab",
+		Description: "Fetches the release as \"package fetch\" does (SHA-256 checked), uploads it to the device's " +
+			"C:\\Data\\Installs, and runs pheinstall in a device shell (the phetty daemon), which installs it " +
+			"silently through the software installer. Waits for pheinstall's log line and reports the result.\n\n" +
+			"Needs a device whose image carries pheinstall, phfs (files) and phettyd (shells).",
+		Flags: with(func(fs *flag.FlagSet) {
+			fs.String("drive", "c", "install to this `drive`")
+			fs.String("o", "", "the cache `directory` (as for fetch)")
+			fs.Int("wait", 180, "give up after this many `seconds`")
+			indexFlags(fs)
+		}),
+		Examples: []cli.Example{
+			{What: "Install the newest release:", Cmd: "package install hello"},
+			{What: "A release, to the memory card:", Cmd: "package install -drive e hello@v1.0"},
+		},
+		Run: func(fs *flag.FlagSet, args []string) error {
+			if len(args) != 1 {
+				return cli.Usagef("which item?")
+			}
+			pc, items, err := loadItems(fs)
+			if err != nil {
+				return err
+			}
+			id, tag, _ := strings.Cut(args[0], "@")
+			it, err := pkgindex.Find(items, id)
+			if err != nil {
+				return err
+			}
+			rel, err := it.Release(tag)
+			if err != nil {
+				return err
+			}
+			dir := str(fs, "o")
+			if dir == "" {
+				dir = pkgindex.CacheDir()
+			}
+			local, err := pc.Fetch(context.Background(), rel, dir)
+			if err != nil {
+				return err
+			}
+			c, dev, err := device(fs)
+			if err != nil {
+				return err
+			}
+			data, err := os.ReadFile(local)
+			if err != nil {
+				return err
+			}
+			name := filepath.Base(local)
+			remote := "/C:/Data/Installs/" + name
+			const chunk = 3072 // what one fs_write takes
+			for off := 0; off == 0 || off < len(data); off += chunk {
+				end := off + chunk
+				if end > len(data) {
+					end = len(data)
+				}
+				if _, err := c.Op(dev, "fs_write", map[string]any{"path": remote, "offset": off,
+					"data_b64": base64.StdEncoding.EncodeToString(data[off:end]), "truncate": off == 0}); err != nil {
+					return fmt.Errorf("upload %s: %w", remote, err)
+				}
+				if end == len(data) {
+					break
+				}
+			}
+			fmt.Printf("uploaded %s (%d bytes)\n", remote, len(data))
+			// pheinstall's log lines seen so far: the answer is a newer one naming this file
+			last := int64(0)
+			if lines, err := c.Lines(dev, "[pheinstall]", 0, 200); err == nil {
+				for _, l := range lines {
+					if l.ID > last {
+						last = l.ID
+					}
+				}
+			}
+			if _, err := c.Op(dev, "tty_list", map[string]any{"start": true}); err != nil {
+				return fmt.Errorf("device shell: %w", err)
+			}
+			raw, err := c.Op(dev, "tty_new", nil)
+			if err != nil {
+				return fmt.Errorf("device shell: %w", err)
+			}
+			var tty struct {
+				ID int `json:"id"`
+			}
+			if err := json.Unmarshal(raw, &tty); err != nil {
+				return fmt.Errorf("tty_new: %w", err)
+			}
+			defer c.Op(dev, "tty_kill", map[string]any{"id": tty.ID})
+			cmd := fmt.Sprintf("pheinstall C:\\Data\\Installs\\%s %s\r", name, str(fs, "drive"))
+			if _, err := c.Op(dev, "tty_write", map[string]any{"id": tty.ID, "text": cmd}); err != nil {
+				return err
+			}
+			deadline := time.Now().Add(time.Duration(intFlag(fs, "wait")) * time.Second)
+			for time.Now().Before(deadline) {
+				time.Sleep(2 * time.Second)
+				lines, err := c.Lines(dev, "[pheinstall]", 0, 50)
+				if err != nil {
+					continue
+				}
+				for _, l := range lines {
+					if l.ID > last && strings.Contains(strings.ToLower(l.Text), strings.ToLower(name)) {
+						fmt.Println(strings.TrimSpace(l.Text))
+						if strings.Contains(l.Text, ": installed") {
+							return nil
+						}
+						return fmt.Errorf("%s %s: not installed", it.ID, rel.Tag)
+					}
+				}
+			}
+			return fmt.Errorf("no answer from pheinstall within %ds (is it in the image?)", intFlag(fs, "wait"))
+		},
+	}
+}
+
+func intFlag(fs *flag.FlagSet, name string) int {
+	n, _ := strconv.Atoi(str(fs, name))
+	return n
 }
 
 func matches(it *pkgindex.Item, words []string) bool {

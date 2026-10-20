@@ -60,6 +60,7 @@ Installable items from the Phorepoc index and others: list, inspect, download.
 | [`ph package list`](ph-package-list.md) | List the installable items of the indexes |
 | [`ph package info`](ph-package-info.md) | Show an item: description, compatibility, approved releases |
 | [`ph package fetch`](ph-package-fetch.md) | Download approved releases into the package cache |
+| [`ph package install`](ph-package-install.md) | Install an item on a device through PhoneLab |
 
 ## Device
 
