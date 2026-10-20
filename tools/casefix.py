@@ -41,9 +41,10 @@ def main(pkgs: list[str] | None = None) -> None:
     def rank(p: str) -> tuple:
         """which of several same-named headers a bare include means: the exported tree in the order the mmps'
         SYSTEMINCLUDE macros search it (mw/ before platform/mw/: RCL_3 moved AknUtils.h from the 2010 plat API to mw/,
-        and the stale 2010 copy in platform/mw/ lacked AknListUtils -> avkon failed), then source dirs"""
+        and the stale 2010 copy in platform/mw/ lacked AknListUtils -> avkon failed), then source dirs, with
+        stub packages' copies last (the 2010 fepstub's AknFepUICtrlPinyinPopup.h, a shorter path, broke avkonfep)"""
         if not p.startswith(inc + os.sep):
-            return (2, len(p))
+            return (2, 1 if any("stub" in d.lower() for d in p.split(os.sep)[:-1]) else 0, len(p))
         d = os.path.dirname(os.path.relpath(p, inc)).replace(os.sep, "/").lower()
         order = ["", "mw", "platform/mw", "platform", "app", "platform/app"]
         return (0, order.index(d), 0) if d in order else (1, d.count("/"), len(d))

@@ -40,6 +40,10 @@ DEFAULT_PKGS = [
 # never part of a device build: the PC emulator's host graphics, and the API reference (a copy of an old SDK epoc32/include:
 # casefix linked avkon.rsg there, without the RCL_3 resource ids)
 HOST_ONLY_PKGS = {"oss.FCL.sf.adapt.SimulatorGraphics", "oss.API_REF.Public_API"}
+# generated SDK headers no bld.inf exports, taken from the API reference's prebuilt copy (only these: the rest of it is
+# an old SDK). featureuids.h: the feature UIDs header the SDK generated from the S60 feature list (NFeature::KFmTx ...);
+# without it casefix linked the ROM tools' much older featureUIDs.h and hwrmserver failed.
+PREBUILT = ["featureuids.h"]
 SKIP_DIRS = {"test", "tsrc", "tests", "documentation", "examples", "internal"}
 SECTION = re.compile(r"^\s*PRJ_(\w+)", re.I)
 
@@ -282,6 +286,15 @@ def run(pkgs, scan_only=False):
         print("  ... %d more" % (len(replaced) - 40))
 
 
+def prebuilt() -> None:
+    ref = os.path.join(BASE, "oss.API_REF.Public_API", "epoc32", "include")
+    for h in PREBUILT:
+        dst = os.path.join(OUT, h)
+        if not os.path.exists(dst) and os.path.isfile(os.path.join(ref, h)):
+            shutil.copyfile(os.path.join(ref, h), dst)
+            print(f"prebuilt: {h}")
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     if sys.argv[1:2] == ["--manifest-all"]:
@@ -302,5 +315,6 @@ if __name__ == "__main__":
             run(pkgs)
             import cdl_headers                     # the CDL client headers no bld.inf exports (MifHeader ...)
             cdl_headers.main()
+            prebuilt()
         else:
             run(sys.argv[1:] or DEFAULT_PKGS)
