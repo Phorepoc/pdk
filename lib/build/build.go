@@ -33,6 +33,9 @@ type Env struct {
 	Symbian string
 	Build   string // a directory or a Docker volume name
 	Image   string
+	// Adaptations: the adaptation checkouts built with core (PHOREPOC_ADAPTATIONS, the host's path-list separator):
+	// each has an os/ tree merged over core's and a registry/ of its own components (tools/emitter/paths.py).
+	Adaptations []string
 }
 
 // FromEnv reads the PHOREPOC_* variables. The pdk is PHOREPOC_PDK, else found from the executable or the current
@@ -52,6 +55,12 @@ func FromEnv() (*Env, error) {
 	e.OSRoot = getenv("PHOREPOC_OS_ROOT", filepath.Join(e.Core, "os"))
 	e.Symbian = getenv("PHOREPOC_SYMBIAN", filepath.Join(e.Core, "symbian"))
 	e.Build = getenv("PHOREPOC_BUILD", filepath.Join(e.Core, "build"))
+	for _, a := range filepath.SplitList(os.Getenv("PHOREPOC_ADAPTATIONS")) {
+		if a != "" {
+			abs, _ := filepath.Abs(a)
+			e.Adaptations = append(e.Adaptations, abs)
+		}
+	}
 	return e, nil
 }
 
@@ -120,6 +129,15 @@ func (e *Env) dockerArgs(tty bool, cmd []string) ([]string, error) {
 		}
 	}
 	args = append(args, "-v", e.Build+":/build") // a directory, or a Docker volume name
+	var adapt []string
+	for i, a := range e.Adaptations {
+		m := fmt.Sprintf("/adapt/%d", i)
+		args = append(args, "-v", a+":"+m+":ro")
+		adapt = append(adapt, m)
+	}
+	if len(adapt) > 0 {
+		args = append(args, "-e", "PHOREPOC_ADAPTATIONS="+strings.Join(adapt, ":"))
+	}
 	for _, v := range passThrough {
 		if val, ok := os.LookupEnv(v); ok {
 			args = append(args, "-e", v+"="+val)
@@ -191,6 +209,8 @@ const Commands = ` SOURCE
   PHOREPOC_OS_ROOT   our overlay, components and board files (default: <core>/os)
   PHOREPOC_SYMBIAN   the Symbian source: symbian-2010/ and symbian-rcl3/ (default: <core>/symbian)
   PHOREPOC_BUILD     all generated files, a directory or a Docker volume name (default: <core>/build)
+  PHOREPOC_ADAPTATIONS  adaptation checkouts built with core (path list): their os/ is merged over core's, their
+                     registry/ adds their components
   PHOREPOC_IMAGE     the toolchain image (default: ` + DefaultImage + `)
   NET=1 (comms stack)  FONTS=ubuntu|dejavu|gdr  UI_RENDERER=classic|alfred|both  SHELLS=s3|s4|both  FAST=1 (keep core images)
 `

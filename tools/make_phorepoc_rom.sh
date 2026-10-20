@@ -28,6 +28,8 @@ export PHOREPOC_OS_ROOT="${PHOREPOC_OS_ROOT:-$PHOREPOC_CORE/os}"
 export PHOREPOC_SYMBIAN="${PHOREPOC_SYMBIAN:-$PHOREPOC_CORE/symbian}"
 export PHOREPOC_BUILD="${PHOREPOC_BUILD:-$PHOREPOC_CORE/build}"
 OS_ROOT="$PHOREPOC_OS_ROOT"
+# with adaptations (PHOREPOC_ADAPTATIONS) the OS tree is the merged view paths.py builds (core os/ + each adaptation os/)
+[ -z "${PHOREPOC_ADAPTATIONS:-}" ] || OS_ROOT="$(python3 "$TOOLS/emitter/paths.py")"
 SYMBIAN="$PHOREPOC_SYMBIAN"
 BUILD="$PHOREPOC_BUILD"
 SYM10="$SYMBIAN/symbian-2010"
