@@ -51,6 +51,7 @@ SISString = 1
 SISArray = 2
 SISCompressed = 3
 SISVersion = 4
+SISVersionRange = 5
 SISDate = 6
 SISTime = 7
 SISDateTime = 8
@@ -155,8 +156,11 @@ def build_package(files, *, app_uid: int, vendor: str, app_name: str,
                              _array(SISLanguage, [_field(SISLanguage, struct.pack("<I", LANG_EN), typed=False)]))
     # empty arrays still carry their real element types (SWI rejects a placeholder type)
     # target devices: a platform product UID (SISDependency = uid [+ version range] + names); none -> the
-    # installer warns "not compatible with the phone" (skippable)
+    # installer warns "not compatible with the phone" (skippable). Always with a version range: without one the
+    # names array is read type-assumed, and the in-memory parser (ReadMemberArrayL on a TPtrProvider) then skips
+    # 4 bytes too many -> installserver panics USER 29 on the device.
     devices = [_field(SISDependency, _field(SISUid, struct.pack("<I", platform_uid))
+                      + _field(SISVersionRange, _field(SISVersion, struct.pack("<iii", 0, 0, 0)))
                       + _array(SISString, [_field(SISString, _u16str("Symbian^3"), typed=False)]), typed=False)
                ] if platform_uid else []
     prerequisites = _field(SISPrerequisites, _array(SISDependency, devices) + _array(SISDependency, []))
