@@ -1163,7 +1163,7 @@ def main(argv=None):
                     "ROM SECTION based at this address (e.g. 0x80400000) instead of a whole "
                     "ROM -- the blob xk_uimage.S carries inside the kernel image. Takes --xip "
                     "and --secondary-name; no bootstrap.")
-    ap.add_argument("--secondary-name", default="uhello.exe",
+    ap.add_argument("--secondary-name", default="efile.exe",
                     help="with --section: which bundled image the section header names as the "
                     "ROM secondary (the first user process).")
     ap.add_argument("--exe-data-base", default="0x70000000",

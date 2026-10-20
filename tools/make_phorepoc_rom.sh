@@ -8,9 +8,7 @@
 #                     2+3 are EFILE's dependencies.
 #   4. efile.exe   -- the F32 file server: an exexp EXE importing across all three of them (build_efile_x32.py)
 #   4b. estart.exe -- ESTART (e32strt.exe), which F32 starts once it is up (build_estart_x32.py)
-#   5. uhello.exe  -- imports bound to euser's ordinals via veneers; the section's SECONDARY, i.e. the process the
-#                     kernel actually starts (OS_ROOT/emitter/build_uhello_x32.py, part of the kernel adaptation)
-#   6. the section -- all of them prelinked at 0x80400000, with real TRomEntry +
+#   5. the section -- all of them prelinked at 0x80400000, with real TRomEntry +
 #                     TRomImageHeader records                        (tools/rombuild.py --section)
 #
 # Paths: PHOREPOC_OS_ROOT (board files, our components), PHOREPOC_SYMBIAN (the Symbian source),
@@ -18,8 +16,7 @@
 # link, board lists under tools/phorepoc-x86/board) live in OS_ROOT.
 #
 # SKIP_CENSUS=1 reuses the euser objects from a previous run (much faster).
-# SECONDARY_IMAGE=efile.exe names a different bundled image as the ROM's secondary (the first
-# user process the kernel starts). Default uhello.exe.
+# SECONDARY_IMAGE names the bundled image the kernel starts first (the ROM's secondary). Default efile.exe.
 set -eu
 PDK="$(cd "$(dirname "$0")/.." && pwd)"
 TOOLS="$PDK/tools"
@@ -69,7 +66,7 @@ CORE_STAMP="$BUILD/rom/core.stamp"
 if [ "${ARGS_ONLY:-0}" = 1 ]; then
   [ -n "${BOOT:-}" ] || { echo "ARGS_ONLY=1 needs BOOT=" >&2; exit 1; }
 elif [ "${FAST:-0}" = 1 ] && [ "$(cat "$CORE_STAMP" 2>/dev/null)" = "LEAVE_TRACE=${LEAVE_TRACE:-0} SCHED_TRACE=${SCHED_TRACE:-0}" ]; then
-  echo "FAST=1: core images (euser efsrv hal efile estart uhello) kept from the last build"
+  echo "FAST=1: core images (euser efsrv hal efile estart) kept from the last build"
 else
   rm -f "$CORE_STAMP"
   python3 "$TOOLS/emitter/build_euser_x32.py" | tail -3
@@ -77,9 +74,6 @@ else
   python3 "$TOOLS/emitter/build_hal_x32.py" | tail -3
   python3 "$TOOLS/emitter/build_efile_x32.py" | tail -4
   python3 "$TOOLS/emitter/build_estart_x32.py" | tail -2
-  if [ -f "$OS_ROOT/emitter/build_uhello_x32.py" ]; then
-    IMPORTS=1 python3 "$OS_ROOT/emitter/build_uhello_x32.py" | tail -5
-  fi
   echo "LEAVE_TRACE=${LEAVE_TRACE:-0} SCHED_TRACE=${SCHED_TRACE:-0}" > "$CORE_STAMP"
 fi
 # The text shell stack, each from its real .mmp through the generic x32 builder: EWSRV + its console/key-translation/domain
@@ -414,5 +408,5 @@ python3 "$TOOLS/rombuild.py" --section 0x80400000 $SHELL_XIP $DATA \
    --builtin-device 'Sys\Bin\enet.ldd=ldd:1' --builtin-device 'Sys\Bin\ethernet.pdd=pdd:2' \
    --builtin-device 'Sys\Bin\esoundsc.ldd=ldd:3' --builtin-device 'Sys\Bin\soundsc.pdd=pdd:4' \
    --builtin-device 'Sys\Bin\ecamerasc.ldd=ldd:5' --builtin-device 'Sys\Bin\camerasc.pdd=pdd:6' \
-   --secondary-name "${SECONDARY_IMAGE:-uhello.exe}" \
+   --secondary-name "${SECONDARY_IMAGE:-efile.exe}" \
    "$BUILD/rom/romsect.bin"
