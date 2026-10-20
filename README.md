@@ -32,32 +32,35 @@ How it works, the operations and the phone side: [docs/phonelab.md](docs/phonela
 
 ## ph
 
-Build commands need Docker; `core` is expected next to this checkout, or set `PHOREPOC_CORE`:
+Every command is a verb on one kind of object, in the manner of zfs(8): `ph source ...`, `ph component ...`,
+`ph image ...`, `ph board ...`, `ph device ...`. `ph help` lists them, `ph help <command>` is a command's manual page,
+and the same pages are in [docs/ph/](docs/ph/README.md).
+
+Build commands need Docker; `core` and the adaptation repositories are expected next to this checkout (or set
+`PHOREPOC_CORE`, `PHOREPOC_ADAPTATIONS`). A clean PC build:
 
 ```sh
 go build -o ph ./cmd/ph
-ph fetch                  # the Symbian source -> core/symbian/
-ph export && ph casefix   # the include tree
-ph build palette estor    # x32 images -> core/build/x32img/
-ph rom                    # the ROM section
-ph tests                  # byte-compare with another build
-ph help                   # all commands and options
+ph source fetch                        # the Symbian source -> core/symbian/
+ph source export -a                    # the include tree (and the case links)
+ph source mbg -a                       # the icon id headers
+ph component resources -A -b pc        # resources and their .rsg headers
+ph component build -A -b pc            # every component -> build/x32img/
+ph image rom -b pc                     # the ROM
 ```
 
-Phone commands:
+Device commands, through a running PhoneLab (`-url`, or `$PHONELAB_URL`, default `http://localhost:8737`):
 
 ```sh
-ph health
-ph push symbian.img -wait 'running slot B'     # prints the new boot's report
-ph report -symbols symbian.syms               # faults with function names, panics, PASS/FAIL
-ph diff 1094 1095
-ph input 'key menu; wait 1000; shot'
-ph log -grep fault -n 50
-ph shot -o screen.png
-ph op peek addr=0x01c20000 count=4
+ph device status
+ph device push symbian.img -w 'running slot B'    # prints the new boot's report
+ph device report -s symbian.syms                  # faults with function names, panics, PASS/FAIL
+ph device diff 1094 1095
+ph device input 'key menu; wait 1000; shot'
+ph device log -g fault -n 50
+ph device shot -o screen.png
+ph device op peek addr=0x01c20000 count=4
 ```
-
-The phone commands use a running PhoneLab (`-url`, or `$PHONELAB_URL`, default `http://localhost:8737`).
 
 ## Layout
 

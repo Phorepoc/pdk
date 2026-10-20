@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # make_phorepoc_rom.sh -- build the prelinked XIP ROM section that the x86-64 (x32) kernel carries as its ROM.
-# Runs on Linux inside the toolchain container (./ph rom does that). Steps:
+# Runs on Linux inside the toolchain container (ph image rom does that). Steps:
 #
 #   1. euser.dll   -- the real 2549-ordinal export table              (tools/emitter/build_euser_x32.py)
 #   2. efsrv.dll   -- the F32 client library, 135 euser ordinals imported (build_efsrv_x32.py)

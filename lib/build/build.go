@@ -154,7 +154,8 @@ func (e *Env) InContainer(cmd ...string) error {
 		c = exec.Command(cmd[0], cmd[1:]...)
 		c.Dir = e.PDK
 		c.Env = append(os.Environ(), "PHOREPOC_PDK="+e.PDK, "PHOREPOC_CORE="+e.Core, "PHOREPOC_OS_ROOT="+e.OSRoot,
-			"PHOREPOC_SYMBIAN="+e.Symbian, "PHOREPOC_BUILD="+e.Build)
+			"PHOREPOC_SYMBIAN="+e.Symbian, "PHOREPOC_BUILD="+e.Build,
+			"PHOREPOC_ADAPTATIONS="+strings.Join(e.Adaptations, string(os.PathListSeparator)))
 	} else {
 		if _, err := exec.LookPath("docker"); err != nil {
 			return fmt.Errorf("docker not found")
@@ -180,51 +181,6 @@ const romScript = `mkdir -p "$PHOREPOC_BUILD" && \
   && echo "ROM ok ($(grep -a -m1 images "$PHOREPOC_BUILD/rom-$1.log" | cut -c1-100))" \
   || { echo "ROM FAILED:"; tail -5 "$PHOREPOC_BUILD/rom-$1.log"; exit 1; }`
 
-// Commands is the build command group, as `ph help` lists it.
-const Commands = ` SOURCE
-  fetch                   the Symbian source: pinned commits of the Phorepoc forks -> <core>/symbian (core's fetch.sh, on the host)
-  export [pkg...]         the epoc32/include tree from the bld.inf exports (tools/epoc32_export.py; --all = every package)
-  casefix                 case-insensitive include links for the case-sensitive file system (tools/casefix.py)
-  mbg [--all|pkg...]      the icon-id headers (.mbg) components include (tools/mbg.py; before build)
-
- BUILD
-  build <key> [key...]    build components for x32 (tools/emitter/build_mmp_x32.py; keys = core's registry/components*.py)
-  closure <key>           ... and everything it links against (--closure)
-  all                     rebuild EVERY component, providers first (--all)
-  arm <key> [key...]      build ARM images (tools/emitter/build_mmp.py)
-  rsc <key> [key...]      compile a component's resources (tools/emitter/build_mmp.py --rsc)
-  rom [ssm|@|@app]        build the ROM section (default ssm = the phone's real System State Manager boot; @ = bootui)
-  stale                   images linked before a provider of theirs existed (need a relink)
-  sis <key> [key...]      package components as an installable SIS (tools/make_sis.py)
-  skin                    the default skin package (series60skin .skn + .mif; tools/skin_gen.py)
-  icons                   the icon files (.mif) of every registered component (tools/mif_all.py)
-  zdata                   the Z: data the packages' bld.inf files export (tools/zdata_gen.py)
-
- TEST
-  tests [args]            byte-compare the images built here with another build (tests/compare_images.py)
-  shell                   a shell in the container, with the mounts above
-
- OPTIONS (environment)
-  PHOREPOC_CORE      the core checkout: registry, overlay, source (default: the core folder next to the pdk)
-  PHOREPOC_OS_ROOT   our overlay, components and board files (default: <core>/os)
-  PHOREPOC_SYMBIAN   the Symbian source: symbian-2010/ and symbian-rcl3/ (default: <core>/symbian)
-  PHOREPOC_BUILD     all generated files, a directory or a Docker volume name (default: <core>/build)
-  PHOREPOC_ADAPTATIONS  adaptation checkouts built with core (path list): their os/ is merged over core's, their
-                     registry/ adds their components
-  PHOREPOC_IMAGE     the toolchain image (default: ` + DefaultImage + `)
-  NET=1 (comms stack)  FONTS=ubuntu|dejavu|gdr  UI_RENDERER=classic|alfred|both  SHELLS=s3|s4|both  FAST=1 (keep core images)
-`
-
-// IsCommand reports whether name is a build command.
-func IsCommand(name string) bool {
-	switch name {
-	case "fetch", "export", "casefix", "mbg", "build", "closure", "all", "arm", "rsc", "rom", "stale", "sis", "skin", "icons",
-		"zdata", "tests", "shell":
-		return true
-	}
-	return false
-}
-
 func bashPath() string {
 	if runtime.GOOS == "windows" {
 		for _, p := range []string{`C:\Program Files\Git\bin\bash.exe`, `C:\Program Files (x86)\Git\bin\bash.exe`} {
@@ -241,67 +197,137 @@ func stdio(c *exec.Cmd) *exec.Cmd {
 	return c
 }
 
-// Run executes one build command.
-func Run(cmd string, args []string) error {
-	e, err := FromEnv()
+// Python runs one of the pdk's Python tools in the toolchain container (the build steps not yet ported to Go).
+func (e *Env) Python(script string, args ...string) error {
+	return e.InContainer(append([]string{"python3", script}, args...)...)
+}
+
+// Fetch runs core's fetch.sh on the host: the pinned Symbian source into <core>/symbian.
+func (e *Env) Fetch(args ...string) error {
+	c := exec.Command(bashPath(), append([]string{filepath.Join(e.Core, "fetch.sh")}, args...)...)
+	c.Dir = e.Core
+	return stdio(c).Run()
+}
+
+// Rom builds the ROM section with the given boot: "ssm" (the phone's real System State Manager boot), "@" (bootui)
+// or "@<app>" (bootui starting that application).
+func (e *Env) Rom(boot string) error {
+	return e.InContainer("bash", "-c", romScript, "_", boot)
+}
+
+// Shell opens an interactive shell in the toolchain container with the mounts.
+func (e *Env) Shell() error {
+	if inContainer() {
+		return stdio(exec.Command("bash")).Run()
+	}
+	return e.InContainer("bash")
+}
+
+// Board is a device the pdk builds for: the adaptation checkouts that make it, and its architecture.
+type Board struct {
+	Name, Summary string
+	Adaptations   []string // checkout folder names, next to core
+	Arch          string   // "x32" or "arm"
+}
+
+// Boards are the boards ph knows by name (-b).
+var Boards = []Board{
+	{"pc", "QEMU, VirtualBox and real PCs: x86-64 with the x32 ABI", []string{"adaptation-x86-64", "adaptation-pc"}, "x32"},
+	{"pinephone", "the PINE64 PinePhone: ARM, Allwinner A64", []string{"adaptation-a64", "adaptation-pinephone"}, "arm"},
+}
+
+// FindBoard returns the named board.
+func FindBoard(name string) (*Board, error) {
+	var names []string
+	for i := range Boards {
+		if Boards[i].Name == name {
+			return &Boards[i], nil
+		}
+		names = append(names, Boards[i].Name)
+	}
+	return nil, fmt.Errorf("no board %q (boards: %s)", name, strings.Join(names, ", "))
+}
+
+// AdaptationDirs: where the board's adaptation checkouts are expected (next to core).
+func (e *Env) AdaptationDirs(b *Board) []string {
+	var out []string
+	for _, a := range b.Adaptations {
+		out = append(out, filepath.Join(filepath.Dir(e.Core), a))
+	}
+	return out
+}
+
+// UseBoard builds for the board: its adaptations replace PHOREPOC_ADAPTATIONS, and an ARM board's ROM is ARM.
+func (e *Env) UseBoard(name string) error {
+	b, err := FindBoard(name)
 	if err != nil {
 		return err
 	}
-	py := func(script string, pre ...string) error {
-		return e.InContainer(append(append([]string{"python3", script}, pre...), args...)...)
-	}
-	each := func(script string, pre ...string) error {
-		for _, k := range args {
-			if err := e.InContainer(append(append([]string{"python3", script}, pre...), k)...); err != nil {
-				return err
-			}
+	dirs := e.AdaptationDirs(b)
+	for _, d := range dirs {
+		if !isDir(d) {
+			return fmt.Errorf("board %s needs the %s checkout at %s", b.Name, filepath.Base(d), d)
 		}
-		return nil
 	}
-	switch cmd {
-	case "fetch":
-		c := exec.Command(bashPath(), append([]string{filepath.Join(e.Core, "fetch.sh")}, args...)...)
-		c.Dir = e.Core
-		return stdio(c).Run()
-	case "export":
-		return py("tools/epoc32_export.py")
-	case "casefix":
-		return py("tools/casefix.py")
-	case "mbg":
-		return py("tools/mbg.py")
-	case "build":
-		return py("tools/emitter/build_mmp_x32.py")
-	case "closure":
-		return py("tools/emitter/build_mmp_x32.py", "--closure")
-	case "all":
-		return e.InContainer("python3", "tools/emitter/build_mmp_x32.py", "--all")
-	case "arm":
-		return each("tools/emitter/build_mmp.py")
-	case "rsc":
-		return each("tools/emitter/build_mmp.py", "--rsc")
-	case "rom":
-		boot := "ssm"
-		if len(args) > 0 {
-			boot = args[0]
-		}
-		return e.InContainer("bash", "-c", romScript, "_", boot)
-	case "stale":
-		return e.InContainer("python3", "tools/stale_stubs.py")
-	case "sis":
-		return py("tools/make_sis.py")
-	case "skin":
-		return py("tools/skin_gen.py")
-	case "icons":
-		return py("tools/mif_all.py")
-	case "zdata":
-		return py("tools/zdata_gen.py")
-	case "tests":
-		return py("tests/compare_images.py")
-	case "shell":
-		if inContainer() {
-			return stdio(exec.Command("bash")).Run()
-		}
-		return e.InContainer("bash")
+	e.Adaptations = dirs
+	if b.Arch == "arm" {
+		os.Setenv("ROM_ARCH", "arm")
 	}
-	return fmt.Errorf("unknown command %q", cmd)
+	return nil
+}
+
+// ImageOption is a setting of the build recipes (`ph image rom -O name=value`), handed to the container as an
+// environment variable.
+type ImageOption struct {
+	Name, Env, Values, Help string
+}
+
+// ImageOptions are the settings the recipes read.
+var ImageOptions = []ImageOption{
+	{"net", "NET", "0|1", "the networking stack: ESOCK, TCP/IP, DNS, DHCP, the e1000 driver and SNTP"},
+	{"net-test", "NET_TEST", "<host> <port>", "the host the nettest component reaches at boot (RConnection, DNS, a TCP GET)"},
+	{"ntp-server", "NTP_SERVER", "<host>", "the SNTP server (default pool.ntp.org)"},
+	{"fonts", "FONTS", "ubuntu|dejavu|gdr", "the UI font set (default ubuntu)"},
+	{"webfonts", "WEBFONTS", "0|1", "the web fonts (CJK subset); 0 leaves them out"},
+	{"themes", "THEMES", "0|1", "the extra 2010 themes (Haze, Jing); 0 leaves them out"},
+	{"ui-renderer", "UI_RENDERER", "classic|alfred|both", "the UI render path(s) (default: both on NGA boards, classic elsewhere)"},
+	{"shells", "SHELLS", "s3|s4|both", "the UI shell(s): Symbian^3, the Symbian^4 home screen (Qt 4.8 + Hb), or both"},
+	{"nga", "NGA", "0|1", "the NGA window server (composition through OpenWF-C)"},
+	{"nga-keep", "NGA_KEEP", "<component>,...", "keep these non-NGA twins in an NGA image (bisecting)"},
+	{"alf", "ALF", "<stage>", "the Alfred (ALF) set at a bring-up stage"},
+	{"phetty", "PHETTY", "on|off|exclude", "the developer terminal daemon (phettyd, pheshell, pheterm)"},
+	{"utc-offset", "UTC_OFFSET", "<minutes>", "the home time zone, minutes from UTC (180 = UTC+3)"},
+	{"ssm-test", "SSM_TEST", "<component>", "start this test component at boot (as ssmtest.exe)"},
+	{"rom-tail", "ROM_TAIL", "<component>,...", "put these images last in the ROM (a delta push then sends only them)"},
+	{"rom-exclude", "ROM_EXCLUDE", "<component>,...", "leave these out of the ROM (they ship as SIS packages)"},
+	{"rom-data", "ROM_DATA_EXTRA", "<dest>=<src> ...", "extra Z: files, dest relative to Z:\\"},
+	{"cenrep", "CENREP_EXTRA", "<path>/<uid>.txt ...", "central repository files that override the built ones"},
+	{"rom-heap-limits", "ROM_HEAP_LIMITS", "0|1", "the Phorepoc heap and stack table; 0 = each image's own values"},
+	{"secondary", "SECONDARY_IMAGE", "<image>", "the first user process the kernel starts (default efile.exe)"},
+	{"s4", "PHOREPOC_S4", "0|1", "build the Symbian^4 components in their own tree"},
+	{"qt48", "PHOREPOC_QT48", "0|1", "register Qt 4.8 as installed (its ROM stub)"},
+	{"icons", "MIF_ALL", "0|1", "generate every component's icon files before the ROM (default 1)"},
+	{"iby-data", "IBY_DATA", "0|1", "the data files the packages' .iby files list (default 1)"},
+	{"fast", "FAST", "0|1", "keep the core images (euser, efsrv, hal, efile, estart) from the last build"},
+	{"prune", "PRUNE_UNRESOLVED", "0|1", "drop images whose imports are not in the ROM instead of failing"},
+	{"leave-trace", "LEAVE_TRACE", "0|1", "log each User::Leave with its caller (diagnostic)"},
+	{"sched-trace", "SCHED_TRACE", "0|1", "the active scheduler with a dispatch log (diagnostic)"},
+	{"x32-ld", "X32_LD", "bfd", "force GNU ld for the x32 links"},
+	{"x32-defs", "X32_DEFS", "<component>:<MACRO>,...", "extra defines for some components (diagnostic)"},
+	{"x32-include", "X32_INCLUDE", "<component>:<header>,...", "force-include a header in some components (diagnostic)"},
+	{"x32-fullerr", "X32_FULLERR", "0|1", "the whole compiler output of the first failure"},
+}
+
+// SetImageOption applies `-O name=value`.
+func SetImageOption(nv string) error {
+	name, value, ok := strings.Cut(nv, "=")
+	if !ok {
+		return fmt.Errorf("-O %s: want <name>=<value> (\"ph help image-options\" lists them)", nv)
+	}
+	for _, o := range ImageOptions {
+		if o.Name == name {
+			return os.Setenv(o.Env, value)
+		}
+	}
+	return fmt.Errorf("-O %s: no image option %q (\"ph help image-options\" lists them)", nv, name)
 }

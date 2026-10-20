@@ -70,10 +70,10 @@ def listed_dirs() -> list[str]:
 
 
 def main() -> None:
-    # bld.infs with #ifdef'd icon blocks are read through cpp + the variant headers `ph export` writes; without
+    # bld.infs with #ifdef'd icon blocks are read through cpp + the variant headers `ph source export` writes; without
     # them those targets silently vanish (the platform macros are all undefined)
     if not os.path.isfile(os.path.join(EPOC32_ROOT, "include", "bldvariant.hrh")):
-        sys.exit(f"mif_all: {EPOC32_ROOT}/include has no bldvariant.hrh -- run `ph export` first")
+        sys.exit(f"mif_all: {EPOC32_ROOT}/include has no bldvariant.hrh -- run `ph source export` first")
     have = {f.lower() for f in os.listdir(ICON_GEN)} if os.path.isdir(ICON_GEN) else set()
     dirs = group_dirs()
     listed = []

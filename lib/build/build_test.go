@@ -32,8 +32,34 @@ func TestIsPath(t *testing.T) {
 	}
 }
 
-func TestIsCommand(t *testing.T) {
-	if !IsCommand("rom") || IsCommand("health") {
-		t.Error("IsCommand")
+func TestImageOptions(t *testing.T) {
+	pass := map[string]bool{}
+	for _, v := range passThrough {
+		pass[v] = true
+	}
+	seen := map[string]bool{}
+	for _, o := range ImageOptions {
+		if !pass[o.Env] {
+			t.Errorf("image option %s: %s is not handed to the container (passThrough)", o.Name, o.Env)
+		}
+		if seen[o.Name] {
+			t.Errorf("image option %s twice", o.Name)
+		}
+		seen[o.Name] = true
+		if o.Help == "" || o.Values == "" {
+			t.Errorf("image option %s: no values or help", o.Name)
+		}
+	}
+	if err := SetImageOption("nope=1"); err == nil {
+		t.Error("an unknown image option must fail")
+	}
+}
+
+func TestFindBoard(t *testing.T) {
+	if b, err := FindBoard("pc"); err != nil || b.Arch != "x32" {
+		t.Errorf("pc: %v %v", b, err)
+	}
+	if _, err := FindBoard("nope"); err == nil {
+		t.Error("an unknown board must fail")
 	}
 }
