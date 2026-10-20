@@ -1,5 +1,5 @@
-// Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+/* Copyright The Phorepoc Authors
+   SPDX-License-Identifier: Apache-2.0 */
 
 /* mmp_dll_device.ld -- mmp_dll.ld for a `device` DLL (the REAL phone; C++ exceptions on). The phone's unwinder
  * (drtaeabi, kernel/eka/compsupp/symaehabi) finds a RAM-loaded image's tables only through the E32 header's

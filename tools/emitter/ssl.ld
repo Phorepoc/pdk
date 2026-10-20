@@ -1,5 +1,5 @@
-// Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+/* Copyright The Phorepoc Authors
+   SPDX-License-Identifier: Apache-2.0 */
 
 /* Track U P1b — link script for the mbedTLS SSL.DLL (and its headless self-tests).
  * Single .text (code + rodata + C++ vtables/rel.ro folded in) at 0x8000, then

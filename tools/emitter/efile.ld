@@ -1,5 +1,5 @@
-// Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+/* Copyright The Phorepoc Authors
+   SPDX-License-Identifier: Apache-2.0 */
 
 /* efile.ld — link script for the from-source EFILE.EXE (Track B / M7).
  * spike.ld plus: the EXE entry (_E32Startup) and the static-ctor table.

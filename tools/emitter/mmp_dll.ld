@@ -1,5 +1,5 @@
-// Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+/* Copyright The Phorepoc Authors
+   SPDX-License-Identifier: Apache-2.0 */
 
 /* mmp_dll.ld — link script for build_mmp.py DLLs. spike.ld plus: _E32Dll
  * (toolchain/dll_rt/dll_entry.s) pinned at code offset 0 = the image entry

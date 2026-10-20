@@ -1,5 +1,5 @@
-// Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+/* Copyright The Phorepoc Authors
+   SPDX-License-Identifier: Apache-2.0 */
 
 /* efile_device.ld -- efile.ld for a `device` EXE: the unwind tables kept, as in mmp_dll_device.ld (see there). */
 ENTRY(_E32Startup)

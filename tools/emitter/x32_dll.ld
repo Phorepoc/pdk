@@ -1,5 +1,5 @@
-// Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+/* Copyright The Phorepoc Authors
+   SPDX-License-Identifier: Apache-2.0 */
 
 /* x32_dll.ld -- link script for a Path C (amd64 CPU, x32 ABI) DLL that becomes an E32Image.
  * The DLL sibling of x32_exe.ld (and the amd64 sibling of mmp_dll.ld): same elf.extract
