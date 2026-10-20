@@ -212,6 +212,7 @@ func installCommand() *cli.Command {
 			fs.String("drive", "c", "install to this `drive`")
 			fs.String("o", "", "the cache `directory` (as for fetch)")
 			fs.Int("wait", 180, "give up after this many `seconds`")
+			fs.Int("chunk", 3072, "upload in requests of this many `bytes` (at most 3072)")
 			indexFlags(fs)
 		}),
 		Examples: []cli.Example{
@@ -253,7 +254,10 @@ func installCommand() *cli.Command {
 			}
 			name := filepath.Base(local)
 			remote := "/C:/Data/Installs/" + name
-			const chunk = 3072 // what one fs_write takes
+			chunk := intFlag(fs, "chunk")
+			if chunk <= 0 || chunk > 3072 {
+				chunk = 3072
+			}
 			for off := 0; off == 0 || off < len(data); off += chunk {
 				end := off + chunk
 				if end > len(data) {

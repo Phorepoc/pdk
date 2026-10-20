@@ -5,7 +5,7 @@ Install an item on a device through PhoneLab.
 ## Synopsis
 
 ```
-ph package install [-no-default] [-d <device>] [-drive <drive>] [-index <source>] [-o <directory>] [-token <token>] [-url <url>] [-wait <seconds>] <id>[@<tag>]
+ph package install [-no-default] [-chunk <bytes>] [-d <device>] [-drive <drive>] [-index <source>] [-o <directory>] [-token <token>] [-url <url>] [-wait <seconds>] <id>[@<tag>]
 ```
 
 ## Description
@@ -16,6 +16,7 @@ Needs a device whose image carries pheinstall, phfs (files) and phettyd (shells)
 
 ## Options
 
+- `-chunk <bytes>`: Upload in requests of this many bytes (at most 3072) (default: 3072).
 - `-d <device>`: The device id (default: the only device the service has).
 - `-drive <drive>`: Install to this drive (default: c).
 - `-index <source>`: Read this index (a source: URL or file) before the default ones; repeatable.
