@@ -220,7 +220,7 @@ def devmenu_cenrep() -> str:
 
 
 def browser_cenrep() -> str:
-    """The web browser's own repository (OURS, KPheBrowserRepoUid 0xE7015B01, src/phebrctl): key 1 = User-Agent string
+    """The web browser's own repository (OURS, KPheBrowserRepoUid 0xE7015B01, phebrctl in webkit-symbian): key 1 = User-Agent string
     (read by phebrctl at engine start; empty = the engine's built-in default, a current Android Chrome). Edit it here or
     persist a new value from a tool; any process may change it."""
     ua = "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
