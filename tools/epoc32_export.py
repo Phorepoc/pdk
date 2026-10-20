@@ -34,7 +34,9 @@ DEFAULT_PKGS = [
     "../symbian-rcl3/oss.FCL.sf.mw.classicui", "../symbian-rcl3/oss.FCL.sf.mw.appsupport", "../symbian-rcl3/oss.FCL.sf.mw.inputmethods",
     "../symbian-rcl3/oss.FCL.sf.mw.uiresources",
 ]
-HOST_ONLY_PKGS = {"oss.FCL.sf.adapt.SimulatorGraphics"}
+# never part of a device build: the PC emulator's host graphics, and the API reference (a copy of an old SDK epoc32/include:
+# casefix linked avkon.rsg there, without the RCL_3 resource ids)
+HOST_ONLY_PKGS = {"oss.FCL.sf.adapt.SimulatorGraphics", "oss.API_REF.Public_API"}
 SKIP_DIRS = {"test", "tsrc", "tests", "documentation", "examples", "internal"}
 SECTION = re.compile(r"^\s*PRJ_(\w+)", re.I)
 
@@ -46,7 +48,9 @@ def all_packages():
     base = os.path.dirname(BASE)
     rest = [os.path.join("..", t, d) for t in ("symbian-2010", "symbian-rcl3")
             for d in sorted(os.listdir(os.path.join(base, t))) if d not in HOST_ONLY_PKGS]
-    have = {os.path.normpath(os.path.join(BASE, p)) for p in DEFAULT_PKGS}
+    # an RCL_3 package of the default set runs AGAIN in its place at the end: otherwise its symbian-2010 twin, later in
+    # the list, replaced its headers (classicui's CAknItemActionMenu without MarkingMode -> avkon, eikcoctl ... failed)
+    have = {os.path.normpath(os.path.join(BASE, p)) for p in DEFAULT_PKGS if "symbian-rcl3" not in p}
     return DEFAULT_PKGS + [p for p in rest if os.path.normpath(os.path.join(BASE, p)) not in have]
 
 

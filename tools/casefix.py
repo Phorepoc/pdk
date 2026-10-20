@@ -30,9 +30,25 @@ def main(pkgs: list[str] | None = None) -> None:
     import epoc32_export
     if pkgs is None:
         pkgs = epoc32_export.all_packages() if sys.argv[1:2] == ["--all"] else sys.argv[1:] or epoc32_export.DEFAULT_PKGS
-    roots = [os.path.join(EPOC32_ROOT, "include")] + [os.path.normpath(os.path.join(SYMBIAN, "symbian-2010", p)) for p in pkgs]
+    inc = os.path.join(EPOC32_ROOT, "include")
+    roots = [inc] + [os.path.normpath(os.path.join(SYMBIAN, "symbian-2010", p)) for p in pkgs]
     by_base, by_tail = {}, {}
     scan = []
+
+    def rank(p: str) -> tuple:
+        """which of several same-named headers a bare include means: the exported tree in the order the mmps'
+        SYSTEMINCLUDE macros search it (mw/ before platform/mw/: RCL_3 moved AknUtils.h from the 2010 plat API to mw/,
+        and the stale 2010 copy in platform/mw/ lacked AknListUtils -> avkon failed), then source dirs"""
+        if not p.startswith(inc + os.sep):
+            return (2, len(p))
+        d = os.path.dirname(os.path.relpath(p, inc)).replace(os.sep, "/").lower()
+        order = ["", "mw", "platform/mw", "platform", "app", "platform/app"]
+        return (0, order.index(d), 0) if d in order else (1, d.count("/"), len(d))
+
+    def keep(table: dict, key: str, p: str) -> None:
+        if key not in table or rank(p) < rank(table[key]):
+            table[key] = p
+
     for top in roots:
         for root, dirs, files in os.walk(top):
             dirs[:] = [d for d in dirs if d != ".git"]
@@ -41,8 +57,8 @@ def main(pkgs: list[str] | None = None) -> None:
                 p = os.path.join(root, f)
                 if ext in HEADER_EXT:
                     low = f.lower()
-                    by_base.setdefault(low, p)
-                    by_tail.setdefault(os.path.basename(root).lower() + "/" + low, p)
+                    keep(by_base, low, p)
+                    keep(by_tail, os.path.basename(root).lower() + "/" + low, p)
                 if ext in SCAN_EXT and top != roots[0]:
                     scan.append(p)
     spellings = set()
@@ -63,7 +79,11 @@ def main(pkgs: list[str] | None = None) -> None:
         if hit is None:
             continue
         link = os.path.join(OUT, *s.split("/"))
-        if os.path.lexists(link):
+        if os.path.islink(link):
+            if os.readlink(link) == hit:
+                continue
+            os.remove(link)             # an older run chose a worse candidate
+        elif os.path.lexists(link):
             continue
         os.makedirs(os.path.dirname(link), exist_ok=True)
         os.symlink(hit, link)
