@@ -435,7 +435,7 @@ def build_dll(code: bytes, exports: list[int], *,
               exports_in_code: bool = False, exception_descriptor: int = 0) -> bytes:
     """Assemble a DLL E32Image with an export table (P1a).
 
-    Delta vs. build_stage1 (an EXE), per docs/track-u/tls-p1-scope.md §DLL delta
+    Delta vs. build_stage1 (an EXE), per delta
     and the loader:
       * uid1 = UID1_DLL (0x10000079) — the sole DLL discriminator the loader uses;
         the UID checksum is recomputed from it.
