@@ -459,7 +459,7 @@ def build(key: str, rsc_only: bool = False) -> int:
              # X32_DEFS="<key>:<MACRO>[,...]" -- opt-in diagnostic defines, as build_mmp_x32.py
              + [f"-D{d.split(':', 1)[1]}" for d in os.environ.get("X32_DEFS", "").split(",")
                 if ":" in d and d.split(":", 1)[0] == key]
-             + incs + ["-idirafter", CASEFIX]   # case-insensitive #include fallback (tools/casefix.py)
+             + incs + ["-idirafter", CASEFIX, "-idirafter", SYMBIAN]   # case-insensitive #include fallback (tools/casefix.py)
              + comp.get("flags", [])
              # 2010-era C++ (`nullptr` as an identifier: etelmm, cntmodel), as build_mmp_x32.py compiles everything
              + ["-std=gnu++03"]

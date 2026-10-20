@@ -47,7 +47,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from paths import OS_ROOT, BUILD, prefix_maps, resolve as pathres           # noqa: E402
+from paths import OS_ROOT, BUILD, SYMBIAN, prefix_maps, resolve as pathres           # noqa: E402
 import mmp as MMP                                   # noqa: E402
 MMP.CPP = "cpp"                                     # same -undef -nostdinc run as the ARM build
 # Some mmps `#include <vg\openvguids.hrh>` (backslash): a Linux cpp rejects that. Preprocess such a file from a
@@ -92,6 +92,9 @@ IMG = os.path.join(BUILD, "x32img")                 # the plain images (provider
 IMG_OUT = os.path.join(S4_BUILD, "x32img") if S4 else IMG
 CASEFIX = os.path.join(BUILD, "casefix")
 CASEFIX_FLAGS = ["-idirafter", CASEFIX] if os.path.isdir(CASEFIX) else []
+# last of all: the Symbian source root, so our files can include an unmodified source file as <symbian-2010/...>
+# (never a path relative to a checkout layout)
+CASEFIX_FLAGS += ["-idirafter", SYMBIAN]
 
 
 def img_dir(rom: str) -> str:

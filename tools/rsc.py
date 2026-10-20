@@ -19,6 +19,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
 import mmp as MMP  # noqa: E402
+from paths import SYMBIAN  # noqa: E402
 
 RCOMP = shutil.which("rcomp") or "rcomp"
 
@@ -32,6 +33,7 @@ def compile_rss(rss: str, rsc: str, rsg: str | None = None, incs=(), uids=(), la
     inc_args = []
     for d in [os.path.dirname(rss), *incs, os.path.join(MMP.EPOC32, "include")]:
         inc_args += ["-I", d]
+    inc_args += ["-idirafter", SYMBIAN]       # <symbian-2010/...>: our resources including an unmodified one
     r = subprocess.run([MMP.CPP, "-undef", "-nostdinc", "-x", "c", "-w",
                         f"-DLANGUAGE_{lang}", "-D_UNICODE", *[f"-D{d}" for d in defs],
                         *inc_args, "-include", MMP.variant_for(variant_of or rss), rss, "-o", rpp],
