@@ -116,18 +116,18 @@ jobs:
           } >> "$GITHUB_ENV"
           mkdir -p build
 
-      - name: Layer recipes (tls -- mbedTLS + the CA bundle at their pinned versions)
-        if: contains(inputs.layers, 'tls')
-        run: |
-          docker run --rm -v "$PWD:$PWD" -w "$PWD" -e PHOREPOC_BUILD="$PWD/build" -e PHOREPOC_PDK="$PWD/pdk" \
-            "$PHOREPOC_IMAGE" bash -c 'set -e; bash tls/recipes/fetch_mbedtls.sh; bash tls/recipes/fetch_cacert.sh
-              [ "${{ inputs.board }}" = pc ] && bash tls/recipes/build_mbedtls.sh || true'
-
       - name: Exports + header case links
         run: |
           ph source export -b ${{ inputs.board }}
           ph source casefix -b ${{ inputs.board }}
           ph source mbg -b ${{ inputs.board }}
+
+      - name: Layer recipes (tls -- mbedTLS + the CA bundle at their pinned versions; after the exports: it compiles against them)
+        if: contains(inputs.layers, 'tls')
+        run: |
+          docker run --rm -v "$PWD:$PWD" -w "$PWD" -e PHOREPOC_BUILD="$PWD/build" -e PHOREPOC_PDK="$PWD/pdk" \
+            "$PHOREPOC_IMAGE" bash -c 'set -e; bash tls/recipes/fetch_mbedtls.sh; bash tls/recipes/fetch_cacert.sh
+              [ "${{ inputs.board }}" = pc ] && bash tls/recipes/build_mbedtls.sh || true'
 
       - name: Build every component (pc)
         if: inputs.board == 'pc'
