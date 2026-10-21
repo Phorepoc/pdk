@@ -637,7 +637,10 @@ class E32Xip:
             reb = [self.export_run(e) & 0xFFFFFFFF for e in self.exports]
             parts += b"\x00" * (-len(parts) % 4)
             self.export_addr = self.code_addr + len(parts)
-            parts += struct.pack(f"<{len(reb)}I", *reb)
+            # CheckRomExports (sf_lepoc.cpp) tests xd[ordinal] with xd = iExportDir, i.e. the entry AFTER the one an
+            # import names: for the LAST ordinal it reads the word past the table and refuses the import (KErrNotSupported)
+            # when that is 0. The ROM builder links statically and never hits it; a RAM-loaded image (SIS) does.
+            parts += struct.pack(f"<{len(reb)}I", *reb) + struct.pack("<I", 0xFFFFFFFF)
         if self.ref_deps:
             # TDllRefTable { TUint16 iFlags; TUint16 iNumberOfEntries; TRomImageHeader* iEntry[]; }
             parts += b"\x00" * (-len(parts) % 4)
@@ -740,7 +743,7 @@ def prelink_e32(rom_builder, imgs, exe_data_run_base, data_top=KUserDataAddress_
             img.data_lma = img.code_addr + plen
             plen += len(img.data)
         if img.exports:
-            plen += (-plen % 4) + 4 * len(img.exports)
+            plen += (-plen % 4) + 4 * len(img.exports) + 4   # + the guard word (below)
         if img.ref_deps:
             plen += (-plen % 4)
             img.ref_table_addr = img.code_addr + plen
