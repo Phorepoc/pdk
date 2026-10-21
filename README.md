@@ -51,6 +51,22 @@ ph image kernel -b pc                  # the kernel and a GRUB ISO (build/x86/ek
 ph image vbox -b pc                    # a VirtualBox appliance (build/x86/Phorepoc.ova)
 ```
 
+The PinePhone, after the same source steps:
+
+```sh
+ph component resources -A -b pinephone
+ph component build -A -arch arm -b pinephone     # every component -> build/arm/img/
+ph image zdata -b pinephone
+ph image pinephone -b pinephone                  # symbian.img + boot.scr (build/pinephone)
+# the SD card for balenaEtcher (host, needs docker), in adaptation-pinephone/os:
+O=../../build/pinephone RELEASE=1 bash tools/phorepoc-arm/make_pinephone_sd.sh
+```
+
+**Releases** are built by GitHub Actions: the device repositories (adaptation-pc, adaptation-pinephone) call
+[.github/workflows/board-image.yml](.github/workflows/board-image.yml), which runs the steps above for the commits the
+device repository's `board.lock` pins (`tools/board_lock.sh <board>` writes it) and, on a `v*` tag, attaches the images
+to a draft release there.
+
 Device commands, through a running PhoneLab (`-url`, or `$PHONELAB_URL`, default `http://localhost:8737`):
 
 ```sh
