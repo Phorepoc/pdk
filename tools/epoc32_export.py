@@ -58,7 +58,14 @@ def all_packages():
     # an RCL_3 package of the default set runs AGAIN in its place at the end: otherwise its symbian-2010 twin, later in
     # the list, replaced its headers (classicui's CAknItemActionMenu without MarkingMode -> avkon, eikcoctl ... failed)
     have = {os.path.normpath(os.path.join(BASE, p)) for p in DEFAULT_PKGS if "symbian-rcl3" not in p}
-    return DEFAULT_PKGS + [p for p in rest if os.path.normpath(os.path.join(BASE, p)) not in have]
+    order = DEFAULT_PKGS + [p for p in rest if os.path.normpath(os.path.join(BASE, p)) not in have]
+    # ... and the other way round: a symbian-2010 package of the default set (the line the build compiles, e.g.
+    # os.devicesrv) runs again after its RCL_3 twin, or that twin's older headers win (ssmstateawaresession.h without
+    # CSsmStateAwareSession2 -> ssmcmn.dll failed, SSM ran on stubs). RCL_3-only headers stay.
+    twins = {os.path.basename(p) for p in rest if "symbian-rcl3" in p}
+    again = [p for p in DEFAULT_PKGS if "symbian-rcl3" not in p and os.path.basename(p) in twins
+             and os.path.join("..", "symbian-rcl3", os.path.basename(p)) not in DEFAULT_PKGS]
+    return order + again
 
 
 def _variant(path):
