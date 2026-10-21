@@ -131,13 +131,13 @@ jobs:
       - name: Build every component (pc)
         if: inputs.board == 'pc'
         run: |
-          ph component resources -b pc
+          ph component resources -A -b pc
           ph component build -A -b pc 2>&1 | tee component-build.log | tail -n 20
 
       - name: Build every component (pinephone)
         if: inputs.board == 'pinephone'
         run: |
-          ph component resources -b pinephone
+          ph component resources -A -b pinephone
           ph component build -A -arch arm -b pinephone 2>&1 | tee component-build.log | tail -n 20
 
       - name: Own the build folder (the container wrote it as root)
