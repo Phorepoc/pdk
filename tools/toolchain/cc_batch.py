@@ -30,7 +30,7 @@ def symcc_prefix(kernel, cia):
     if key not in _PREFIX:
         args = ["bash", SYMCC] + (["-k"] if kernel else []) + ["x.cia" if cia else "x.cpp"]
         out = subprocess.run(args, capture_output=True, env=dict(os.environ, SYMCC_PRINT="1", SYMCC_ARM="1"),
-                             cwd=PDK, check=True).stdout
+                             check=True).stdout
         _PREFIX[key] = [a for a in out.decode().split(chr(0)) if a]
     return _PREFIX[key]
 
