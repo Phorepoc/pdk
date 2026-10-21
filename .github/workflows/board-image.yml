@@ -137,12 +137,13 @@ jobs:
       - name: Images (pc) -- ROM, bootable ISO, VirtualBox appliance
         if: inputs.board == 'pc'
         run: |
+          ph image zdata -b pc
           ph image rom -b pc
           ph image kernel -b pc
           ph image vbox -b pc
           mkdir -p out
-          cp build/ekern/phorepoc-ekern.iso out/phorepoc-pc.iso
-          cp build/vbox/*.ova out/
+          cp build/x86/ekern/phorepoc-ekern.iso out/phorepoc-pc.iso
+          cp build/x86/Phorepoc.ova out/phorepoc-pc.ova
 
       - name: Images (pinephone) -- the SD-card image
         if: inputs.board == 'pinephone'
