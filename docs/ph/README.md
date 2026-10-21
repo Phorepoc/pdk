@@ -38,6 +38,7 @@ What goes onto a device: the ROM, its data, installable packages.
 | [`ph image rom`](ph-image-rom.md) | Build the ROM |
 | [`ph image kernel`](ph-image-kernel.md) | Build the x86-64 kernel and its bootable ISO |
 | [`ph image vbox`](ph-image-vbox.md) | Package the ISO as a VirtualBox appliance |
+| [`ph image pinephone`](ph-image-pinephone.md) | Build the PinePhone image (kernel + ROM, for U-Boot) |
 | [`ph image skin`](ph-image-skin.md) | Build the default skin package |
 | [`ph image icons`](ph-image-icons.md) | Build every component's icon files (.mif) |
 | [`ph image zdata`](ph-image-zdata.md) | Collect the Z: data the packages export |

@@ -135,6 +135,12 @@ jobs:
           ph component resources -b pc
           ph component build -A -b pc 2>&1 | tee component-build.log | tail -n 20
 
+      - name: Build every component (pinephone)
+        if: inputs.board == 'pinephone'
+        run: |
+          ph component resources -b pinephone
+          ph component build -A -arch arm -b pinephone 2>&1 | tee component-build.log | tail -n 20
+
       - name: Own the build folder (the container wrote it as root)
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" build
@@ -160,15 +166,15 @@ jobs:
       - name: Images (pinephone) -- the SD-card image
         if: inputs.board == 'pinephone'
         run: |
-          if ! ph help image pinephone >/dev/null 2>&1; then
-            echo "::warning::ph cannot build the PinePhone image yet (the ARM image recipe is not wired into the pdk: adaptation-a64 os/tools/kernel/README.md)"
-            exit 0
-          fi
+          ph image zdata -b pinephone
           ph image pinephone -b pinephone
+          sudo chown -R "$(id -u):$(id -g)" build
+          # the SD card (on the host: its script runs docker for the FAT tools + Debian's U-Boot)
+          (cd adaptation-pinephone/os && O="$GITHUB_WORKSPACE/build/pinephone" RELEASE=1 bash tools/phorepoc-arm/make_pinephone_sd.sh)
           mkdir -p out
-          cp build/pinephone/phorepoc-pinephone-sd.img out/
-          xz -T0 -6 out/phorepoc-pinephone-sd.img
-          cp build/pinephone/uboot/*source* out/ 2>/dev/null || true
+          cp --sparse=always build/pinephone/phorepoc-pinephone-sd.img out/phorepoc-pinephone.img
+          xz -T0 -6 out/phorepoc-pinephone.img
+          cp build/pinephone/uboot/u-boot-source-*.tar out/
 
       - name: Checksums + provenance
         run: |

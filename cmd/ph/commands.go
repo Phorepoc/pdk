@@ -464,6 +464,31 @@ func commands(app *cli.App) []*cli.Command {
 			},
 		},
 		{
+			Group: "image", Name: "pinephone",
+			Summary: "Build the PinePhone image (kernel + ROM, for U-Boot)",
+			Description: "Builds the PinePhone image from the ARM components (\"ph component build -A -arch arm -b pinephone\" " +
+				"first): the core images the kernel boots, the kernel with the A64 drivers linked in, the bootstrap and " +
+				"the ROM from the shared recipe, packaged for U-Boot: <build>/pinephone/symbian.img and boot.scr.\n\n" +
+				"The SD card to write with balenaEtcher is made from them on the host (it needs docker): " +
+				"O=<build>/pinephone RELEASE=1 bash tools/phorepoc-arm/make_pinephone_sd.sh, run in adaptation-pinephone's os/.",
+			Flags: func(fs *flag.FlagSet) {
+				boardFlag(fs)
+			},
+			Examples: []cli.Example{
+				{What: "The image for the ARM components just built:", Cmd: "image pinephone -b pinephone"},
+			},
+			Run: func(fs *flag.FlagSet, args []string) error {
+				if err := noArgs(args); err != nil {
+					return err
+				}
+				e, err := env(str(fs, "b"))
+				if err != nil {
+					return err
+				}
+				return e.InContainer("bash", "tools/make_arm_image.sh")
+			},
+		},
+		{
 			Group: "image", Name: "skin",
 			Summary: "Build the default skin package",
 			Description: "Compiles the S60 default skin from its descriptor with the release's skin compiler: " +
