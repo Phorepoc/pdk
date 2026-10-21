@@ -1,0 +1,180 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# board-image.yml -- the reusable workflow every device repository calls to build its board's image (and, on a tag,
+# to publish it as a release of that repository). One implementation for all boards:
+#
+#   - checks out the pdk, core and the board's repositories side by side (where ph expects them), at the commits the
+#     caller's board.lock pins ("<repo> <commit>" lines; a repo it does not name: main)
+#   - fetches the pinned Symbian source from the Phorepoc forks (core's fetch.sh)
+#   - builds with ph in the toolchain image, restoring the previous build from the cache (a full x32 build takes hours
+#     on a hosted runner; an incremental one minutes)
+#   - packages: pc -> the bootable ISO + a VirtualBox appliance (.ova); pinephone -> the SD-card image to write with
+#     balenaEtcher (+ the U-Boot source it embeds, which its licence asks us to offer)
+#   - uploads the files as workflow artifacts; with `release: true` also attaches them to the caller's release
+#
+# Caller (in adaptation-pc / adaptation-pinephone, .github/workflows/release.yml):
+#   jobs:
+#     image:
+#       uses: Phorepoc/pdk/.github/workflows/board-image.yml@main
+#       with: { board: pc, release: ${{ startsWith(github.ref, 'refs/tags/') }} }
+#       permissions: { contents: write, packages: read }
+
+name: board-image
+
+on:
+  workflow_call:
+    inputs:
+      board:
+        description: "The board (ph board list): pc or pinephone"
+        type: string
+        required: true
+      release:
+        description: "Attach the images to the caller's release for this tag"
+        type: boolean
+        default: false
+      layers:
+        description: "Layer repositories built in (space separated), besides the board's adaptations"
+        type: string
+        default: "tls"
+
+env:
+  PHOREPOC_IMAGE: ghcr.io/phorepoc/base:latest
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - name: Make room (the source trees + a full build need ~25 GB)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          docker image prune -af >/dev/null || true
+          df -h /
+
+      - name: The board's repositories
+        id: repos
+        run: |
+          case "${{ inputs.board }}" in
+            pc)        adapt="adaptation-x86-64 adaptation-pc" ;;
+            pinephone) adapt="adaptation-a64 adaptation-pinephone" ;;
+            *) echo "unknown board ${{ inputs.board }}"; exit 1 ;;
+          esac
+          echo "list=pdk core $adapt ${{ inputs.layers }}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the caller (for its board.lock)
+        uses: actions/checkout@v4
+        with:
+          path: caller
+
+      - name: Check out the repositories at the pinned commits
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          lock=caller/board.lock
+          for r in ${{ steps.repos.outputs.list }}; do
+            ref=main
+            [ -f "$lock" ] && ref=$(awk -v r="$r" '$1 == r { print $2 }' "$lock") && [ -n "$ref" ] || ref=main
+            echo "$r @ $ref"
+            git init -q "$r"
+            git -C "$r" fetch -q --depth 1 "https://github.com/${{ github.repository_owner }}/$r.git" "$ref"
+            git -C "$r" checkout -q FETCH_HEAD
+            echo "$r $(git -C "$r" rev-parse HEAD)" >> built-from.txt
+          done
+          cat built-from.txt
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: pdk/go.mod
+          cache-dependency-path: pdk/go.sum
+
+      - name: Build ph
+        run: |
+          (cd pdk && go build -o ../bin/ph ./cmd/ph)
+          echo "$PWD/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch the Symbian source (pinned in core's sources.lock)
+        run: PHOREPOC_SYMBIAN="$PWD/core/symbian" sh core/fetch.sh > fetch.log && tail -n 3 fetch.log
+
+      - name: Pull the toolchain image
+        run: docker pull -q "$PHOREPOC_IMAGE"
+
+      - name: Restore the previous build
+        uses: actions/cache/restore@v4
+        with:
+          path: build
+          key: build-${{ inputs.board }}-${{ hashFiles('built-from.txt', 'core/sources.lock') }}
+          restore-keys: build-${{ inputs.board }}-
+
+      - name: Environment
+        run: |
+          {
+            echo "PHOREPOC_CORE=$PWD/core"
+            echo "PHOREPOC_SYMBIAN=$PWD/core/symbian"
+            echo "PHOREPOC_BUILD=$PWD/build"
+            echo "PHOREPOC_ADAPTATIONS=$(for r in ${{ steps.repos.outputs.list }}; do case $r in pdk|core) ;; *) printf '%s:' "$PWD/$r" ;; esac; done | sed 's/:$//')"
+          } >> "$GITHUB_ENV"
+          mkdir -p build
+
+      - name: Exports + header case links
+        run: |
+          ph source export -b ${{ inputs.board }}
+          ph source casefix -b ${{ inputs.board }}
+
+      - name: Build every component (pc)
+        if: inputs.board == 'pc'
+        run: |
+          ph component resources -b pc
+          ph component build -A -b pc 2>&1 | tee component-build.log | tail -n 20
+
+      - name: Save the build for the next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: build
+          key: build-${{ inputs.board }}-${{ hashFiles('built-from.txt', 'core/sources.lock') }}
+
+      - name: Images (pc) -- ROM, bootable ISO, VirtualBox appliance
+        if: inputs.board == 'pc'
+        run: |
+          ph image rom -b pc
+          ph image kernel -b pc
+          ph image vbox -b pc
+          mkdir -p out
+          cp build/ekern/phorepoc-ekern.iso out/phorepoc-pc.iso
+          cp build/vbox/*.ova out/
+
+      - name: Images (pinephone) -- the SD-card image
+        if: inputs.board == 'pinephone'
+        run: |
+          if ! ph help image pinephone >/dev/null 2>&1; then
+            echo "::warning::ph cannot build the PinePhone image yet (the ARM image recipe is not wired into the pdk: adaptation-a64 os/tools/kernel/README.md)"
+            exit 0
+          fi
+          ph image pinephone -b pinephone
+          mkdir -p out
+          cp build/pinephone/phorepoc-pinephone-sd.img out/
+          xz -T0 -6 out/phorepoc-pinephone-sd.img
+          cp build/pinephone/uboot/*source* out/ 2>/dev/null || true
+
+      - name: Checksums + provenance
+        run: |
+          mkdir -p out
+          cp built-from.txt out/
+          (cd out && sha256sum * > SHA256SUMS && cat SHA256SUMS)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phorepoc-${{ inputs.board }}
+          path: out/
+          if-no-files-found: warn
+
+      - name: Release
+        if: inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          gh release view "$tag" -R "${{ github.repository }}" >/dev/null 2>&1 \
+            || gh release create "$tag" -R "${{ github.repository }}" --title "$tag" --notes-file /dev/null --draft
+          gh release upload "$tag" out/* -R "${{ github.repository }}" --clobber
