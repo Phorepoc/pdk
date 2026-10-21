@@ -68,7 +68,8 @@ CORE_STAMP="$BUILD/rom/core.stamp"
 # so every board shares this one ROM recipe
 if [ "${ARGS_ONLY:-0}" = 1 ]; then
   [ -n "${BOOT:-}" ] || { echo "ARGS_ONLY=1 needs BOOT=" >&2; exit 1; }
-elif [ "${FAST:-0}" = 1 ] && [ "$(cat "$CORE_STAMP" 2>/dev/null)" = "LEAVE_TRACE=${LEAVE_TRACE:-0} SCHED_TRACE=${SCHED_TRACE:-0}" ]; then
+elif [ "${FAST:-0}" = 1 ] && [ "$(cat "$CORE_STAMP" 2>/dev/null)" = "LEAVE_TRACE=${LEAVE_TRACE:-0} SCHED_TRACE=${SCHED_TRACE:-0}" ] \
+     && [ -f "$BUILD/x32core/euser_x32.dll" ] && [ -f "$BUILD/x32core/efile_x32.exe" ]; then
   echo "FAST=1: core images (euser efsrv hal efile estart) kept from the last build"
 else
   rm -f "$CORE_STAMP"
@@ -77,6 +78,10 @@ else
   python3 "$TOOLS/emitter/build_hal_x32.py" | tail -3
   python3 "$TOOLS/emitter/build_efile_x32.py" | tail -4
   python3 "$TOOLS/emitter/build_estart_x32.py" | tail -2
+  # the stamp only when every core image is there (a failed build must not be "kept" by the next FAST=1 ROM)
+  for f in euser_x32.dll efsrv_x32.dll hal_x32.dll efile_x32.exe estart_x32.exe; do
+    [ -f "$BUILD/x32core/$f" ] || { echo "core image $f was not built (see above)" >&2; exit 1; }
+  done
   echo "LEAVE_TRACE=${LEAVE_TRACE:-0} SCHED_TRACE=${SCHED_TRACE:-0}" > "$CORE_STAMP"
 fi
 # The text shell stack, each from its real .mmp through the generic x32 builder: EWSRV + its console/key-translation/domain
