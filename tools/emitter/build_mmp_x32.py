@@ -114,6 +114,14 @@ EKA = os.path.join(KHS, "kernel", "eka")
 FS = os.path.join(KHS, "userlibandfileserver", "fileserver")
 
 # The user-side compile line, plus symcc's codegen rules.
+def env_libs(key: str) -> list:
+    """X32_LIBS="<key>:<lib>[,<key>:<lib>...]" -- extra LIBRARY entries for a diagnostic build, the companion of
+    X32_DEFS: e.g. X32_DEFS=hspsthemeserver:HSPS_LOG_ACTIVE needs X32_LIBS=hspsthemeserver:hspstools.lib (its mmp
+    never links the log bus)"""
+    return [d.split(":", 1)[1] for d in os.environ.get("X32_LIBS", "").split(",")
+            if ":" in d and d.split(":", 1)[0] == key]
+
+
 BASE_FLAGS = ["-mx32", "-ffreestanding", "-fno-pic", "-fno-stack-protector", "-nostdinc",
               "-std=gnu++03", "-fno-exceptions", "-fno-rtti", "-fpermissive", "-w", "-masm=intel", "-O2",
               "-fno-builtin", "-fno-tree-loop-distribute-patterns", "-fshort-wchar",
@@ -656,7 +664,7 @@ def build(key: str) -> int:
     phase("nm")
     # euser is always a provider: a few tiny mmps (lookuptable, the stub rasterizer) omit euser.lib
     # and would otherwise stub User::Panic
-    libs = comp.get("libs", []) + m.libs
+    libs = comp.get("libs", []) + m.libs + env_libs(key)
     if not any(l.lower().startswith("euser.") for l in libs):
         libs = libs + ["euser.lib"]
     resolve, dll_order, data_names, sidecars = provider_maps(libs)
@@ -848,7 +856,7 @@ def closure(roots: list[str]) -> list[str]:
             print(f"=== {k}: mmp unreadable, built last: {(str(e).splitlines() or ['?'])[0][:160]}")   # its build reports it
             order.append(k)
             return
-        for lib in comp.get("libs", []) + m.libs + m.staticlibs:
+        for lib in comp.get("libs", []) + m.libs + m.staticlibs + env_libs(k):
             visit(lib.rsplit(".", 1)[0].lower())
         order.append(k)
     for r in roots:
