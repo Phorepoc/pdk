@@ -155,7 +155,13 @@ def main() -> None:
         for line in open(zman).read().splitlines():
             if line.strip():
                 z, _, host = line.strip().partition("=")
-                out += ["--data", z + "=" + (host if os.path.isabs(host) else os.path.join(BUILD, host))]
+                host = host if os.path.isabs(host) else os.path.join(BUILD, host)
+                # a manifest from an earlier `ph image zdata` (another board, another tree) may name files this
+                # build does not have: skipped with a note -- rerun `ph image zdata` to refresh it
+                if not os.path.isfile(host):
+                    print(f"gui_rom_args: zdata {z}: {host} missing (stale manifest?) -- skipped", file=sys.stderr)
+                    continue
+                out += ["--data", z + "=" + host]
     print("\n".join(out))
 
 
