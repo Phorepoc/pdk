@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import uuid
 from xml.sax.saxutils import escape
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +33,8 @@ OVF_NS = 'xmlns="http://schemas.dmtf.org/ovf/envelope/1" ' \
          'xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1" ' \
          'xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData" ' \
          'xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData" ' \
-         'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
+         'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' \
+         'xmlns:vbox="http://www.virtualbox.org/ovf/machine"'
 
 
 def item(rtype, name, instance, desc=None, subtype=None, parent=None, address=None, on_parent=None, host=None,
@@ -63,17 +65,70 @@ def item(rtype, name, instance, desc=None, subtype=None, parent=None, address=No
     return "      <Item>\n        " + "\n        ".join(f) + "\n      </Item>\n"
 
 
+def vbox_machine(name, mem, cpus, disk_uuid, iso_uuid):
+    """VirtualBox's own section (what its export writes): the settings OVF has no words for -- the phone-shaped video
+    modes, the VMSVGA display the kernel drives, AC'97, the boot order (DVD first), the UTC clock -- and the DVD drive
+    holding the ISO. Other hypervisors ignore it (ovf:required="false")."""
+    return f"""    <vbox:Machine ovf:required="false" version="1.19-windows" uuid="{{{uuid.uuid4()}}}" name="{escape(name)}" OSType="Other_64" snapshotFolder="Snapshots">
+      <ovf:Info>Complete VirtualBox machine configuration in VirtualBox format</ovf:Info>
+      <ExtraData>
+        <ExtraDataItem name="CustomVideoMode1" value="720x1280x32"/>
+        <ExtraDataItem name="CustomVideoMode2" value="1280x720x32"/>
+      </ExtraData>
+      <Hardware>
+        <Memory RAMSize="{mem}"/>
+        <Boot>
+          <Order position="1" device="DVD"/>
+          <Order position="2" device="HardDisk"/>
+          <Order position="3" device="None"/>
+          <Order position="4" device="None"/>
+        </Boot>
+        <Display controller="VMSVGA" VRAMSize="16"/>
+        <Firmware/>
+        <BIOS>
+          <IOAPIC enabled="true"/>
+        </BIOS>
+        <Network>
+          <Adapter slot="0" enabled="true" type="82540EM">
+            <NAT localhost-reachable="true"/>
+          </Adapter>
+        </Network>
+        <AudioAdapter codec="AD1980" useDefault="true" enabled="true" enabledOut="true"/>
+        <StorageControllers>
+          <StorageController name="IDE" type="PIIX4" PortCount="2" useHostIOCache="true" Bootable="true">
+            <AttachedDevice type="HardDisk" hotpluggable="false" port="0" device="0">
+              <Image uuid="{{{disk_uuid}}}"/>
+            </AttachedDevice>
+            <AttachedDevice passthrough="false" type="DVD" hotpluggable="false" port="1" device="0">
+              <Image uuid="{{{iso_uuid}}}"/>
+            </AttachedDevice>
+          </StorageController>
+        </StorageControllers>
+        <RTC localOrUTC="UTC"/>
+        <CPU count="{cpus}">
+          <PAE enabled="true"/>
+          <LongMode enabled="true"/>
+        </CPU>
+      </Hardware>
+    </vbox:Machine>
+"""
+
+
 def ovf(name, mem, cpus, disk_file, disk_bytes, disk_cap, iso_file, iso_bytes):
-    """The OVF 1.0 descriptor."""
+    """The OVF 1.0 descriptor, in the shape VirtualBox's own export writes (VBoxManage export --options iso): the ISO is
+    a disk of the package (ECMA-119) in the CD-ROM drive of the second IDE channel, and the vbox:Machine section
+    carries the VirtualBox settings."""
+    disk_uuid, iso_uuid = uuid.uuid4(), uuid.uuid4()
     items = (
         item(3, f"{cpus} virtual CPU(s)", 1, "Number of virtual CPUs", quantity=cpus, units="hertz * 10^6")
         + item(4, f"{mem} MB of memory", 2, "Memory Size", quantity=mem, units="byte * 2^20")
         + item(5, "ideController0", 3, "IDE Controller", subtype="PIIX4", address=0)
-        + item(17, "disk1", 4, "C: disk", parent=3, on_parent=0, host="ovf:/disk/vmdisk1")
-        + item(15, "cdrom1", 5, "Kernel and ROM image (GRUB)", parent=3, on_parent=2, host="ovf:/file/file2",
+        + item(5, "ideController1", 4, "IDE Controller", subtype="PIIX4", address=1)
+        + item(17, "disk1", 5, "C: disk", parent=3, on_parent=0, host="ovf:/disk/vmdisk1")
+        + item(15, "cdrom1", 6, "Kernel and ROM image (GRUB)", parent=4, on_parent=0, host="ovf:/disk/iso2",
                automatic="true")
-        + item(10, "Ethernet adapter on 'NAT'", 6, "Intel PRO/1000", subtype="E1000", automatic="true")
-        + item(35, "sound", 7, "Intel AC'97 audio", subtype="ensoniq1371", automatic="true")
+        + item(10, "Ethernet adapter on 'NAT'", 7, "Intel PRO/1000", subtype="E1000", automatic="true")
+        + item(35, "sound", 8, "Intel AC'97 audio", subtype="ensoniq1371", automatic="true")
     )
     return f"""<?xml version="1.0"?>
 <Envelope ovf:version="1.0" xml:lang="en-US" {OVF_NS}>
@@ -84,7 +139,9 @@ def ovf(name, mem, cpus, disk_file, disk_bytes, disk_cap, iso_file, iso_bytes):
   <DiskSection>
     <Info>Virtual disk information</Info>
     <Disk ovf:capacity="{disk_cap}" ovf:diskId="vmdisk1" ovf:fileRef="file1"
-          ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
+          ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized" vbox:uuid="{disk_uuid}"/>
+    <Disk ovf:capacity="{iso_bytes}" ovf:diskId="iso2" ovf:fileRef="file2"
+          ovf:format="http://www.ecma-international.org/publications/standards/Ecma-119.htm" vbox:uuid="{iso_uuid}"/>
   </DiskSection>
   <NetworkSection>
     <Info>Logical networks</Info>
@@ -106,7 +163,7 @@ def ovf(name, mem, cpus, disk_file, disk_bytes, disk_cap, iso_file, iso_bytes):
         <vssd:VirtualSystemType>virtualbox-2.2</vssd:VirtualSystemType>
       </System>
 {items}    </VirtualHardwareSection>
-  </VirtualSystem>
+{vbox_machine(name, mem, cpus, disk_uuid, iso_uuid)}  </VirtualSystem>
 </Envelope>
 """
 
