@@ -473,7 +473,9 @@ def build_dll(code: bytes, exports: list[int], *,
     # address table at iTextSize and rejects the image (f32image.h ValidateImports). x86 only for now:
     # with the old flags (XIP never reads them) -- flip them when ARM next RAM-loads an image.
     arm_bits = 0 if cpu == CPU_X86 else FLAG_ABI_EABI | FLAG_EPT_EKA2
-    imp_fmt = FLAG_IMPFMT_ELF if (cpu == CPU_X86 if imp_elf is None else imp_elf) else 0
+    # (ARM images too since 2026-10-21: a SIS-installed (RAM-loaded) ARM image was rejected KErrCorrupt -- no IAT room
+    # at iTextSize; the ROM builder never reads the import format)
+    imp_fmt = FLAG_IMPFMT_ELF if (True if imp_elf is None else imp_elf) else 0
     hdr.flags = arm_bits | imp_fmt | FLAG_HDRFMT_V | (0 if exe else FLAG_DLL)
     if stack_size is not None:
         hdr.stack_size = stack_size
