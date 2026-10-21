@@ -12,6 +12,7 @@ rcomp is the release's own resource compiler (the toolchain image carries it, wi
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -40,6 +41,16 @@ def compile_rss(rss: str, rsc: str, rsg: str | None = None, incs=(), uids=(), la
                        capture_output=True, text=True, errors="replace")
     if r.returncode:
         return False, "cpp: " + r.stderr[-1500:]
+    # a file found through -idirafter is a "system header": cpp tags its line markers with flag 3 (# 12 "f" 1 3), which
+    # rcomp reads as a stray token (`Unknown character '"'`). It knows the include flags 1 and 2 only.
+    with open(rpp, encoding="latin-1") as fh:
+        pp = fh.read()
+    fixed = re.sub(r'^(# \d+ "[^"\n]*")((?: \d)+)$',
+                   lambda m: m.group(1) + "".join(" " + f for f in m.group(2).split() if f in ("1", "2")),
+                   pp, flags=re.M)
+    if fixed != pp:
+        with open(rpp, "w", encoding="latin-1", newline="") as fh:
+            fh.write(fixed)
     args = [RCOMP, "-u", f"-o{rsc}", f"-s{rpp}", f"-i{rss}"]
     if rsg:
         os.makedirs(os.path.dirname(rsg), exist_ok=True)
