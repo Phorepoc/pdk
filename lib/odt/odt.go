@@ -1,9 +1,9 @@
 // Copyright (c) Nokia Corporation and/or its subsidiary(-ies) (ThemeInstaller); Copyright The Phorepoc Authors (the Go port)
-// SPDX-License-Identifier: EPL-1.0
+// SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 
 // Package odt compiles the Symbian^3 homescreen configuration sources (Xuikon XML, CSS and a localisation DTD)
 // into the binary "ODT" form (.o0000) the homescreen reads at run time. It is a Go port of the ThemeInstaller
-// XML2ODT compiler (Nokia, EPL-1.0), so no Java is needed to build the configuration binaries.
+// XML2ODT compiler (Nokia, EPL-1.0; this port EPL-2.0), so no Java is needed to build the configuration binaries.
 //
 // Ported: the manifest (.dat) reading, the XML parse with the DTD's entities, the CSS parse and its application
 // to the XML (rule matching by specificity, inheritance), and the ODT writer. Not ported: language specific

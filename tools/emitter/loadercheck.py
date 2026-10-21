@@ -1,6 +1,6 @@
 # Copyright (c) 1996-2009 Nokia Corporation and/or its subsidiary(-ies): the 2010 source this ports (f32image.h)
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: EPL-1.0
+# SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 
 """loadercheck.py -- the REAL F32 loader's acceptance checks for a RAM-loaded E32Image.
 

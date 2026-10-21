@@ -101,6 +101,7 @@ cd web && npm ci && npm test && npx vue-tsc --noEmit
 
 ## Licence
 
-[Apache-2.0](LICENSE), copyright The Phorepoc Authors ([AUTHORS](AUTHORS), [NOTICE](NOTICE)). Two files derived from
-the Symbian source stay under [EPL-1.0](LICENSES/EPL-1.0.txt); each file's header says which licence it is under.
+[Apache-2.0](LICENSE), copyright The Phorepoc Authors ([AUTHORS](AUTHORS), [NOTICE](NOTICE)). The Nokia-derived
+files are our updated versions, under [EPL-2.0](LICENSES/EPL-2.0.txt) with GPL-2.0-or-later as a Secondary License (relicensed from
+EPL-1.0 under its section 7); copied Symbian test data stays under [EPL-1.0](LICENSES/EPL-1.0.txt). Each file's header says which licence it is under.
 Contributions are welcome under the same terms: add yourself to `AUTHORS`.

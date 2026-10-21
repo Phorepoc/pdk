@@ -5,14 +5,13 @@ Phorepoc was founded by Kyriakos Bompotis.
 
 This product includes software developed by The Phorepoc Authors, licensed under the Apache License 2.0 (LICENSE).
 
-Two files are derived from the Symbian source released by Nokia Corporation and/or its subsidiary(-ies) and the
-Symbian Foundation, and stay under the Eclipse Public License 1.0 (LICENSES/EPL-1.0.txt):
+The Nokia-derived source files in this repo are our updated versions, distributed under the Eclipse Public License 2.0
+(LICENSES/EPL-2.0.txt) with GNU General Public License, version 2 or later as a Secondary License (relicensed from
+EPL-1.0 under its section 7); unmodified Symbian sources are fetched from upstream and remain EPL-1.0. They are:
   tools/toolchain/genexec.pl
   tools/emitter/loadercheck.py
-
-The Go port of the ThemeInstaller XML2ODT compiler is derived from the ThemeInstaller source (Java) released by
-Nokia Corporation and/or its subsidiary(-ies), and stays under the Eclipse Public License 1.0
-(LICENSES/EPL-1.0.txt):
-  lib/odt/            (the library)
+  lib/odt/            (the Go port of the ThemeInstaller XML2ODT compiler, derived from Nokia's Java source)
   cmd/phodt/          (its command)
-  lib/odt/testdata/   (homescreen configuration sources and the compiled files, Nokia, EPL-1.0)
+
+The test data under lib/odt/testdata/ (homescreen configuration sources and the compiled files, Nokia) is copied
+unchanged and stays under the Eclipse Public License 1.0 (LICENSES/EPL-1.0.txt).

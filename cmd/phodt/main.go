@@ -1,5 +1,5 @@
 // Copyright (c) Nokia Corporation and/or its subsidiary(-ies) (ThemeInstaller); Copyright The Phorepoc Authors (the Go port)
-// SPDX-License-Identifier: EPL-1.0
+// SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 
 // Command phodt compiles a homescreen configuration (a manifest .dat naming the Xuikon XML, CSS and DTD) to the
 // binary ODT form (.o0000), replacing the Java ThemeInstaller.
