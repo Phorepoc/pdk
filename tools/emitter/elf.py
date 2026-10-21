@@ -309,6 +309,24 @@ def extract(blob: bytes, data_imports=frozenset()) -> Extracted:
         if not sec:
             continue
         for r in elf.relocs_for(target):
+            if (elf.e_machine == EM_X86_64 and r.rtype == R_X86_64_GOTPCRELX and target == ".text"
+                    and r.offset - sec.addr >= 2 and sec.data[r.offset - sec.addr - 2] == 0x3B
+                    and (sec.data[r.offset - sec.addr - 1] & 0xC7) == 0x05):
+                # `cmp r32, sym@GOTPCREL(%rip)` (a comparison with a function's address, libstdcpp): lld relaxes
+                # only mov/call/jmp/test without a REX prefix and left this one reading a GOT slot, which E32 has
+                # not. The relaxation the linker would do with a REX prefix, done here: `cmp r32, $sym` -- 81 /7 id,
+                # the same 6 bytes -- the immediate an ordinary absolute relocation.
+                off = r.offset - sec.addr
+                s_val = elf.symbols[r.sym].value if r.sym < len(elf.symbols) else 0
+                code = bytearray(ext.code)
+                code[off - 2] = 0x81
+                code[off - 1] = 0xF8 | ((sec.data[off - 1] >> 3) & 7)
+                struct.pack_into("<I", code, off, s_val)
+                ext.code = bytes(code)
+                if s_val:                     # (an undefined weak symbol compares with 0: nothing to relocate)
+                    off_list.append(off)
+                    type_map[off] = classify(s_val)
+                continue
             if elf.e_machine == EM_X86_64 and r.rtype in _X86_GOTPCREL_TYPES:
                 r = _x86_relaxed(r, sec)
             if r.rtype in _PC_REL_BY_MACHINE[elf.e_machine]:
