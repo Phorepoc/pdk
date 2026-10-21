@@ -34,6 +34,9 @@ SYMBIAN="$PHOREPOC_SYMBIAN"
 BUILD="$PHOREPOC_BUILD"
 SYM10="$SYMBIAN/symbian-2010"
 PX86="$OS_ROOT/tools/phorepoc-x86"
+# the board CommsDat source for CED (the x86 board brings its generator; a board that ships the CED-built database
+# itself, os/data/commsdat/cccccc00.cre, needs none)
+mk_ced_xml() { [ -f "$PX86/commdb_xml.py" ] && python3 "$PX86/commdb_xml.py" "$BUILD/rom/phorepoc_ced.xml" >/dev/null || true; }
 mkdir -p "$BUILD/rom"
 
 # UI_RENDERER=classic|alfred|both (default: both on NGA boards, classic elsewhere): which render path(s) the image carries.
@@ -113,7 +116,7 @@ if [ -n "${BOOT:-}" ]; then
   # adaptation over Symbian's stub), ESTART from its real mmp (domain manager on), and a wsini with NO startup
   # line -- SSM starts WSERV itself (startup\0\wserv.rsc) and then the UI. Same Z: data as BOOT=@.
   SSMBOOT=0; [ "$BOOT" = ssm ] && { SSMBOOT=1; COMMSDAT=1; export PHOREPOC_SSM=1; ESTART_IMG="$BUILD/x32img/e32strt.exe"
-                                    python3 "$PX86/commdb_xml.py" "$BUILD/rom/phorepoc_ced.xml" >/dev/null; }
+                                    mk_ced_xml; }
   case "$BOOT" in @*)
     BOOT_APP="${BOOT#@}"
     # after apparc's first scan (it registers widgets with apparc): the WRT first-boot pre-installer (waited for -- it
@@ -130,7 +133,7 @@ if [ -n "${BOOT:-}" ]; then
   # server + ESOCK, ntpsync sets the clock over SNTP, and nettest walks RConnection -> DNS -> a TCP GET (NET_TEST="<host> <port>").
   # All go in before the foreground app (the list's last item). Without NET=1 an S60 ROM runs only CED.
   if [ "$COMMSDAT" = 1 ] && [ "$SSMBOOT" = 0 ]; then
-    python3 "$PX86/commdb_xml.py" "$BUILD/rom/phorepoc_ced.xml" >/dev/null
+    mk_ced_xml
     NT="${NET_TEST:-}"
     # NET_DUMP=1: + ceddump, the resulting database as c:\cedout.cfg (read it off the DISK=1 image)
     DUMP=""; [ "${NET_DUMP:-0}" = 1 ] && DUMP=" ceddump"
@@ -287,7 +290,7 @@ if [ -n "${BOOT:-}" ]; then
     grep -qiF 'resource\versions\sw.txt=' "$ARGS" || \
       printf -- '--data\nresource\\versions\\sw.txt=%s\n' "$BUILD/rom/sw.txt"
     if [ "$COMMSDAT" = 1 ]; then
-      printf -- '--data\nSys\\Data\\phorepoc_ced.xml=%s\n' "$BUILD/rom/phorepoc_ced.xml"
+      [ -f "$BUILD/rom/phorepoc_ced.xml" ] && printf -- '--data\nSys\\Data\\phorepoc_ced.xml=%s\n' "$BUILD/rom/phorepoc_ced.xml"
       # CommsDat's repository: the default database commsdat.iby ships (CED replaces its content)
       CDB="$SYM10/oss.FCL.sf.os.commsfw/commsfwtools/preparedefaultcommsdatabase/defaultcommdb/bin/cccccc00.cre"
       # BOOT=ssm runs no CED: the ROM carries CED's OUTPUT, as a phone ROM does (the database a BOOT=@ NET=1
