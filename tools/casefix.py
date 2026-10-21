@@ -37,6 +37,7 @@ def main(pkgs: list[str] | None = None) -> None:
     roots = [inc] + [os.path.normpath(os.path.join(SYMBIAN, "symbian-2010", p)) for p in pkgs]
     by_base, by_tail = {}, {}
     scan = []
+    default_2010 = {p for p in epoc32_export.DEFAULT_PKGS if "symbian-rcl3" not in p}
 
     def rank(p: str) -> tuple:
         """which of several same-named headers a bare include means: the exported tree in the order the mmps'
@@ -44,7 +45,19 @@ def main(pkgs: list[str] | None = None) -> None:
         and the stale 2010 copy in platform/mw/ lacked AknListUtils -> avkon failed), then source dirs, with
         stub packages' copies last (the 2010 fepstub's AknFepUICtrlPinyinPopup.h, a shorter path, broke avkonfep)"""
         if not p.startswith(inc + os.sep):
-            return (2, 1 if any("stub" in d.lower() for d in p.split(os.sep)[:-1]) else 0, len(p))
+            # between the two trees' copies of one source header, the line the build compiles that package from:
+            # RCL_3, except the symbian-2010 packages of the default set (as epoc32_export orders them) -- the 2010
+            # phone engine's pevirtualengine.h lacked TPEPhoneIdentityParameters and the RCL_3 phone engine failed
+            parts = p.split(os.sep)
+            tree = next((i for i, d in enumerate(parts) if d in ("symbian-2010", "symbian-rcl3")), None)
+            pkg = parts[tree + 1] if tree is not None and tree + 1 < len(parts) else ""
+            if tree is None:
+                pref = 1
+            elif parts[tree] == "symbian-rcl3":
+                pref = 1 if pkg in default_2010 else 0
+            else:
+                pref = 0 if pkg in default_2010 else 1
+            return (2, 1 if any("stub" in d.lower() for d in parts[:-1]) else 0, pref, len(p))
         d = os.path.dirname(os.path.relpath(p, inc)).replace(os.sep, "/").lower()
         order = ["", "mw", "platform/mw", "platform", "app", "platform/app"]
         return (0, order.index(d), 0) if d in order else (1, d.count("/"), len(d))
