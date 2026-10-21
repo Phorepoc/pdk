@@ -132,11 +132,15 @@ jobs:
         if: inputs.board == 'pc'
         run: |
           ph component resources -A -b pc
+          ph source casefix -a -b pc            # links the .rsg spellings the resources just generated (Linux is case-sensitive)
+          ph component resources -A -b pc       # ... and the resources that include them
           ph component build -A -b pc 2>&1 | tee component-build.log | tail -n 20
 
       - name: Build every component (pinephone)
         if: inputs.board == 'pinephone'
         run: |
+          ph component resources -A -b pinephone
+          ph source casefix -a -b pinephone
           ph component resources -A -b pinephone
           ph component build -A -arch arm -b pinephone 2>&1 | tee component-build.log | tail -n 20
 
