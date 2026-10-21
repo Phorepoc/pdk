@@ -289,6 +289,7 @@ if [ -n "${BOOT:-}" ]; then
       # boot built from phorepoc_ced.xml + cmsetup, taken off its disk)
       if [ "$SSMBOOT" = 1 ]; then
         if [ -f "$BUILD/commsdat/cccccc00.cre" ]; then CDB="$BUILD/commsdat/cccccc00.cre"
+        elif [ -f "$OS_ROOT/data/commsdat/cccccc00.cre" ]; then CDB="$OS_ROOT/data/commsdat/cccccc00.cre"   # the board's own
         else echo "BOOT=ssm: no CED-built CommsDat -- ESOCK/connmon will fail (bash $PX86/make_commsdat.sh)" >&2; fi
       fi
       printf -- '--data\nprivate\\10202be9\\cccccc00.cre=%s\n' "$CDB"
