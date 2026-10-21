@@ -159,6 +159,7 @@ jobs:
         if: inputs.board == 'pc'
         run: |
           ph image zdata -b pc
+          ph image skin -b pc                   # the default skin package (the UI needs one)
           ph image rom -b pc -O prune=1   # (drops what needs layers this board does not ship yet, e.g. Mesa)
           ph image kernel -b pc
           ph image vbox -b pc
@@ -170,6 +171,7 @@ jobs:
         if: inputs.board == 'pinephone'
         run: |
           ph image zdata -b pinephone
+          ph image skin -b pinephone
           ph image pinephone -b pinephone
           sudo chown -R "$(id -u):$(id -g)" build
           # the SD card (on the host: its script runs docker for the FAT tools + Debian's U-Boot)
