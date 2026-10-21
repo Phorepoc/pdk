@@ -13,7 +13,7 @@ The job file holds NUL-separated records, each a NUL-separated argv terminated b
 A TU is compiled only when its object is missing, the recorded command line (<obj>.cmd) differs, or the source /
 a header it included (<obj>.d, -MMD) is newer than the object. Compiles run in parallel straight into g++ (no shell
 start per TU). <obj>.log = the compiler's output + "rc=N". Exit 1 if any TU fails (its output printed).
-Environment: SYMCC_* and SYMBIAN_GXX as for symcc.
+Environment: SYMCC_* and SYMBIAN_GXX as for symcc. The source and object paths in the job file are relative to the working directory (the recipe tree).
 """
 import os, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
@@ -97,7 +97,7 @@ def compile_one(argv, obj, cmd, cmdline):
     for f in (obj, obj + ".cmd"):
         if os.path.exists(f):
             os.remove(f)
-    r = subprocess.run(cmd + ["-MMD", "-MF", obj + ".d"], capture_output=True, text=True, errors="replace", cwd=PDK)
+    r = subprocess.run(cmd + ["-MMD", "-MF", obj + ".d"], capture_output=True, text=True, errors="replace")
     out = r.stdout + r.stderr
     open(obj + ".log", "w", encoding="utf-8").write("=== %s -> %s  rc=%d\n%s" % (
         os.path.basename(argv[1] if argv[0] in ("-k",) else obj), os.path.basename(obj), r.returncode, out))
