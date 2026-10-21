@@ -76,7 +76,7 @@ if [ "$KERNEL" -eq 1 ]; then
   INCS+=(-I"$B/include/kernel" -I"$B/include/memmodel"
          -I"$B/include/${SYMCC_NKERN:-nkern}" -I"$B/include/${SYMCC_NKERN:-nkern}/arm"
          -I"$B/include/kernel/arm" -I"$B/include/memmodel/epoc"
-         -I"$OS_ROOT/toolchain/kinc")
+         -I"${PHOREPOC_KINC:-$OS_ROOT/toolchain/kinc}")
 fi
 
 # SYMCC_PREINC="dir ...": include dirs searched BEFORE all of the above (overlays of baseline headers, e.g.
