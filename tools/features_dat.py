@@ -36,8 +36,13 @@ DSR = [(0x10279806, 0x10281805)]      # the Symbian default supported range
 
 def main(out: str) -> None:
     r = subprocess.run([MMP.CPP, "-undef", "-nostdinc", "-x", "c", "-w", "-dM", "-E",
-                        "-I", os.path.join(MMP.EPOC32, "include"), MMP.S60_VARIANT_HRH],
+                        "-I", os.path.join(MMP.EPOC32, "include"),
+                        # the case-insensitive fallback the compiles use (tools/casefix.py): bldvariant.hrh includes
+                        # "ProductVariant.hrh", exported as productvariant.hrh -- on Linux nothing was defined
+                        "-idirafter", os.path.join(MMP.BUILD, "casefix"), MMP.S60_VARIANT_HRH],
                        capture_output=True, text=True, errors="replace")
+    if r.returncode != 0:
+        sys.exit("features_dat: the variant headers do not preprocess:\n" + r.stderr[-2000:])
     defined = set(re.findall(r"^#define\s+(\w+)", r.stdout, re.M))
     text = open(XML, encoding="utf-8", errors="replace").read()
     entries = {}
