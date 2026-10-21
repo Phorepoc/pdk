@@ -383,6 +383,15 @@ def main() -> None:
                                         and l.split("=", 1)[0][17:].lower() in board)]
     zlines += ["private\\10202be9\\" + f + "=" + p for f, p in sorted(board.items())]
     zlines = [s60_meshpreface(l) for l in zlines]
+    # the homescreen configurations compiled to ODT (core os/data/homescreen: HSPS installs them from
+    # z:\private\200159c0\install at its first start); the manifest's paths are relative to its folder
+    hdir = os.path.join(OS_ROOT, "data", "homescreen")
+    hman = os.path.join(hdir, "manifest.txt")
+    if os.path.isfile(hman):
+        for l in open(hman).read().splitlines():
+            if l.strip():
+                z, _, p = l.strip().partition("=")
+                zlines.append(z + "=" + os.path.join(hdir, p))
     # S^4: Orbit's Z: data (its central-repository files, i18n tables) and the other
     # S^4 packages': every BUILD/s4/*-zdata.txt
     for sman in sorted(glob.glob(os.path.join(S4B, "*-zdata.txt"))) if S4 else []:
