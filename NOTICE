@@ -9,3 +9,10 @@ Two files are derived from the Symbian source released by Nokia Corporation and/
 Symbian Foundation, and stay under the Eclipse Public License 1.0 (LICENSES/EPL-1.0.txt):
   tools/toolchain/genexec.pl
   tools/emitter/loadercheck.py
+
+The Go port of the ThemeInstaller XML2ODT compiler is derived from the ThemeInstaller source (Java) released by
+Nokia Corporation and/or its subsidiary(-ies), and stays under the Eclipse Public License 1.0
+(LICENSES/EPL-1.0.txt):
+  lib/odt/            (the library)
+  cmd/phodt/          (its command)
+  lib/odt/testdata/   (homescreen configuration sources and the compiled files, Nokia, EPL-1.0)

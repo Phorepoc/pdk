@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+============================================================================
+<FileName: "organizerconfiguration.dtd">
+<PartOf  : "organizerconfiguration">
+
+<FileDescription: "Localization strings for the configuration">
+<FileVersion    : >
+
+<Copyright:
+"Copyright © 2007 Nokia Corporation.
+This material, including documentation and any related
+computer programs, is protected by copyright controlled by
+Nokia Corporation. All rights are reserved. Copying,
+including reproducing, storing,  adapting or translating, any
+or all of this material requires the prior written consent of
+Nokia Corporation. This material also contains confidential
+information which may not be disclosed to others without the
+prior written consent of Nokia Corporation.">
+============================================================================
+-->
+
+
+<!--
+qtn_ai_cale_no_eve_positive_short.attributes
+qtn_ai_cale_no_eve_positive_short.layout "ai2_gene_pane_t1/opt1"
+qtn_ai_cale_no_eve_positive_short.release "TB9.2"
+qtn_ai_cale_no_eve_positive_short.description "Indicates that there are no upcoming events in calendar."
+qtn_ai_cale_no_eve_positive_short.parents "ai2_gene_pane_t1"
+-->
+<!ENTITY qtn_ai_cale_no_eve_positive_short  "No calendar events within next 7 days">
+
+<!--
+qtn_ai_cale_no_more_ev_positive_short.attributes
+qtn_ai_cale_no_more_ev_positive_short.layout "ai2_gene_pane_t1/opt1"
+qtn_ai_cale_no_more_ev_positive_short.release "TB9.2"
+qtn_ai_cale_no_more_ev_positive_short.description "Indicates that there are no more upcoming events in calendar."
+qtn_ai_cale_no_more_ev_positive_short.parents "ai2_gene_pane_t1"
+-->
+<!ENTITY qtn_ai_cale_no_more_ev_positive_short  "No more calendar events within next 7 days">
+
+<!--
+qtn_hs_cale_next_tomorrow.attributes
+qtn_hs_cale_next_tomorrow.layout "ai2_gene_pane_t1/opt1"
+qtn_hs_cale_next_tomorrow.release "TB9.2"
+qtn_hs_cale_next_tomorrow.description "Indicates that next calendar event is tomorrow"
+qtn_hs_cale_next_tomorrow.parents "ai2_gene_pane_t1"
+-->
+<!ENTITY qtn_hs_cale_next_tomorrow  "Next event tomorrow">
+
+

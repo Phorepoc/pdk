@@ -1,0 +1,75 @@
+widget#calendarPluginContainer {
+    display: block;
+    width: auto;
+    height: auto;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 2%;
+    padding-bottom: 2%;
+    nav-index: appearance;
+    block-progression: tb;
+}
+
+button.calendarEntryBox {
+    display: none;
+    visibility: visible;
+    width: auto;
+    height: 31%;
+    margin-top: auto;
+    margin-bottom: auto;
+    block-progression: lr;
+}
+
+image.calendarEntryIcon { /* ai_gene_pane_1_g1 */
+    display: block;
+    visibility: visible;
+    width: 24px;
+    height: 24px;
+}
+
+text.calendarEntryText1 { /* ai_gene_pane_1_t1 */
+    display: block;
+    visibility: visible;
+    position: static;
+    height: auto;
+    width: auto;
+    padding-left: 5px;
+    padding-right: 6px;
+    font-family: EAknLogicalFontSecondaryFont;
+    font-size: 23px;
+    _s60-text-valign: top;
+    color: "SKIN(268458534 13056 74)";
+}
+
+button.calendarInfoBox {
+    display: none;
+    visibility: visible;
+    width: auto;
+    height: auto;
+    block-progression: rl;
+
+}
+
+text#calendarInfoText { /* ai_gene_pane_1_t1 */
+    display: block;
+    visibility: visible;
+    position: static;
+    height: adaptive;
+    width: auto;
+    padding-left: 5px;
+    padding-right: 5px;
+    margin-top: auto;
+    margin-bottom: auto;    
+    font-family: EAknLogicalFontSecondaryFont;
+    font-size: 23px;
+    _s60-text-valign: top;
+    color: "SKIN(268458534 13056 74)";
+    max-line-amount: 2;
+    text-overflow-mode: wrap;
+}
+
+image#calendarInfoIcon
+{
+    margin-top: auto;
+    margin-bottom: auto;    
+}

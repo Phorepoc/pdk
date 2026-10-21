@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmluiml xmlns="http://www.series60.com/xml/xmluiml/1" version="1.0"> 
+
+	<widget id="wizardPluginContainer" focusable="true" _s60-initial-focus="1" >
+	
+		<contentsource name="WLANWizard" value="0x10281CAF" />
+		
+		<actions>
+			<action>
+				<trigger name="activate"/>
+				<event name="WLANWizard/OpenMenu" />
+			</action>
+		</actions>
+
+		<button id="wizardInfoArea1" class="wizardStatusBox1" focusable="false">
+			<image id="wizardStatusIcon" class="wizardicon" focusable="false">
+				<property class="WLANWizard/StatusIcon"/>
+			</image>
+			<text id="statusName1" class="wizardEntryText1" focusable="false">
+				<property class="WLANWizard/NetworkStatus" />
+			</text>
+		</button> <!-- enf of wizardInfoArea1 -->
+			
+		<button id="wizardInfoArea2" class="wizardStatusBox2" focusable="false">
+			<text id="statusName2" class="wizardEntryText2" focusable="false">
+				<property class="WLANWizard/NetworkName"/>
+			</text>
+			<image id="wizardSecureIcon" class="wizardicon" focusable="false">
+				<property class="WLANWizard/SecureIcon"/>
+				<property class="policy/Content" name="wizardSecureIcon" value="display: block;"/>
+			</image> 
+			<image id="wizardStrengthIcon" class="wizardicon" focusable="false">
+				<property class="WLANWizard/StrengthIcon"/>
+				<property class="policy/Content" name="wizardStrengthIcon" value="display: block;"/>
+			</image>
+		</button> <!-- enf of wizardInfoArea2 -->
+		
+	</widget> <!-- end of wizardPluginContainer -->
+
+</xmluiml>

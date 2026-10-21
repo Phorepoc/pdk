@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xmluiml SYSTEM "organizer.dtd">
+<xmluiml xmlns="http://www.series60.com/xml/xmluiml/1" version="1.0">
+  
+  <!--######################################
+      ####       Organizer plugin       ####
+      ######################################-->
+    <widget id="calendarPluginContainer" focusable="true" _s60-initial-focus="1">
+    
+	  <!-- UI resources for Organizer -->
+		<desc id="Organizer/NoEventsForToday">&qtn_ai_cale_no_eve_positive_short;</desc>
+	    <desc id="Organizer/NoMoreEventsForToday">&qtn_ai_cale_no_more_ev_positive_short;</desc>
+		<desc id="Organizer/IconAnniv" path="SKIN(268458241 2)"/>
+		<desc id="Organizer/IconAppt" path="SKIN(268458241 4)"/>
+		<desc id="Organizer/IconMemo" path="SKIN(268458241 6)"/>
+		<desc id="Organizer/IconTodo" path="SKIN(270501603 5126)"/>
+		<desc id="Organizer/IconMeetAccepted" path="SKIN(270501603 5508)"/>
+		<desc id="Organizer/IconMeetNotAnswered" path="SKIN(270501603 5511)"/>
+		<desc id="Organizer/IconMeetTentative" path="SKIN(270501603 5514)"/>
+	  
+	    <contentsource name="Organizer" value="0x102750FE"/>  
+	  
+		<!-- #################################
+	       ## Organizer plug-in settings  ##
+	       ################################# -->
+	
+		<!-- Item count and size settings -->
+		<!-- Total line count -->
+		<property class="Settings/Organizer" name="0x01" value="3"/>
+	
+		<!-- Timed item line count -->
+		<property class="Settings/Organizer" name="0x02" value="1"/>
+	
+		<!-- Non Timed item line count -->
+		<property class="Settings/Organizer" name="0x03" value="1"/>
+	
+		<!-- Line count reserved for non timed items -->
+		<property class="Settings/Organizer" name="0x04" value="0"/>
+	
+		<!-- Publish end time for upcoming timed items -->
+		<property class="Settings/Organizer" name="0x05" value="1"/>
+	
+		<!-- Use alternate publishing for upcoming and ongoing items -->
+		<property class="Settings/Organizer" name="0x06" value="0"/>
+	
+		<!-- Open event to viewer 0 / editor 1 -->
+		<property class="Settings/Organizer" name="0x07" value="0"/>
+	
+	    <!-- Days to handle as not today. After which "Next event on DAY DATE" is displayed.
+	         Here one means tomorrow only. So we display detailed info for not today events for
+	         tomorrow only. -->
+	    <property class="Settings/Organizer" name="0x08" value="0"/>
+	
+	    <!-- Open first valid event on launch event index 0 -->
+	    <property class="Settings/Organizer" name="0x09" value="1"/>
+	
+	    <!-- Publish info text (no more events...) using InfoText and InfoIcon ids -->
+	    <property class="Settings/Organizer" name="0x0A" value="1"/>
+		    
+    
+        <actions>
+            <action>
+                            
+                <trigger name="activate"/>
+                
+                <event name="Organizer/ItemSelected(0)"/>
+          </action>
+        </actions>
+      <!-- #1 -->
+        <button id="calendarEntryBox1" class="calendarEntryBox" >
+          <image id="calendarEntryIcon1" class="calendarEntryIcon" >
+            <property class="Organizer/EventIcon" name="ordinal" value="0x01"/>
+                <property class="policy/emptyContent" name="calendarEntryBox1" value="display: none;"/>
+                <property class="policy/Content" name="calendarEntryBox1" value="display: block;"/>
+				<!-- hide the infobox when we have some events to show -->
+                <property class="policy/Content" name="calendarInfoTextBox" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoText" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoIcon" value="display: none;"/>
+          </image>
+          <text id="calendarEntryText1_1" class="calendarEntryText1" >
+            <property class="Organizer/StartTimeAndSubject" name="ordinal" value="0x01"/>
+            <!-- If there is no text, the entry box is not shown at all -->
+				<property class="policy/Content" name="calendarEntryText1_1" value="display: block;"/>
+				<property class="policy/emptyContent" name="calendarEntryText1_1" value="display: none;"/>
+				<!-- hide the infobox when we have some events to show -->
+                <property class="policy/Content" name="calendarInfoTextBox" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoText" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoIcon" value="display: none;"/>
+
+			</text>
+        </button>
+
+        <!-- #2 -->
+        <button id="calendarEntryBox2" class="calendarEntryBox" >
+          <image id="calendarEntryIcon2" class="calendarEntryIcon" >
+            <property class="Organizer/EventIcon" name="ordinal" value="0x02"/>
+                <property class="policy/emptyContent" name="calendarEntryBox2" value="display: none;"/>
+                <property class="policy/Content" name="calendarEntryBox2" value="display: block;"/>
+								<!-- hide the infobox when we have some events to show -->
+                <property class="policy/Content" name="calendarInfoTextBox" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoText" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoIcon" value="display: none;"/>
+
+          </image>
+          <text id="calendarEntryText2_1" class="calendarEntryText1" >
+            <property class="Organizer/StartTimeAndSubject" name="ordinal" value="0x02"/>
+            <!-- If there is no text, the entry box is not shown at all -->
+				<property class="policy/Content" name="calendarEntryText2_1" value="display: block;"/>
+				<property class="policy/emptyContent" name="calendarEntryText2_1" value="display: none;"/>
+								<!-- hide the infobox when we have some events to show -->
+                <property class="policy/Content" name="calendarInfoTextBox" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoText" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoIcon" value="display: none;"/>
+
+
+          </text>         
+		</button>
+
+        <!-- #3 -->
+        <button id="calendarEntryBox3" class="calendarEntryBox" >
+          <image id="calendarEntryIcon3" class="calendarEntryIcon" >
+            <property class="Organizer/EventIcon" name="ordinal" value="0x03"/>
+                <property class="policy/emptyContent" name="calendarEntryBox3" value="display: none;"/>
+                <property class="policy/Content" name="calendarEntryBox3" value="display: block;"/>
+								<!-- hide the infobox when we have some events to show -->
+                <property class="policy/Content" name="calendarInfoTextBox" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoText" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoIcon" value="display: none;"/>
+
+          </image>
+          <text id="calendarEntryText3_1" class="calendarEntryText1" >
+            <property class="Organizer/StartTimeAndSubject" name="ordinal" value="0x03"/>
+            <!-- If there is no text, the entry box is not shown at all -->
+				<property class="policy/Content" name="calendarEntryText3_1" value="display: block;"/>
+				<property class="policy/emptyContent" name="calendarEntryText3_1" value="display: none;"/>
+								<!-- hide the infobox when we have some events to show -->
+                <property class="policy/Content" name="calendarInfoTextBox" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoText" value="display: none;"/>
+                <property class="policy/Content" name="calendarInfoIcon" value="display: none;"/>
+
+          </text>        
+        </button>
+		
+        <!-- Info text. Hidden by default, shown in case info text is shown. Then
+			 other buttons are hidden -->
+        <button id="calendarInfoTextBox" class="calendarInfoBox" >
+          <image id="calendarInfoIcon" class="calendarEntryIcon" >
+            <property class="Organizer/InfoIcon"/>
+			<!-- hide the above buttons and show just this info button -->
+                <property class="policy/Content" name="calendarEntryBox1" value="display: none;"/>
+                <property class="policy/Content" name="calendarEntryBox2" value="display: none;"/>
+                <property class="policy/Content" name="calendarEntryBox3" value="display: none;"/>
+
+                <property class="policy/Content" name="calendarInfoIcon" value="display: block;"/>								
+                <property class="policy/Content" name="calendarInfoTextBox" value="display: block;"/>
+
+                <property class="policy/emptyContent" name="calendarInfoIcon" value="display: none;"/>												
+          </image>
+          <text id="calendarInfoText" >
+            <property class="Organizer/InfoText"/>
+ 			<!-- hide the above buttons and show just this info button -->
+                <property class="policy/Content" name="calendarEntryBox1" value="display: none;"/>
+                <property class="policy/Content" name="calendarEntryBox2" value="display: none;"/>
+                <property class="policy/Content" name="calendarEntryBox3" value="display: none;"/>
+				
+                <property class="policy/Content" name="calendarInfoText" value="display: block;"/>								
+                <property class="policy/Content" name="calendarInfoTextBox" value="display: block;"/>
+          </text>
+        </button>				
+      </widget> <!-- end calendarPluginContainer box -->	  
+</xmluiml>
