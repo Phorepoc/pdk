@@ -390,6 +390,77 @@ func commands(app *cli.App) []*cli.Command {
 			},
 		},
 		{
+			Group: "image", Name: "kernel",
+			Summary: "Build the x86-64 kernel and its bootable ISO",
+			Description: "Builds the kernel for the PC board from the Symbian source (nkernSMP, ekern and the flexible " +
+				"memory model, with the x86-64 adaptation's backend and boot stub), links it with the ROM that " +
+				"\"ph image rom -b pc\" made (<build>/rom/romsect.bin), and wraps both in a GRUB ISO: " +
+				"<build>/x86/ekern/phorepoc-ekern.iso. Boots in QEMU, VirtualBox or on a PC; the kernel image " +
+				"is about the size of the ROM, so give the machine at least 512 MB.\n\n" +
+				"Settings of the kernel (trace, screen, scale, dbg, kclean) are given with -O name=value " +
+				"(\"ph help image-options\" lists them).",
+			Flags: func(fs *flag.FlagSet) {
+				fs.Var(&multi{}, "O", "set an image `option`, name=value (repeatable)")
+				boardFlag(fs)
+			},
+			Examples: []cli.Example{
+				{What: "The kernel and ISO for the ROM just built:", Cmd: "image kernel -b pc"},
+				{What: "A kernel that traces its boot:", Cmd: "image kernel -b pc -O trace=0x80000002"},
+			},
+			Run: func(fs *flag.FlagSet, args []string) error {
+				if err := noArgs(args); err != nil {
+					return err
+				}
+				for _, o := range vals(fs, "O") {
+					if err := build.SetImageOption(o); err != nil {
+						return cli.Usagef("%v", err)
+					}
+				}
+				e, err := env(str(fs, "b"))
+				if err != nil {
+					return err
+				}
+				return e.Kernel()
+			},
+		},
+		{
+			Group: "image", Name: "vbox",
+			Summary: "Package the ISO as a VirtualBox appliance",
+			Description: "Writes <build>/x86/<name>.ova from the ISO \"ph image kernel\" made: a PC with the ISO in its " +
+				"DVD drive and a blank, formatted C: disk (a streamOptimized VMDK on the IDE primary master), " +
+				"an Intel PRO/1000 network adapter on NAT and AC'97 audio. It needs neither VirtualBox nor root: the " +
+				"disk is converted with qemu-img and the archive is a tar, the OVF descriptor first.\n\n" +
+				"Import it with VirtualBox (File, Import Appliance). If the DVD drive comes in empty, attach " +
+				"phorepoc-ekern.iso from the archive (or <build>/x86/ekern). For the phone-shaped screen add " +
+				"the video mode: VBoxManage setextradata <name> CustomVideoMode1 720x1280x32.",
+			Flags: func(fs *flag.FlagSet) {
+				fs.String("n", "Phorepoc", "the virtual machine's `name`, and the file's")
+				fs.String("m", "1024", "`MB` of RAM (the ROM lives in RAM)")
+				fs.String("c", "2", "number of virtual `CPUs`")
+				fs.String("d", "256", "size of the C: disk in `MB`")
+				fs.String("o", "", "write the appliance to this `file` (in the container: under /build)")
+				boardFlag(fs)
+			},
+			Examples: []cli.Example{
+				{What: "The appliance for the last kernel:", Cmd: "image vbox -b pc"},
+				{What: "A 2 GB RAM machine with a 1 GB C: disk:", Cmd: "image vbox -b pc -m 2048 -d 1024"},
+			},
+			Run: func(fs *flag.FlagSet, args []string) error {
+				if err := noArgs(args); err != nil {
+					return err
+				}
+				a := []string{"-n", str(fs, "n"), "-m", str(fs, "m"), "-c", str(fs, "c"), "-d", str(fs, "d")}
+				if o := str(fs, "o"); o != "" {
+					a = append(a, "-o", o)
+				}
+				e, err := env(str(fs, "b"))
+				if err != nil {
+					return err
+				}
+				return e.Vbox(a...)
+			},
+		},
+		{
 			Group: "image", Name: "skin",
 			Summary: "Build the default skin package",
 			Description: "Compiles the S60 default skin from its descriptor with the release's skin compiler: " +

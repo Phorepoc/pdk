@@ -26,6 +26,7 @@ var passThrough = []string{
 	"LEAVE_TRACE", "SCHED_TRACE", "MIF_ALL", "IBY_DATA", "ROM_ARCH", "ROM_TAIL", "ROM_EXCLUDE", "SSM_TEST",
 	"SECONDARY_IMAGE", "PHOREPOC_S4", "PHOREPOC_QT48", "PHETTY", "CENREP_EXTRA", "ROM_DATA_EXTRA", "UTC_OFFSET",
 	"WEBFONTS", "THEMES", "X32_LD", "X32_DEFS", "X32_INCLUDE", "X32_FULLERR", "PRUNE_UNRESOLVED", "ROM_HEAP_LIMITS",
+	"TRACE", "SCREEN", "SCALE", "DBG", "KCLEAN",
 }
 
 // Env is where the pieces live.
@@ -218,6 +219,16 @@ func (e *Env) Rom(boot string) error {
 	return e.InContainer("bash", "-c", romScript, "_", boot)
 }
 
+// Kernel builds the x86-64 kernel and the GRUB ISO that carries the ROM of "ph image rom" (<build>/x86/ekern).
+func (e *Env) Kernel() error {
+	return e.InContainer("bash", "tools/make_phorepoc_kernel.sh")
+}
+
+// Vbox packages the kernel ISO and a blank C: disk as a VirtualBox appliance; args are make_ova.py's options.
+func (e *Env) Vbox(args ...string) error {
+	return e.Python("tools/make_ova.py", args...)
+}
+
 // Shell opens an interactive shell in the toolchain container with the mounts.
 func (e *Env) Shell() error {
 	if inContainer() {
@@ -315,6 +326,11 @@ var ImageOptions = []ImageOption{
 	{"prune", "PRUNE_UNRESOLVED", "0|1", "drop images whose imports are not in the ROM instead of failing"},
 	{"leave-trace", "LEAVE_TRACE", "0|1", "log each User::Leave with its caller (diagnostic)"},
 	{"sched-trace", "SCHED_TRACE", "0|1", "the active scheduler with a dispatch log (diagnostic)"},
+	{"trace", "TRACE", "<hex>", "ph image kernel: the kernel's trace mask (default 0x80000000: panics only)"},
+	{"screen", "SCREEN", "<w>x<h>", "ph image kernel: the screen the display HAL reports (default 360x640)"},
+	{"scale", "SCALE", "n", "ph image kernel: show each screen pixel as an n x n block (default 2)"},
+	{"dbg", "DBG", "0|1", "ph image kernel: a debug kernel (default 1)"},
+	{"kclean", "KCLEAN", "0|1", "ph image kernel: rebuild the kernel objects even when nothing changed"},
 	{"x32-ld", "X32_LD", "bfd", "force GNU ld for the x32 links"},
 	{"x32-defs", "X32_DEFS", "<component>:<MACRO>,...", "extra defines for some components (diagnostic)"},
 	{"x32-include", "X32_INCLUDE", "<component>:<header>,...", "force-include a header in some components (diagnostic)"},

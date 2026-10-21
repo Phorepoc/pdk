@@ -36,6 +36,8 @@ What goes onto a device: the ROM, its data, installable packages.
 | command | what it does |
 |---|---|
 | [`ph image rom`](ph-image-rom.md) | Build the ROM |
+| [`ph image kernel`](ph-image-kernel.md) | Build the x86-64 kernel and its bootable ISO |
+| [`ph image vbox`](ph-image-vbox.md) | Package the ISO as a VirtualBox appliance |
 | [`ph image skin`](ph-image-skin.md) | Build the default skin package |
 | [`ph image icons`](ph-image-icons.md) | Build every component's icon files (.mif) |
 | [`ph image zdata`](ph-image-zdata.md) | Collect the Z: data the packages export |
@@ -201,6 +203,21 @@ Given as -O name=value, as many as needed (ph image rom -b pc -O net=1 -O fonts=
 
   sched-trace=0|1
       The active scheduler with a dispatch log (diagnostic).
+
+  trace=<hex>
+      Ph image kernel: the kernel's trace mask (default 0x80000000: panics only).
+
+  screen=<w>x<h>
+      Ph image kernel: the screen the display HAL reports (default 360x640).
+
+  scale=n
+      Ph image kernel: show each screen pixel as an n x n block (default 2).
+
+  dbg=0|1
+      Ph image kernel: a debug kernel (default 1).
+
+  kclean=0|1
+      Ph image kernel: rebuild the kernel objects even when nothing changed.
 
   x32-ld=bfd
       Force GNU ld for the x32 links.

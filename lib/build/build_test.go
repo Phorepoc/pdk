@@ -66,3 +66,19 @@ func TestFindBoard(t *testing.T) {
 		t.Error("an unknown board must fail")
 	}
 }
+
+// The kernel settings of "ph image kernel -O trace=..." reach the container.
+func TestKernelOptionsPassed(t *testing.T) {
+	t.Setenv("TRACE", "") // restored when the test ends
+	if err := SetImageOption("trace=0x80000002"); err != nil {
+		t.Fatal(err)
+	}
+	e := &Env{PDK: "/p", Core: "/c", OSRoot: "/nonexistent-os", Symbian: "/nonexistent-sym", Build: "vol", Image: "img:1"}
+	a, err := e.dockerArgs(false, []string{"bash", "tools/make_phorepoc_kernel.sh"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := strings.Join(a, " "); !strings.Contains(s, "-e TRACE=0x80000002") || !strings.HasSuffix(s, "img:1 bash tools/make_phorepoc_kernel.sh") {
+		t.Errorf("TRACE not handed over: %s", s)
+	}
+}

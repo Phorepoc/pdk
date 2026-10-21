@@ -47,6 +47,8 @@ ph source mbg -a                       # the icon id headers
 ph component resources -A -b pc        # resources and their .rsg headers
 ph component build -A -b pc            # every component -> build/x32img/
 ph image rom -b pc                     # the ROM
+ph image kernel -b pc                  # the kernel and a GRUB ISO (build/x86/ekern)
+ph image vbox -b pc                    # a VirtualBox appliance (build/x86/Phorepoc.ova)
 ```
 
 Device commands, through a running PhoneLab (`-url`, or `$PHONELAB_URL`, default `http://localhost:8737`):
