@@ -116,6 +116,13 @@ jobs:
           } >> "$GITHUB_ENV"
           mkdir -p build
 
+      - name: Layer recipes (tls -- mbedTLS + the CA bundle at their pinned versions)
+        if: contains(inputs.layers, 'tls')
+        run: |
+          docker run --rm -v "$PWD:$PWD" -w "$PWD" -e PHOREPOC_BUILD="$PWD/build" -e PHOREPOC_PDK="$PWD/pdk" \
+            "$PHOREPOC_IMAGE" bash -c 'set -e; bash tls/recipes/fetch_mbedtls.sh; bash tls/recipes/fetch_cacert.sh
+              [ "${{ inputs.board }}" = pc ] && bash tls/recipes/build_mbedtls.sh || true'
+
       - name: Exports + header case links
         run: |
           ph source export -b ${{ inputs.board }}
@@ -126,6 +133,10 @@ jobs:
         run: |
           ph component resources -b pc
           ph component build -A -b pc 2>&1 | tee component-build.log | tail -n 20
+
+      - name: Own the build folder (the container wrote it as root)
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" build
 
       - name: Save the build for the next run
         if: always()

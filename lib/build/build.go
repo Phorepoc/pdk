@@ -240,14 +240,14 @@ func (e *Env) Shell() error {
 // Board is a device the pdk builds for: the adaptation checkouts that make it, and its architecture.
 type Board struct {
 	Name, Summary string
-	Adaptations   []string // checkout folder names, next to core
+	Adaptations   []string // checkout folder names, next to core: the board's adaptations + the layers it ships (tls: modern TLS)
 	Arch          string   // "x32" or "arm"
 }
 
 // Boards are the boards ph knows by name (-b).
 var Boards = []Board{
-	{"pc", "QEMU, VirtualBox and real PCs: x86-64 with the x32 ABI", []string{"adaptation-x86-64", "adaptation-pc"}, "x32"},
-	{"pinephone", "the PINE64 PinePhone: ARM, Allwinner A64", []string{"adaptation-a64", "adaptation-pinephone"}, "arm"},
+	{"pc", "QEMU, VirtualBox and real PCs: x86-64 with the x32 ABI", []string{"adaptation-x86-64", "adaptation-pc", "tls"}, "x32"},
+	{"pinephone", "the PINE64 PinePhone: ARM, Allwinner A64", []string{"adaptation-a64", "adaptation-pinephone", "tls"}, "arm"},
 }
 
 // FindBoard returns the named board.
