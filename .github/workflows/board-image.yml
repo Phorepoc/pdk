@@ -122,7 +122,7 @@ jobs:
           ph source casefix -b ${{ inputs.board }}
           ph source mbg -b ${{ inputs.board }}
 
-      - name: Layer recipes (tls -- mbedTLS + the CA bundle at their pinned versions; after the exports: it compiles against them)
+      - name: Layer recipes (tls -- mbedTLS + the CA bundle at their pinned versions; after the exports, which it compiles against)
         if: contains(inputs.layers, 'tls')
         run: |
           docker run --rm -v "$PWD:$PWD" -w "$PWD" -e PHOREPOC_BUILD="$PWD/build" -e PHOREPOC_PDK="$PWD/pdk" \
