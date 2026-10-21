@@ -56,6 +56,9 @@ merge() { local dst=$1; shift; mkdir -p "$dst"; for d in "$@"; do [ -d "$d" ] ||
 rm -rf "$V/src" "$V/tools" "$V/toolchain" "$V/emitter" "$V/baseline" "$V/bin"
 mkdir -p "$V"
 ln -s "$OS_ROOT/src" "$V/src"
+rm -rf "$V/third_party" "$V/.epoc32"; ln -s "$OS_ROOT/third_party" "$V/third_party"
+# the exported public headers (tools/epoc32_export.py) the kernel-side NGA sources include (<sgresource/...>)
+[ -d "$PHOREPOC_BUILD/epoc32" ] && ln -s "$PHOREPOC_BUILD/epoc32" "$V/.epoc32"
 merge "$V/tools" "$OS_ROOT/tools" "$PDK/tools"
 merge "$V/toolchain" "$OS_ROOT/toolchain" "$PDK/tools/toolchain"
 rm -f "$V/toolchain/kinc"; ln -s "$KINC" "$V/toolchain/kinc"
