@@ -127,6 +127,7 @@ jobs:
         run: |
           ph source export -b ${{ inputs.board }}
           ph source casefix -b ${{ inputs.board }}
+          ph source mbg -b ${{ inputs.board }}
 
       - name: Build every component (pc)
         if: inputs.board == 'pc'
