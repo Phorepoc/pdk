@@ -212,7 +212,7 @@ if [ -n "${BOOT:-}" ]; then
   # the language list: UTF-16LE with a BOM, "01,d" (English, default)
   printf '\377\3760\0001\000,\000d\000\r\000\n\000' > "$BUILD/rom/languages.txt"
   # one software version per ROM build: apparc drops its C: app-list cache when it changes
-  python3 "$PX86/sw_version.py" "$BUILD/rom/sw.txt" >/dev/null
+  python3 "$([ -f "$PX86/sw_version.py" ] && echo "$PX86" || echo "$TOOLS")/sw_version.py" "$BUILD/rom/sw.txt" >/dev/null
   ARGS="$BUILD/rom/full.args"
   # every registered component's icon files (bld.inf mifconv) before the recipe stages BUILD/icon-gen (MIF_ALL=0 = off):
   # missing .mif files crash apps that load their icons at start
