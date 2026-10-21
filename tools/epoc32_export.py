@@ -19,7 +19,7 @@ Only destinations under /epoc32/include are honoured (no rom/ iby, data, zips).
 import filecmp, os, re, shutil, subprocess, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "emitter"))
-from paths import SYMBIAN, EPOC32_ROOT  # noqa: E402
+from paths import SYMBIAN, EPOC32_ROOT, OS_ROOT  # noqa: E402
 
 BASE = os.path.join(SYMBIAN, "symbian-2010")
 OUT = os.path.join(EPOC32_ROOT, "include")
@@ -259,6 +259,15 @@ def run(pkgs, scan_only=False):
         for f in os.listdir(hb):
             if f.lower().endswith("symbian.h") or f.lower() == "hbsymbianvariant.h":
                 shutil.copy2(os.path.join(hb, f), os.path.join(OUT, "hb", "hbcore", f.lower()))
+    # Our public headers: os/inc/** of core and every layer (OS_ROOT is their merged view), e.g. the browser engine
+    # seam <phorepoc/phewebengine.h> from the phewebengine repo -- engine repos compile against the exported tree
+    our_inc = os.path.join(OS_ROOT, "inc")
+    for root, dirs, files in os.walk(our_inc, followlinks=True):
+        for f in files:
+            rel = os.path.relpath(os.path.join(root, f), our_inc)
+            dst = os.path.join(OUT, rel.lower())
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copyfile(os.path.join(root, f), dst)
     # RCL_3 ErrorResGt.rss includes <errors/generic/faxerr.ra>, but the fax component that
     # exported it is not in the 2010 release; the only copy is the telephony test tree's.
     fax = os.path.join(BASE, "oss.FCL.sf.os.networkingsrv", "networkingtestandutils",
