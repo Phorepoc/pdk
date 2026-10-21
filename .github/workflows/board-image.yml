@@ -118,9 +118,8 @@ jobs:
 
       - name: Exports + header case links
         run: |
-          ph source export -b ${{ inputs.board }}
-          ph source casefix -b ${{ inputs.board }}
-          ph source mbg -b ${{ inputs.board }}
+          ph source export -a -b ${{ inputs.board }}     # every package (a clean tree needs them all; runs casefix too)
+          ph source mbg -a -b ${{ inputs.board }}
 
       - name: Layer recipes (tls -- mbedTLS + the CA bundle at their pinned versions; after the exports, which it compiles against)
         if: contains(inputs.layers, 'tls')
