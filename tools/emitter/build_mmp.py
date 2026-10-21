@@ -864,14 +864,23 @@ def main() -> int:
     rsc_only = "--rsc" in args          # resources (.rsc/.rsg) only -- run before a
     args = [a for a in args if a != "--rsc"]    # bulk build so every <x.rsg> exists
     keys = list(C.COMPONENTS) if args == ["--all"] else args
-    rc = 0
-    for k in keys:
-        try:
-            rc |= build(k, rsc_only)
-        except (Exception, SystemExit) as e:   # noqa: BLE001 -- one bad mmp (or a `link failed` SystemExit) must
-            print(f"=== {k}: FAILED: {(str(e).splitlines() or ['?'])[0][:200]}")   # not stop a batch
-            rc = 1
-    return rc
+    # resources include the .rsg headers OTHER resources generate (<avkon.rsg>): on a fresh tree one pass in registry
+    # order fails wherever the producer comes later, so the failed ones go round again while a pass makes progress
+    passes = 8 if rsc_only else 1
+    while True:
+        failed = []
+        for k in keys:
+            try:
+                if build(k, rsc_only):
+                    failed.append(k)
+            except (Exception, SystemExit) as e:   # noqa: BLE001 -- one bad mmp (or a `link failed` SystemExit) must
+                print(f"=== {k}: FAILED: {(str(e).splitlines() or ['?'])[0][:200]}")   # not stop a batch
+                failed.append(k)
+        passes -= 1
+        if not failed or len(failed) == len(keys) or passes == 0:
+            return 1 if failed else 0
+        print(f"=== resources: {len(failed)} component(s) failed, again (their .rsg headers may exist now)")
+        keys = failed
 
 
 if __name__ == "__main__":
