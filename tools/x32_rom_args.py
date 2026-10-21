@@ -240,6 +240,11 @@ def main() -> None:
     # ROM_EXCLUDE=<key>[,<key>...]: components that ship as a SIS instead (make_sis.py) -- a ROM file of
     # the same name would eclipse-block the install
     exclude = {k for k in os.environ.get("ROM_EXCLUDE", "").split(",") if k}
+    # ... and the board's own list (BOARD/rom_exclude.txt, one key per line, # comments): components the
+    # hardware has no use for (the PC board: no WLAN -> no WLAN engine, whose server dies without wlanhwinit)
+    bex = os.path.join(BOARD, "rom_exclude.txt")
+    if os.path.isfile(bex):
+        exclude |= {l.split("#", 1)[0].strip() for l in open(bex)} - {""}
     for key, comp in C.COMPONENTS.items():
         if key in OWN or key in TEXT_SHELL or key in exclude:
             continue
