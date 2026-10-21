@@ -842,7 +842,12 @@ def closure(roots: list[str]) -> list[str]:
             return
         seen.add(k)
         comp = C.COMPONENTS[k]
-        m = MMP.parse(os.path.join(MMP.BASE, mmp_of(comp)), MMP_DEFS)
+        try:
+            m = MMP.parse(os.path.join(MMP.BASE, mmp_of(comp)), MMP_DEFS)
+        except (Exception, SystemExit) as e:   # noqa: BLE001 -- one unreadable mmp must not stop the whole order:
+            print(f"=== {k}: mmp unreadable, built last: {(str(e).splitlines() or ['?'])[0][:160]}")   # its build reports it
+            order.append(k)
+            return
         for lib in comp.get("libs", []) + m.libs + m.staticlibs:
             visit(lib.rsplit(".", 1)[0].lower())
         order.append(k)
