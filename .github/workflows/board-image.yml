@@ -149,7 +149,7 @@ jobs:
         if: inputs.board == 'pc'
         run: |
           ph image zdata -b pc
-          ph image rom -b pc
+          ph image rom -b pc -O prune=1   # (drops what needs layers this board does not ship yet, e.g. Mesa)
           ph image kernel -b pc
           ph image vbox -b pc
           mkdir -p out
