@@ -12,11 +12,11 @@ ph component build [-Ar] [-arch <architecture>] [-b <board>] [<component>...]
 
 Compiles each component from its real .mmp with the modern toolchain and writes its E32Image: x32 images into <build>/x32img, ARM images into <build>/arm.
 
--r also builds everything the named components link against, providers first. -A builds every registered component (x32 only), providers first; a component that fails is reported and the build goes on. Run "ph component resources" first: components include the .rsg headers it generates.
+-r also builds everything the named components link against, providers first. -A builds every registered component, providers first (ARM: every component, in registry order); a component that fails is reported and the build goes on. Run "ph component resources" first: components include the .rsg headers it generates.
 
 ## Options
 
-- `-A`: Every registered component (x32).
+- `-A`: Every registered component.
 - `-arch <architecture>`: The architecture: x32 (amd64 CPU, 32-bit pointers) or arm (default: x32).
 - `-b <board>`: Build for this board ("ph board list"): core plus the board's adaptation repositories. Without it, the adaptations in PHOREPOC_ADAPTATIONS.
 - `-r`: Recursive: also everything the components link against, providers first.

@@ -245,12 +245,12 @@ func commands(app *cli.App) []*cli.Command {
 			Description: "Compiles each component from its real .mmp with the modern toolchain and writes its " +
 				"E32Image: x32 images into <build>/x32img, ARM images into <build>/arm.\n\n" +
 				"-r also builds everything the named components link against, providers first. -A builds every " +
-				"registered component (x32 only), providers first; a component that fails is reported and the " +
+				"registered component, providers first (ARM: every component, in registry order); a component that fails is reported and the " +
 				"build goes on. Run \"ph component resources\" first: components include the .rsg headers it " +
 				"generates.",
 			Flags: func(fs *flag.FlagSet) {
 				fs.Bool("r", false, "recursive: also everything the components link against, providers first")
-				fs.Bool("A", false, "every registered component (x32)")
+				fs.Bool("A", false, "every registered component")
 				fs.String("arch", "x32", "the `architecture`: x32 (amd64 CPU, 32-bit pointers) or arm")
 				boardFlag(fs)
 			},
@@ -270,10 +270,13 @@ func commands(app *cli.App) []*cli.Command {
 					return cli.Usagef("which components? (or -A for all)")
 				case arch != "x32" && arch != "arm":
 					return cli.Usagef("-arch %s: x32 or arm", arch)
-				case arch == "arm" && (all || rec):
-					return cli.Usagef("-A and -r are x32 only for now")
+				case arch == "arm" && rec:
+					return cli.Usagef("-r is x32 only for now")
 				}
 				if arch == "arm" {
+					if all {
+						return python(fs, "tools/emitter/build_mmp.py", "--all")
+					}
 					return python(fs, "tools/emitter/build_mmp.py", args...)
 				}
 				switch {
