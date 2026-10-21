@@ -1201,6 +1201,21 @@ def main(argv=None):
                     "its entry point + export 1 by id). Repeatable.")
     args = ap.parse_args(argv)
 
+    # the same data file named twice (the registry's rom_data and a package export, say): kept once; the same ROM path
+    # with two different sources is an error (which one ships would be an accident)
+    seen, data = {}, []
+    for spec in args.data:
+        zn, _, p = spec.partition("=")
+        key = zn.lower().replace("/", "\\")
+        if key in seen:
+            if (os.path.normcase(os.path.abspath(seen[key])) != os.path.normcase(os.path.abspath(p))
+                    and open(seen[key], "rb").read() != open(p, "rb").read()):
+                sys.exit(f"rombuild: {zn} given twice with different content: {seen[key]} and {p}")
+            continue
+        seen[key] = p
+        data.append(spec)
+    args.data = data
+
     rom_base = int(args.rom_base, 0)
     if args.section:
         base = int(args.section, 0)
