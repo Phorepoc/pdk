@@ -332,6 +332,17 @@ def build_resources(key: str, m, rom: str) -> int:
         ok, log = rsc.compile_rss(rss, out, rsg, incs=[rpath(x) for x in C.COMPONENTS[key].get("rsc_incs", [])] + extra_inc + m.userinc + m.sysinc + [CASEFIX], uids=b["uids"],
                                    defs=C.COMPONENTS[key].get("rdefs", ()), variant_of=b["rss"])
         if ok:
+            # the header is written lower case; its users mostly spell it as the resource file is named
+            # (<VPbkEng.rsg>): on a case-sensitive file system that spelling gets a link next to it at once (casefix
+            # ran before these headers existed)
+            spelled = os.path.splitext(b["target"] or os.path.basename(b["rss"]))[0] + ".rsg"
+            if rsg and spelled != os.path.basename(rsg):
+                link = os.path.join(os.path.dirname(rsg), spelled)
+                if not os.path.exists(link):
+                    try:
+                        os.symlink(os.path.basename(rsg), link)
+                    except OSError:
+                        pass                        # (a case-insensitive file system: the spelling already resolves)
             lines.append(tp.replace("/", "\\") + "\\" + stem + ".rsc=" + _rel_build(out))
             # no TARGETPATH: the .iby decides where it lands. A plug-in's extra resources conventionally go
             # next to its registration (ECOM_RESOURCE_DIR: the notes search plug-in opens
