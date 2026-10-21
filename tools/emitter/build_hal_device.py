@@ -77,7 +77,7 @@ def compile_objs(workdir: str) -> list[str]:
                *_generate(workdir),
                os.path.join(BE.ED, "unimpl_export.cpp")]
     extra = [f"-I{os.path.join(HALSRC, 'inc')}",
-             f"-I{os.path.join(OS_ROOT, 'toolchain', 'kinc')}"]
+             f"-I{os.environ.get('PHOREPOC_KINC') or os.path.join(OS_ROOT, 'toolchain', 'kinc')}"]
     env = dict(os.environ, SYMCC_ARM="1")
     objs = []
     for src in sources:

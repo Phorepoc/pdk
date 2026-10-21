@@ -5,8 +5,8 @@
 # make_arm_image.sh -- the PinePhone image from the public repositories ("ph image pinephone"). Runs on Linux inside the
 # toolchain container, after the ARM components are built (ph component build -A -arch arm -b pinephone).
 #
-#   1. the core images the kernel boots first (euser, efsrv, hal, efile: the device builds) -> <build>/arm/device
-#   2. the kernel include shims (as make_phorepoc_kernel.sh) -> <build>/arm/kinc
+#   1. the kernel include shims (as make_phorepoc_kernel.sh) -> <build>/arm/kinc (the device builds include them)
+#   2. the core images the kernel boots first (euser, efsrv, hal, efile: the device builds) -> <build>/arm/device
 #   3. the recipe's tree (<build>/arm/kview): the adaptation's image scripts (adaptation-a64 os/tools/kernel,
 #      adaptation-pinephone os/tools/phorepoc-arm) were written for one tree holding the OS sources, the build tools
 #      and the Symbian packages; that tree is assembled here from links -- src/ toolchain/ tools/ (the merged OS tree +
@@ -32,13 +32,7 @@ A="$PHOREPOC_BUILD/arm"; DEV="$A/device"; V="$A/kview"; OUT="$PHOREPOC_BUILD/pin
 [ -f "$OS_ROOT/tools/phorepoc-arm/make_pinephone_image.sh" ] || { echo "no PinePhone packager (adaptation-pinephone)" >&2; exit 1; }
 [ -d "$A/img" ] || { echo "no ARM images in $A/img (ph component build -A -arch arm -b pinephone)" >&2; exit 1; }
 
-echo "[1/5] core images (device builds)"
-mkdir -p "$DEV"
-for t in euser_device efsrv_device hal_device efile_exe; do
-  python3 "$PDK/tools/emitter/build_$t.py" > "$DEV/$t.log" 2>&1 || { echo "build_$t failed:"; tail -5 "$DEV/$t.log"; exit 1; }
-done
-
-echo "[2/5] kernel include shims"
+echo "[1/5] kernel include shims"
 KINC="$A/kinc"; rm -rf "$KINC"; mkdir -p "$KINC/kernel"
 echo "#include \"$KHS/kernel/eka/include/heap_hybrid.h\"" > "$KINC/kernel/heap_hybrid.h"
 echo "#include \"$KHS/halservices/hal/inc/hal_int.h\"" > "$KINC/kernel/hal_int.h"
@@ -47,6 +41,13 @@ printf '#!/bin/sh\nargs=""\nfor a in "$@"; do case "$a" in -I-|-lang-c++) ;; *) 
 chmod +x "$SHIM/cpp"
 ( cd "$KHS/kernel/eka/kernel" && PATH="$SHIM:$PATH" perl genexec.pl -i execs.txt \
     -e "$KINC/kernel/exec_enum.h" -u "$KINC/kernel/exec_user.h" -k "$KINC/kernel/exec_kernel.h" )
+
+echo "[2/5] core images (device builds)"
+mkdir -p "$DEV"
+export PHOREPOC_KINC="$KINC"
+for t in euser_device efsrv_device hal_device efile_exe; do
+  python3 "$PDK/tools/emitter/build_$t.py" > "$DEV/$t.log" 2>&1 || { echo "build_$t failed:"; tail -5 "$DEV/$t.log"; exit 1; }
+done
 
 echo "[3/5] the recipe's tree ($V)"
 # link every entry of the given folders into one folder (later folders do not replace earlier entries)

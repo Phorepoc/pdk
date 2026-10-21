@@ -32,7 +32,7 @@ from paths import OS_ROOT, BUILD
 from refcheck import check_image, format_result
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-KINC = os.path.join(OS_ROOT, "toolchain", "kinc")
+KINC = os.environ.get("PHOREPOC_KINC") or os.path.join(OS_ROOT, "toolchain", "kinc")
 
 # The device exec layer: the generated user-side executive (all 281 Exec::/
 # E32Loader::/UserSvr:: stub bodies, device svc numbers). Proven to compile
