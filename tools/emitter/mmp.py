@@ -226,7 +226,7 @@ def map_sf_path(path: str, mdir: str) -> str:
     for t in trees:
         cand = os.path.join(root, t, f"oss.FCL.sf.{layer}.{pkg}", rest)
         # (or only its epoc32/tree twin: a package's `|` export dir is not in the source)
-        twin = os.path.join(EPOC32, "tree", os.path.relpath(cand, BASE).replace("..", "_up"))
+        twin = os.path.join(EPOC32, "tree", os.path.relpath(cand, BASE).replace("..", "_up").lower())
         if nocase(cand) or os.path.isdir(twin):
             return os.path.normpath(cand)
     return path
@@ -540,12 +540,12 @@ def parse(path: str, extra_defs=()) -> Mmp:
             d = os.path.join(EPOC32, "include", *extra.split("/"))
             if d not in m.sysinc:
                 m.sysinc.append(d)
-    # in-tree exports (`|` destinations) live in the .epoc32/tree mirror
+    # in-tree exports (`|` destinations) live in the .epoc32/tree mirror (lower case, as epoc32_export writes it)
     for lst in (m.userinc, m.sysinc):
         for d in list(lst):
             # (a sibling tree such as symbian-rcl3 mirrors under tree/_up/)
             if d.lower().startswith(os.path.dirname(BASE).lower()):
-                twin = os.path.join(EPOC32, "tree", os.path.relpath(d, BASE).replace("..", "_up"))
+                twin = os.path.join(EPOC32, "tree", os.path.relpath(d, BASE).replace("..", "_up").lower())
                 if os.path.isdir(twin):
                     lst.insert(lst.index(d) + 1, twin)
     return m
