@@ -440,7 +440,7 @@ func commands(app *cli.App) []*cli.Command {
 				fs.String("n", "Phorepoc", "the virtual machine's `name`, and the file's")
 				fs.String("m", "1024", "`MB` of RAM (the ROM lives in RAM)")
 				fs.String("c", "2", "number of virtual `CPUs`")
-				fs.String("d", "256", "size of the C: disk in `MB`")
+				fs.String("d", "1024", "size of the C: disk in `MB` (1 GiB, as the PinePhone's C:)")
 				fs.String("o", "", "write the appliance to this `file` (in the container: under /build)")
 				boardFlag(fs)
 			},

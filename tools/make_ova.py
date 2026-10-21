@@ -181,7 +181,7 @@ def main():
     ap.add_argument("-n", "--name", default="Phorepoc")
     ap.add_argument("-m", "--mem", type=int, default=1024, help="MB of RAM (the ROM lives in RAM: 1024)")
     ap.add_argument("-c", "--cpus", type=int, default=2)
-    ap.add_argument("-d", "--disk", type=int, default=256, help="MB of the C: disk")
+    ap.add_argument("-d", "--disk", type=int, default=1024, help="MB of the C: disk (1 GiB, as the PinePhone's C:)")
     ap.add_argument("-o", "--out", default=None, help="default: <build>/x86/<name>.ova")
     a = ap.parse_args()
 

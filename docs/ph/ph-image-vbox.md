@@ -18,7 +18,7 @@ Import it with VirtualBox (File, Import Appliance) and start it: the ISO comes i
 
 - `-b <board>`: Build for this board ("ph board list"): core plus the board's adaptation repositories. Without it, the adaptations in PHOREPOC_ADAPTATIONS.
 - `-c <CPUs>`: Number of virtual CPUs (default: 2).
-- `-d <MB>`: Size of the C: disk in MB (default: 256).
+- `-d <MB>`: Size of the C: disk in MB (1 GiB, as the PinePhone's C:) (default: 1024).
 - `-m <MB>`: MB of RAM (the ROM lives in RAM) (default: 1024).
 - `-n <name>`: The virtual machine's name, and the file's (default: Phorepoc).
 - `-o <file>`: Write the appliance to this file (in the container: under /build).
