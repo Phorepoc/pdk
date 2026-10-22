@@ -157,7 +157,9 @@ def _compile_one(src, obj, flags, env):
     if os.environ.get("MMP_DUMPCMD") == os.path.basename(src):      # debug: the full compile command of one TU
         with open(os.path.join(ARM_ROOT, "mmp-cmd.txt"), "w") as fh:
             fh.write("\n".join([*_symcc_cmd(src, flags, env), src, "-O2", "-w", *flags, "-o", obj]))
-    r = subprocess.run([*_symcc_cmd(src, flags, env), src, "-O2", "-w", *flags, "-MMD", "-MF", obj + ".d", "-o", obj],
+    # g++ knows .cpp and .CPP only: a source named .Cpp / .cPP (the 2010 tree has them) would be handed to the linker, so no object
+    xc = ["-x", "c++"] if os.path.splitext(src)[1].lower() == ".cpp" and os.path.splitext(src)[1] not in (".cpp", ".CPP") else []
+    r = subprocess.run([*_symcc_cmd(src, flags, env), *xc, src, "-O2", "-w", *flags, "-MMD", "-MF", obj + ".d", "-o", obj],
                        capture_output=True, text=True, errors="replace", env=env, cwd=PDK)
     if r.returncode == 0:
         open(stamp, "w").write(key)
