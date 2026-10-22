@@ -21,6 +21,7 @@ import (
 	"github.com/Phorepoc/pdk/lib/config"
 	"github.com/Phorepoc/pdk/lib/core"
 	"github.com/Phorepoc/pdk/lib/device"
+	_ "github.com/Phorepoc/pdk/lib/device/nokia"
 	_ "github.com/Phorepoc/pdk/lib/device/pinephone"
 	"github.com/Phorepoc/pdk/lib/mock"
 	"github.com/Phorepoc/pdk/lib/store"
@@ -74,6 +75,9 @@ func main() {
 			log.Fatalf("device %s: %v", d.ID, err)
 		}
 		var op transport.Opener = &transport.SerialOpener{Cfg: transport.SerialConfig{Port: d.Port, VID: d.VID, PID: d.PID}}
+		if po, ok := drv.(interface{ Opener() transport.Opener }); ok && po.Opener() != nil {
+			op = po.Opener() // e.g. the nokia driver over TCP
+		}
 		if mf := firstNonEmpty(*mockFile, d.Mock); mf != "" {
 			lines, err := mock.LoadTranscript(mf, 0)
 			if err != nil {
