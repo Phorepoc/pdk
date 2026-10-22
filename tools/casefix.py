@@ -21,7 +21,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "emitter"))
-from paths import SYMBIAN, BUILD, EPOC32_ROOT  # noqa: E402
+from paths import SYMBIAN, BUILD, EPOC32_ROOT, OS_ROOT  # noqa: E402
 
 OUT = os.path.join(BUILD, "casefix")
 HEADER_EXT = {".h", ".inl", ".hrh", ".mmh", ".rh", ".ra", ".rsg", ".mbg", ".hpp", ".mph", ".inc", ".pan", ".rls", ".loc", ".lag"}   # .mbg: the icon id headers (mbg.py writes them lower case; <Muiu.mbg>)
@@ -35,6 +35,7 @@ def main(pkgs: list[str] | None = None) -> None:
         pkgs = epoc32_export.all_packages() if sys.argv[1:2] == ["--all"] else sys.argv[1:] or epoc32_export.DEFAULT_PKGS
     inc = os.path.join(EPOC32_ROOT, "include")
     roots = [inc] + [os.path.normpath(os.path.join(SYMBIAN, "symbian-2010", p)) for p in pkgs]
+    roots += [os.path.join(OS_ROOT, d) for d in ("src", "toolchain") if os.path.isdir(os.path.join(OS_ROOT, d))]   # our own sources and shims include in the 2010 spelling too
     by_base, by_tail = {}, {}
     scan = []
     default_2010 = {p for p in epoc32_export.DEFAULT_PKGS if "symbian-rcl3" not in p}
