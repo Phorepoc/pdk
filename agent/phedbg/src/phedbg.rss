@@ -1,0 +1,191 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// phedbg.rss -- the phedbg app: an Avkon settings list (main view), the Options menu, queries.
+NAME PHDB
+
+#include <eikon.rh>
+#include <avkon.rsg>
+#include <avkon.rh>
+#include <appinfo.rh>
+#include "phedbg.hrh"
+
+RESOURCE RSS_SIGNATURE { }
+RESOURCE TBUF r_default_document_name { buf = ""; }
+
+RESOURCE EIK_APP_INFO
+	{
+	menubar = r_phedbg_menubar;
+	cba = R_AVKON_SOFTKEYS_OPTIONS_EXIT;
+	}
+
+RESOURCE MENU_BAR r_phedbg_menubar
+	{
+	titles = { MENU_TITLE { menu_pane = r_phedbg_menu_pane; } };
+	}
+
+RESOURCE MENU_PANE r_phedbg_menu_pane
+	{
+	items =
+		{
+		MENU_ITEM { command = EPheDbgCmdStartStop; txt = "Start/stop server"; },
+		MENU_ITEM { command = EPheDbgCmdChange; txt = "Change"; },
+		MENU_ITEM { command = EPheDbgCmdNewCode; txt = "New pairing code"; },
+		MENU_ITEM { command = EPheDbgCmdAllowList; txt = "Write allow-list"; },
+		MENU_ITEM { command = EPheDbgCmdAllowAdd; txt = "Add allowed path"; },
+		MENU_ITEM { command = EPheDbgCmdAllowRemove; txt = "Remove allowed path"; },
+		MENU_ITEM { command = EPheDbgCmdLog; txt = "Session log"; },
+		MENU_ITEM { command = EAknSoftkeyExit; txt = "Exit"; }
+		};
+	}
+
+// ---- on/off and choice popups
+RESOURCE AVKON_POPUP_SETTING_TEXTS r_phedbg_onoff_texts
+	{
+	setting_texts_resource = r_phedbg_onoff_list;
+	popped_up_texts_resource = r_phedbg_onoff_popped;
+	}
+RESOURCE ARRAY r_phedbg_onoff_list
+	{
+	items = { AVKON_ENUMERATED_TEXT { value = 0; text = "Off"; }, AVKON_ENUMERATED_TEXT { value = 1; text = "On"; } };
+	}
+RESOURCE ARRAY r_phedbg_onoff_popped { items = { LBUF { txt = "Off"; }, LBUF { txt = "On"; } }; }
+
+RESOURCE AVKON_POPUP_SETTING_TEXTS r_phedbg_transport_texts
+	{
+	setting_texts_resource = r_phedbg_transport_list;
+	popped_up_texts_resource = r_phedbg_transport_popped;
+	}
+RESOURCE ARRAY r_phedbg_transport_list
+	{
+	items =
+		{
+		AVKON_ENUMERATED_TEXT { value = 1; text = "USB"; },
+		AVKON_ENUMERATED_TEXT { value = 2; text = "TCP"; },
+		AVKON_ENUMERATED_TEXT { value = 3; text = "USB + TCP"; }
+		};
+	}
+RESOURCE ARRAY r_phedbg_transport_popped { items = { LBUF { txt = "USB"; }, LBUF { txt = "TCP"; }, LBUF { txt = "USB + TCP"; } }; }
+
+RESOURCE AVKON_POPUP_SETTING_TEXTS r_phedbg_lan_texts
+	{
+	setting_texts_resource = r_phedbg_lan_list;
+	popped_up_texts_resource = r_phedbg_lan_popped;
+	}
+RESOURCE ARRAY r_phedbg_lan_list
+	{
+	items = { AVKON_ENUMERATED_TEXT { value = 0; text = "This phone only"; }, AVKON_ENUMERATED_TEXT { value = 1; text = "LAN"; } };
+	}
+RESOURCE ARRAY r_phedbg_lan_popped { items = { LBUF { txt = "This phone only"; }, LBUF { txt = "LAN"; } }; }
+
+RESOURCE AVKON_SETTING_PAGE r_phedbg_popup_page { type = EAknCtPopupSettingList; editor_resource_id = r_phedbg_popup_editor; }
+RESOURCE POPUP_SETTING_LIST r_phedbg_popup_editor { }
+
+RESOURCE AVKON_SETTING_PAGE r_phedbg_int_page { type = EAknCtIntegerEdwin; editor_resource_id = r_phedbg_int_editor; }
+RESOURCE AVKON_INTEGER_EDWIN r_phedbg_int_editor { min = 0; max = 65535; }
+
+RESOURCE AVKON_SETTING_PAGE r_phedbg_text_page { type = EEikCtEdwin; editor_resource_id = r_phedbg_text_editor; }
+RESOURCE EDWIN r_phedbg_text_editor { width = 9; lines = 1; maxlength = 16; }
+
+// ---- the main view
+RESOURCE AVKON_SETTING_ITEM_LIST r_phedbg_settings
+	{
+	title = "phedbg";
+	initial_number = 1;
+	items =
+		{
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetServer; name = "Server"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_onoff_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetTransport; name = "Transport"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_transport_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetAcmUnit; name = "USB ACM unit"; setting_page_resource = r_phedbg_int_page;  },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetTcpPort; name = "TCP port"; setting_page_resource = r_phedbg_int_page;  },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetTcpLan; name = "TCP listen"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_lan_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetCode; name = "Pairing code"; setting_page_resource = r_phedbg_text_page;  },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetOpRead; name = "Allow file read"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_onoff_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetOpWrite; name = "Allow file write"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_onoff_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetOpExec; name = "Allow exec"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_onoff_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetOpShot; name = "Allow screenshot"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_onoff_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetOpLog; name = "Allow log"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_onoff_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetOpInput; name = "Allow input"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_onoff_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetConfirm; name = "Confirm writes & exec"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_onoff_texts; },
+		AVKON_SETTING_ITEM { identifier = EPheDbgSetKeepAwake; name = "Keep awake"; setting_page_resource = r_phedbg_popup_page; associated_resource = r_phedbg_onoff_texts; }
+		};
+	}
+
+// ---- text query (add an allowed path) and confirmation query
+RESOURCE DIALOG r_phedbg_path_query
+	{
+	flags = EGeneralQueryFlags;
+	buttons = R_AVKON_SOFTKEYS_OK_CANCEL;
+	items =
+		{
+		DLG_LINE
+			{
+			type = EAknCtQuery;
+			id = EGeneralQuery;
+			control = AVKON_DATA_QUERY
+				{
+				layout = EDataLayout;
+				label = "Allowed path (E:\..\)";
+				control = EDWIN { flags = EEikEdwinNoHorizScrolling | EEikEdwinResizable; width = 8; maxlength = 128; lines = 2; };
+				};
+			}
+		};
+	}
+
+RESOURCE AVKON_LIST_QUERY r_phedbg_confirm_query
+	{
+	flags = EGeneralQueryFlags;
+	softkeys = R_AVKON_SOFTKEYS_OK_CANCEL;
+	items =
+		{
+		AVKON_LIST_QUERY_DLG_LINE
+			{
+			control = AVKON_LIST_QUERY_CONTROL
+				{
+				listtype = EAknCtSinglePopupMenuListBox;
+				heading = "Confirm";
+				listbox = AVKON_LIST_QUERY_LIST { };
+				};
+			}
+		};
+	}
+
+RESOURCE DIALOG r_phedbg_message_query
+	{
+	flags = EGeneralQueryFlags | EEikDialogFlagNoBorder | EEikDialogFlagNoShadow;
+	buttons = R_AVKON_SOFTKEYS_OK_EMPTY;
+	items =
+		{
+		DLG_LINE { type = EAknCtPopupHeadingPane; id = EAknMessageQueryHeaderId; control = AVKON_HEADING { }; },
+		DLG_LINE { type = EAknCtMessageQuery; id = EAknMessageQueryContentId; control = AVKON_MESSAGE_QUERY { }; }
+		};
+	}
+
+RESOURCE AVKON_LIST_QUERY r_phedbg_list_query
+	{
+	flags = EGeneralQueryFlags;
+	softkeys = R_AVKON_SOFTKEYS_OK_CANCEL;
+	items =
+		{
+		AVKON_LIST_QUERY_DLG_LINE
+			{
+			control = AVKON_LIST_QUERY_CONTROL
+				{
+				listtype = EAknCtSinglePopupMenuListBox;
+				heading = "Allowed paths";
+				listbox = AVKON_LIST_QUERY_LIST { };
+				};
+			}
+		};
+	}
+
+RESOURCE LOCALISABLE_APP_INFO r_phedbg_localisable_app_info
+	{
+	short_caption = "phedbg";
+	caption_and_icon = CAPTION_AND_ICON_INFO
+		{
+		caption = "phedbg (debug agent)";
+		number_of_icons = 1;
+		icon_file = "\\resource\\apps\\phedbg_icon.mif";
+		};
+	}

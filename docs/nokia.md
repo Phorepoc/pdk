@@ -1,7 +1,7 @@
 # PhoneLab on stock Nokia Symbian phones
 
-PhoneLab drives Phorepoc devices over phlink. The `nokia` driver does the same job for **stock Nokia Symbian^3 / Anna /
-Belle phones**: your own phone and your own apps. You can list, read and write files, start your exe, list processes,
+PhoneLab drives Phorepoc devices over phlink. The `nokia` driver does the same job for **stock Nokia Symbian^3-family
+phones**: your own phone and your own apps. You can list, read and write files, start your exe, list processes,
 take screenshots and follow a log from `ph`, the REST API, the web UI or MCP. It does not depend on Phorepoc images.
 
 The phone side is **phedbg**, a small native agent in the spirit of the on-device debug agents that Symbian SDKs used to
@@ -36,6 +36,13 @@ unit, `ACM::1` by default (the setting is in the app). On the host it appears as
   ports with AT commands.
 - If the phone's USB personality gives only one free ACM unit, set phedbg's ACM unit to `0` (and check that it is not
   the modem).
+
+**Status of USB on stock phones.** Not working yet. In PC Suite / Nokia Suite mode the suite's own components hold
+the ACM units and `ACM::1` fails with `KErrAccessDenied` (-21); in media transfer and mass storage modes the phone
+exposes no ACM function at all. The C32 calls behind the port can also block for a long time in PC Suite mode, so
+phedbg makes every one of them in a worker thread: the app stays responsive and the log says `USB ACM::<n> opening`,
+then either `host connected` or `USB ACM::<n> not available (<error>)`. Until a free ACM unit is found, use TCP over
+Wi-Fi.
 
 `99-phonelab.rules` also adds the `dialout` group. `compose.yaml` passes in every `ttyACM` (major 166), so the
 container
@@ -74,7 +81,8 @@ the op.
 | ps | | `e name= pid=` lines |
 | screenshot | | `d` lines (24-bit BMP) + `ok fmt=bmp w= h=` |
 | log | | the agent's session log, as `e text=` lines |
-| key / touch | code / x,y | `unsupported` in the self-signed build (see 4) |
+| key | code (a raw scan code, e.g. 17 = down) | `ok`; `unsupported` without SwEvent (see 4) |
+| touch | x, y (screen pixels) | `ok` (a tap: down, 50 ms, up); `unsupported` without SwEvent |
 
 PhoneLab stores each line in the device's history like any other log line. A screenshot or a file read also becomes a
 blob, which `fs_read out=` or `screenshot out=` saves to disk.
@@ -95,19 +103,24 @@ blob, which `fs_read out=` or `screenshot out=` saves to disk.
 - **Per-op switches.** File read, file write, exec, screenshot, log and input can each be turned off. A disabled op
   answers `unsupported`.
 - **Confirmation (optional).** With *Confirm writes/exec* on, each fs_write, fs_delete and exec shows a query on the
-  phone. *No* answers `denied`.
+  phone with three choices: *Allow*, *Allow all (this session)* and *Deny*. *Deny* answers `denied`. *Allow all*
+  lasts until the server stops.
 - **Session log.** The app records every request (op, path, verdict) and shows it in *Session log*.
 - **Capabilities: `ReadUserData WriteUserData NetworkServices LocalServices`.** No TCB, AllFiles, DRM or SwEvent, so a
   self-signed SIS installs on a stock phone.
 
-## 4. Capability-gated features (switched on in a later build)
+## 4. Capability-gated features
 
-v1 ships self-signed with the four user capabilities. Each feature that needs more is behind a compile-time switch in
-`phedbg_caps.h`, and is reported in `info caps=`. When the switch is off, the op answers `unsupported`.
+v1 ships self-signed with the four user capabilities (`group/phedbg.mmp`). Features that need more check the
+capability at run time (`phedbg_caps.h`, `RProcess::HasCapability`), so one source serves every build. The granted
+ones are reported in `info caps=` and in the `hello` ops list. Without the capability the op answers `unsupported`.
 
-| feature | needs | v1 behaviour |
+`group/phedbg_swevent.mmp` is the same app with SwEvent added. A self-signed SIS cannot carry SwEvent, so install that
+build only with a developer certificate or on a phone that grants it.
+
+| feature | needs | self-signed behaviour |
 |---|---|---|
-| key / touch injection into other apps | SwEvent (`RWsSession::SimulateRawEvent`, `SendEventToWindowGroup` to another group) | `unsupported` |
+| key / touch injection into other apps | SwEvent (`UserSvr::AddEvent`) | `unsupported`; works in the SwEvent build |
 | read `\sys\bin`, other apps' `\private` | AllFiles | the platform returns `KErrPermissionDenied` → `err code=denied` |
 | write to `\sys\`, `\resource\` | TCB | outside the allow-list anyway |
 | kernel/system trace (`RBTrace`) | CommDD / extended caps | `log` returns the agent's own session log only |
@@ -130,6 +143,10 @@ The main view is an Avkon settings list. Settings are saved in `phedbg.ini` in t
 | Pairing code | shown; Options → *New pairing code* |
 | Allow: file read / write / exec / screenshot / log / input | On / Off each (input is fixed Off in a build without SwEvent) |
 | Confirm writes & exec | On / Off |
+| Keep awake | On / Off: while the server runs, reset the inactivity timer every 5 s so the screen does not lock |
+
+Starting the server with TCP in LAN mode also brings up the phone's default Internet access point
+(`RConnection::Start`) and shows the phone's IP address, so the host knows what to dial.
 
 Options menu: Start/Stop server, New pairing code, Write allow-list (view, add, remove paths), Session log, Exit.
 *Exit* closes every connection and the process.

@@ -16,7 +16,7 @@ pid = "0666"
 # port = "COM5"          # pin a port instead of matching VID/PID
 # mock = "../testdata/boot-slotb-rearm.log"   # run against the fake phone
 
-# A stock Nokia Symbian^3/Anna/Belle phone running phedbg (docs/nokia.md). USB: pin the ACM port phedbg uses
+# A stock Nokia Symbian^3-family phone running phedbg (docs/nokia.md). USB: pin the ACM port phedbg uses
 # (Windows COMn, Linux /dev/nokia-acm-<ifnum>); TCP: opts.transport = "tcp" with dial = "<phone-ip>:7654"
 # (phedbg) or listen = "0.0.0.0:9999" (a PyS60 agent connecting in). token = the pairing code phedbg shows.
 # [[device]]

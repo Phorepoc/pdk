@@ -1,0 +1,32 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+#ifndef PHEDBG_HRH
+#define PHEDBG_HRH
+enum TPheDbgCommand
+	{
+	EPheDbgCmdStartStop = 0x6000,
+	EPheDbgCmdNewCode,
+	EPheDbgCmdAllowList,
+	EPheDbgCmdAllowAdd,
+	EPheDbgCmdAllowRemove,
+	EPheDbgCmdLog,
+	EPheDbgCmdChange
+	};
+enum TPheDbgSetting
+	{
+	EPheDbgSetServer = 1,
+	EPheDbgSetTransport,
+	EPheDbgSetAcmUnit,
+	EPheDbgSetTcpPort,
+	EPheDbgSetTcpLan,
+	EPheDbgSetCode,
+	EPheDbgSetOpRead,
+	EPheDbgSetOpWrite,
+	EPheDbgSetOpExec,
+	EPheDbgSetOpShot,
+	EPheDbgSetOpLog,
+	EPheDbgSetOpInput,
+	EPheDbgSetConfirm,
+	EPheDbgSetKeepAwake
+	};
+#endif

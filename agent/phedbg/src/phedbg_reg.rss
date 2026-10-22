@@ -1,0 +1,15 @@
+// Copyright The Phorepoc Authors
+// SPDX-License-Identifier: Apache-2.0
+// phedbg_reg.rss -- launcher registration (a normal, visible application)
+#include <appinfo.rh>
+#include <phedbg.rsg>
+
+UID2 KUidAppRegistrationResourceFile
+UID3 0xE7016B40
+
+RESOURCE APP_REGISTRATION_INFO
+	{
+	app_file = "phedbg";
+	localisable_resource_file = "\resource\apps\phedbg";
+	localisable_resource_id = R_PHEDBG_LOCALISABLE_APP_INFO;
+	}

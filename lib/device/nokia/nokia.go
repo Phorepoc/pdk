@@ -1,7 +1,7 @@
 // Copyright The Phorepoc Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package nokia drives stock Nokia Symbian^3 / Anna / Belle phones through an on-phone debug agent that speaks
+// Package nokia drives stock Nokia Symbian^3-family phones through an on-phone debug agent that speaks
 // the "phedbg line protocol v1" (docs/nokia.md). The agent is either phedbg (a native exe, USB CDC ACM or TCP) or
 // a PyS60 script (TCP). The phone is someone's own phone: the agent only runs while its owner has it open, and
 // every request carries the pairing token the agent shows on screen.
