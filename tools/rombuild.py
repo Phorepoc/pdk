@@ -440,6 +440,7 @@ class E32Xip:
         # TRomImageHeader -- ECOM rejects a plug-in whose SID != its UID3
         # (CDllData::SaveSecurityInfoL), and servers police clients by SID.
         self.secure_id, self.vendor_id = g(128), g(132)
+        self.cap1, self.cap2 = g(136), g(140)       # SSecurityInfo.iCaps (the image header's capabilities)
         self.module_version = g(24)  # E32ImageHeader iModuleVersion
         # the ABI bits (KImageABIMask == KRomImageABIMask 0x18; EABI = 0x08): the loader refuses an explicit RLibrary::Load of a
         # DLL whose ABI differs from the process (sf_lepoc.cpp ABIFAIL) -- with 0 here every ROM DLL was 'GCC98r2' and an SDK
@@ -830,7 +831,12 @@ def build_xip_section(imgs, base, secondary_name, exe_data_run_base=0, data_file
                         | (0x04000000 if img.own_wsd else 0)
                         | (0x03000000 if img.data_present else 0),
             priority=(img.priority or 350) if img.is_exe else 0x200,
-            cap1=0xFFFFFFFF, cap2=0xFFFFFFFF,
+            # An EXE runs with its own header capabilities (build_mmp writes the mmp's CAPABILITY): a process that held every
+            # capability, TCB included, could never load or list an engine plug-in installed on C: (ECom and the loader require
+            # the plug-in's capabilities to cover the client's). An EXE whose header says none keeps all of them (an image
+            # from a tool that does not write capabilities). DLLs keep all capabilities: such a DLL loads into every process.
+            cap1=(img.cap1 if img.is_exe and (img.cap1 or img.cap2) else 0xFFFFFFFF),
+            cap2=(img.cap2 if img.is_exe and (img.cap1 or img.cap2) else 0xFFFFFFFF),
             export_count=img.export_count, export_addr=img.export_addr,
             secure_id=img.secure_id, vendor_id=img.vendor_id, exc_desc=img.exc_desc,
             module_version=img.module_version)
