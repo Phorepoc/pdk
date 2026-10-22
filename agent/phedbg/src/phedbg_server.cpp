@@ -434,14 +434,52 @@ CPheDbgTcp* CPheDbgTcp::NewL(CPheDbgServer& aServer, TInt aPort, TBool aLan)
 void CPheDbgTcp::ConstructL(TInt aPort, TBool aLan)
 	{
 	iLine.CreateL(256);
+	iPort = aPort;
+	iLan = aLan;
 	User::LeaveIfError(iSs.Connect());
-	User::LeaveIfError(iListen.Open(iSs, KAfInet, KSockStream, KProtocolInetTcp));
-	TInetAddr addr(aLan ? KInetAddrAny : KInetAddrLoop, aPort);
-	iListen.SetOpt(KSoReuseAddr, KSolInetIp, 1);
-	User::LeaveIfError(iListen.Bind(addr));
-	User::LeaveIfError(iListen.Listen(1));
+	User::LeaveIfError(iTimer.CreateLocal());
+	User::LeaveIfError(Listen());
 	iName.Format(_L("TCP:%d"), aPort);
 	Accept();
+	}
+
+TInt CPheDbgTcp::Listen()
+	{
+	if (iListenOpen)
+		{
+		iListen.Close();
+		iListenOpen = EFalse;
+		}
+	TInt err = iListen.Open(iSs, KAfInet, KSockStream, KProtocolInetTcp);
+	if (err != KErrNone)
+		return err;
+	iListenOpen = ETrue;
+	TInetAddr addr(iLan ? KInetAddrAny : KInetAddrLoop, iPort);
+	iListen.SetOpt(KSoReuseAddr, KSolInetIp, 1);
+	err = iListen.Bind(addr);
+	if (err == KErrNone)
+		err = iListen.Listen(1);
+	return err;
+	}
+
+// The Wi-Fi link dropped (or the access point changed): the listening socket is dead and every Accept fails at once.
+// Close everything and try again in 2 s, for as long as it takes; the server stays up and resumes by itself.
+void CPheDbgTcp::Relisten()
+	{
+	if (iSockOpen)
+		{
+		iSock.Close();
+		iSockOpen = EFalse;
+		}
+	if (iListenOpen)
+		{
+		iListen.Close();
+		iListenOpen = EFalse;
+		}
+	iConnected = EFalse;
+	iWaiting = ETrue;
+	iTimer.After(iStatus, 2000000);
+	SetActive();
 	}
 
 CPheDbgTcp::~CPheDbgTcp()
@@ -449,7 +487,9 @@ CPheDbgTcp::~CPheDbgTcp()
 	Cancel();
 	if (iSockOpen)
 		iSock.Close();
-	iListen.Close();
+	if (iListenOpen)
+		iListen.Close();
+	iTimer.Close();
 	iSs.Close();
 	}
 
@@ -461,8 +501,11 @@ void CPheDbgTcp::Accept()
 		iSockOpen = EFalse;
 		}
 	iConnected = EFalse;
-	if (iSock.Open(iSs) != KErrNone)
+	if (!iListenOpen || iSock.Open(iSs) != KErrNone)
+		{
+		Relisten();
 		return;
+		}
 	iSockOpen = ETrue;
 	iAccepting = ETrue;
 	iListen.Accept(iSock, iStatus);
@@ -478,14 +521,34 @@ void CPheDbgTcp::Issue()
 
 void CPheDbgTcp::RunL()
 	{
+	if (iWaiting)
+		{
+		iWaiting = EFalse;
+		if (Listen() != KErrNone)
+			{
+			Relisten();						// no network yet: keep waiting
+			return;
+			}
+		iFails = 0;
+		iServer.Log(_L("TCP listening again"));
+		Accept();
+		return;
+		}
 	if (iAccepting)
 		{
 		iAccepting = EFalse;
 		if (iStatus.Int() != KErrNone)
 			{
-			Accept();
+			if (++iFails >= 3)
+				{
+				iServer.Log(_L("TCP listener lost (network change): re-listening"));
+				Relisten();
+				}
+			else
+				Accept();
 			return;
 			}
+		iFails = 0;
 		iConnected = ETrue;
 		iLine.Zero();
 		iServer.ChannelUp(*this);
@@ -501,6 +564,8 @@ void CPheDbgTcp::RunL()
 	Received(iRead);
 	if (iConnected)
 		Issue();
+	else
+		Accept();							// a write failed (the link went away): wait for the next host
 	}
 
 TInt CPheDbgTcp::RunError(TInt /*aErr*/)
@@ -511,7 +576,9 @@ TInt CPheDbgTcp::RunError(TInt /*aErr*/)
 
 void CPheDbgTcp::DoCancel()
 	{
-	if (iAccepting)
+	if (iWaiting)
+		iTimer.Cancel();
+	else if (iAccepting)
 		iListen.CancelAccept();
 	else
 		iSock.CancelRecv();
@@ -521,13 +588,37 @@ void CPheDbgTcp::WriteL(const TDesC8& aLine)
 	{
 	if (!iConnected)
 		return;
-	TRequestStatus st;
-	iSock.Write(aLine, st);
-	User::WaitForRequest(st);
+	// timed: a host that vanished with the Wi-Fi must not freeze the app (the write would never complete)
+	RTimer t;
+	if (t.CreateLocal() != KErrNone)
+		return;
 	TBuf8<1> nl;
 	nl.Append('\n');
-	iSock.Write(nl, st);
-	User::WaitForRequest(st);
+	for (TInt part = 0; part < 2 && iConnected; part++)
+		{
+		TRequestStatus st, ts;
+		if (part == 0)
+			iSock.Write(aLine, st);
+		else
+			iSock.Write(nl, st);
+		t.After(ts, 10000000);
+		User::WaitForRequest(st, ts);
+		if (st == KRequestPending)
+			{
+			iSock.CancelWrite();
+			User::WaitForRequest(st);
+			iConnected = EFalse;			// RunL re-accepts after this request
+			iServer.Log(_L("TCP write timed out: host gone"));
+			}
+		else
+			{
+			t.Cancel();
+			User::WaitForRequest(ts);
+			if (st.Int() != KErrNone)
+				iConnected = EFalse;
+			}
+		}
+	t.Close();
 	}
 
 // ---------------------------------------------------------------- server

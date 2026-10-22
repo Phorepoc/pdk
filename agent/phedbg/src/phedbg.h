@@ -117,14 +117,22 @@ private:
 	void ConstructL(TInt aPort, TBool aLan);
 	void Accept();
 	void Issue();
+	TInt Listen();
+	void Relisten();
 	void RunL();
 	TInt RunError(TInt aErr);
 	void DoCancel();
 	RSocketServ iSs;
 	RSocket iListen;
 	RSocket iSock;
+	RTimer iTimer;			// re-listen delay after the network went away
 	TBool iSockOpen;
+	TBool iListenOpen;
 	TBool iAccepting;
+	TBool iWaiting;
+	TInt iFails;
+	TInt iPort;
+	TBool iLan;
 	TSockXfrLength iLen;
 	TBuf<24> iName;
 	};
