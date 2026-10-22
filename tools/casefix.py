@@ -25,7 +25,7 @@ from paths import SYMBIAN, BUILD, EPOC32_ROOT, OS_ROOT  # noqa: E402
 
 OUT = os.path.join(BUILD, "casefix")
 HEADER_EXT = {".h", ".inl", ".hrh", ".mmh", ".rh", ".ra", ".rsg", ".mbg", ".hpp", ".mph", ".inc", ".pan", ".rls", ".loc", ".lag"}   # .mbg: the icon id headers (mbg.py writes them lower case; <Muiu.mbg>)
-SCAN_EXT = HEADER_EXT | {".cpp", ".c", ".cia", ".rss", ".mmp", ".cc", ".s"}
+SCAN_EXT = HEADER_EXT | {".cpp", ".c", ".cia", ".rss", ".mmp", ".cc", ".s", ".rssi"}
 INCLUDE = re.compile(rb'^\s*#\s*include\s*[<"]([^>"\r\n]+)[>"]', re.M)
 
 
