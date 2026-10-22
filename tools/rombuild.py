@@ -1062,7 +1062,10 @@ def build_kernel_rom(bootstrap, rom_base, kernel_bin, k, variant=None, secondary
                             | (0x04000000 if img.own_wsd else 0)        # KRomImageFlagData
                             | (0x03000000 if img.data_present else 0),  # ...DataInit|DataPresent
                 priority=(img.priority or 350) if is_exe else 0x200,
-                cap1=xk.get("cap1", 0xFFFFFFFF), cap2=xk.get("cap2", 0xFFFFFFFF),
+                # an EXE runs with its header capabilities (see the same rule in build_xip_section); the --xinfo caps (all, by
+                # the recipes) are the fallback for an EXE whose header has none, and what every DLL gets
+                cap1=(img.cap1 if is_exe and (img.cap1 or img.cap2) else xk.get("cap1", 0xFFFFFFFF)),
+                cap2=(img.cap2 if is_exe and (img.cap1 or img.cap2) else xk.get("cap2", 0xFFFFFFFF)),
                 export_count=img.export_count, export_addr=img.export_addr,
                 secure_id=img.secure_id, vendor_id=img.vendor_id, exc_desc=img.exc_desc,
             module_version=img.module_version)
