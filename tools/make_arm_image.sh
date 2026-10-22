@@ -74,6 +74,10 @@ ln -s "$SYM10" "$V/baseline/symbian-2010"
 ln -s "$KHS" "$V/baseline/kernelhwsrv"
 mkdir -p "$V/bin"; printf '#!/bin/sh\nexec python3 "$@"\n' > "$V/bin/py"; chmod +x "$V/bin/py"
 export PATH="$V/bin:$PATH" KVIEW="$V"
+# the AArch64 entry shim (needs an AArch64 GCC, which this container lacks: tools/make_arm_shim.sh builds it on the host)
+[ -f "$A/a53/shim-ram-noprobe.bin" ] || [ -n "$(command -v aarch64-linux-gnu-gcc)" ] \
+  || { echo "no entry shim in $A/a53: run tools/make_arm_shim.sh <adaptation-a64> <build> on the host first" >&2; exit 1; }
+mkdir -p "$A/a53"; rm -rf "$V/.a53-build"; ln -s "$A/a53" "$V/.a53-build"
 
 # the AArch64 entry shim: built in the toolchain's arm image (tools/build_a53_shim.sh, on the host), dropped in here
 SHIMBIN="${PHOREPOC_SHIM:-$A/shim-ram-noprobe.bin}"
