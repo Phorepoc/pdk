@@ -21,9 +21,9 @@
 # imports the ROM lacks), NGA (default 1), RAM_MB (make_pinephone_image.sh).
 set -eu
 PDK="$(cd "$(dirname "$0")/.." && pwd)"
-# the PinePhone image is the Qt 4.8 configuration (registry/components_s4.py: the Qt libraries, the shared x32 flags on ARM); build the
-# components with the same setting (PHOREPOC_QT48=1)
-export PHOREPOC_QT48="${PHOREPOC_QT48:-1}"
+# PHOREPOC_QT48=1 = the Qt 4.8 configuration (registry/components_s4.py; needs the Qt source tree in <build>/qt48, fetched separately);
+# the image must be made with the same setting as the components
+export PHOREPOC_QT48="${PHOREPOC_QT48:-0}"
 export PHOREPOC_CORE="${PHOREPOC_CORE:-$PDK/../core}"
 export PHOREPOC_OS_ROOT="${PHOREPOC_OS_ROOT:-$PHOREPOC_CORE/os}"
 export PHOREPOC_SYMBIAN="${PHOREPOC_SYMBIAN:-$PHOREPOC_CORE/symbian}"

@@ -126,6 +126,16 @@ _SYMCC_CMDS = {}
 _SYMCC_LOCK = threading.Lock()
 
 
+def _x32_includes(comp):
+    """the force-includes among a component's x32_flags (STLPORT_X32_FLAGS: symcpp.h = std::nothrow_t + the nothrow
+    new/delete, which GCCE's and RVCT's compiler pre-include): they apply on ARM too; the rest of x32_flags is x32-only"""
+    have, out, xf = comp.get("flags", []), [], comp.get("x32_flags", [])
+    for i, a in enumerate(xf[:-1]):
+        if a == "-include" and not any(have[j] == "-include" and have[j + 1] == xf[i + 1] for j in range(len(have) - 1)):
+            out += ["-include", xf[i + 1]]
+    return out
+
+
 def _symcc_cmd(src, flags, env):
     """symcc's compiler command for this source kind + environment (it depends on the extension and SYMCC_*/SYMBIAN_GXX)."""
     kind = os.path.splitext(src)[1].lower() == ".cia"
@@ -473,7 +483,7 @@ def build(key: str, rsc_only: bool = False) -> int:
              + [f"-D{d.split(':', 1)[1]}" for d in os.environ.get("X32_DEFS", "").split(",")
                 if ":" in d and d.split(":", 1)[0] == key]
              + incs + ["-idirafter", CASEFIX, "-idirafter", SYMBIAN]   # case-insensitive #include fallback (tools/casefix.py)
-             + comp.get("flags", [])
+             + comp.get("flags", []) + _x32_includes(comp)
              # 2010-era C++ (`nullptr` as an identifier: etelmm, cntmodel), as build_mmp_x32.py compiles everything
              + ["-std=gnu++03"]
              # RVCT-only __declspec(notshared/...) under __EABI__ (cntmodel/cntsrv NONSHARED): no meaning to GCC,
