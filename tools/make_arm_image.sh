@@ -75,6 +75,12 @@ ln -s "$KHS" "$V/baseline/kernelhwsrv"
 mkdir -p "$V/bin"; printf '#!/bin/sh\nexec python3 "$@"\n' > "$V/bin/py"; chmod +x "$V/bin/py"
 export PATH="$V/bin:$PATH" KVIEW="$V"
 
+# the AArch64 entry shim: built in the toolchain's arm image (tools/build_a53_shim.sh, on the host), dropped in here
+SHIMBIN="${PHOREPOC_SHIM:-$A/shim-ram-noprobe.bin}"
+if [ -f "$SHIMBIN" ]; then mkdir -p "$V/.a53-build"; cp "$SHIMBIN" "$V/.a53-build/shim-ram-noprobe.bin"; touch "$V/.a53-build/shim-ram-noprobe.bin"
+elif ! command -v aarch64-linux-gnu-gcc >/dev/null; then
+  echo "no AArch64 entry shim: run  bash tools/build_a53_shim.sh $A/shim-ram-noprobe.bin  on the host first" >&2; exit 1
+fi
 echo "[4/5] kernel + ROM (build_ekern_rom.sh BOARD=a64 PHOREPOC=1 BOOT=ssm)"
 mkdir -p "$OUT"
 ( cd "$V" && BOARD=a64 SMP=1 MMODEL=flexible SECONDARY=efile PHOREPOC=1 BOOT=ssm ROM_ARCH=arm NGA="${NGA:-1}" \
