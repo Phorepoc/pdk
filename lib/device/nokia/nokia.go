@@ -96,6 +96,7 @@ func (*Driver) Ops() []device.OpSpec {
 		{Name: "exec", Capability: "process", Description: "Start an exe on the phone (RProcess); wait=1 waits for its exit reason.",
 			Params: []device.Param{path, p("args", "string", "command line", false), p("wait", "bool", "wait for exit", false)}},
 		{Name: "ps", Capability: "process", Description: "List running processes."},
+		{Name: "log", Capability: "status", Description: "The agent's session log (every request and its verdict)."},
 		{Name: "screenshot", Capability: "display", Description: "Capture the screen (PNG or BMP from the agent).",
 			Params: []device.Param{p("out", "file", "save to this server path", false)}},
 		{Name: "key", Capability: "input", Description: "Send a key event (if the agent's platform allows; else 'unsupported').",
@@ -259,7 +260,7 @@ func (d *Driver) Exec(ctx context.Context, l device.Link, op string, a device.Ar
 		return nil, err
 	}
 	switch op {
-	case "fs_list", "ps":
+	case "fs_list", "ps", "log":
 		return map[string]any{"entries": r.Entries, "info": r.KV}, nil
 	case "fs_read", "screenshot":
 		name := "file"
