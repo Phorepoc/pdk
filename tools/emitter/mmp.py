@@ -401,7 +401,11 @@ def _preprocess(path: str, extra_defs=(), markers: bool = False) -> str:
                         *extra_defs, "-I", CEDAR, "-I", os.path.join(EPOC32, "include"),
                         "-I", mdir, "-include", variant_for(path),
                         *sf_mirror_incs(), "-idirafter", os.path.join(BUILD, "casefix"),
-                        "-include", os.path.join(CEDAR, "platform_paths.hrh"), src],
+                        "-include", os.path.join(CEDAR, "platform_paths.hrh"),
+                        # CAP_SERVER, CAP_GENERAL_DLL ... (CAPABILITY CAP_SERVER NetworkControl): abld gets them from the platform
+                        # variant; without them a CAPABILITY line dropped the macro and the image lost those capabilities
+                        *(["-include", os.path.join(EPOC32, "include", "defaultcaps.hrh")]
+                          if os.path.exists(os.path.join(EPOC32, "include", "defaultcaps.hrh")) else []), src],
                        input=stdin, cwd=mdir if stdin is not None else None,
                        capture_output=True, text=True, errors="replace")
     if r.returncode != 0 and not r.stdout:
