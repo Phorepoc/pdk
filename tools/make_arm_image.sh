@@ -82,7 +82,7 @@ mkdir -p "$A/a53"; rm -rf "$V/.a53-build"; ln -s "$A/a53" "$V/.a53-build"
 echo "[4/5] kernel + ROM (build_ekern_rom.sh BOARD=a64 PHOREPOC=1 BOOT=ssm)"
 mkdir -p "$OUT"
 ( cd "$V" && BOARD=a64 SMP=1 MMODEL=flexible SECONDARY=efile PHOREPOC=1 BOOT=ssm ROM_ARCH=arm NGA="${NGA:-1}" \
-    PRUNE_UNRESOLVED="${PRUNE:-1}" ROM_TAIL="${ROM_TAIL:-}" \
+    PRUNE_UNRESOLVED="${PRUNE:-1}" ROM_TAIL="${ROM_TAIL:-phgl,libegl,libglesv2,libglesv1_cm}" SSM_TEST="${SSM_TEST:-wlanjoin}" \
     bash tools/kernel/build_ekern_rom.sh ) > "$OUT/rom.log" 2>&1 \
   || { echo "IMAGE FAILED:"; tail -20 "$OUT/rom.log"; exit 1; }
 
