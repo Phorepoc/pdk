@@ -880,7 +880,10 @@ def main() -> int:
         return 0
     rsc_only = "--rsc" in args          # resources (.rsc/.rsg) only -- run before a
     args = [a for a in args if a != "--rsc"]    # bulk build so every <x.rsg> exists
-    keys = list(C.COMPONENTS) if args == ["--all"] else args
+    # --all on ARM: an entry that only carries x32 archives (the x32 variant of a prebuilt engine, whose ARM twin is the *_arm key
+    # of the same ROM name) would build here as link stubs and overwrite its twin's image
+    keys = ([k for k, c in C.COMPONENTS.items() if not (c.get("x32_archives") and not c.get("arm_archives"))]
+            if args == ["--all"] else args)
     # resources include the .rsg headers OTHER resources generate (<avkon.rsg>): on a fresh tree one pass in registry
     # order fails wherever the producer comes later, so the failed ones go round again while a pass makes progress
     passes = 8 if rsc_only else 1
