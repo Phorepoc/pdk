@@ -16,6 +16,7 @@
 #      (make_phorepoc_rom.sh, ROM_ARCH=arm), then make_pinephone_image.sh (symbian.img + boot.scr)
 #   5. RELEASE=1: make_pinephone_sd.sh RELEASE=1, the SD-card image for balenaEtcher (needs docker: run it on the host)
 #
+# SSM_TEST (default wlanjoin: the SSM test list joins the WLAN from c:wlanjoin.txt), ROM_TAIL (the big GL libraries last in the ROM).
 # Output: <build>/pinephone/{symbian.img,boot.scr,symbian.img.map}. Settings: PRUNE (default 1: drop images whose
 # imports the ROM lacks), NGA (default 1), RAM_MB (make_pinephone_image.sh).
 set -eu
