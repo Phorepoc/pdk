@@ -88,14 +88,15 @@ def main(pkgs: list[str] | None = None) -> None:
     os.makedirs(OUT, exist_ok=True)
     n = 0
     for s in sorted(spellings):
-        if "\\" in s or s.startswith(("/", ".")) or ".." in s:
+        if s.startswith(("/", ".")) or ".." in s:
             continue
-        parts = s.lower().split("/")
+        # a Windows spelling (`#include <vg\vgcontext.h>`) is linked under its literal name: a file name may hold a backslash
+        parts = s.lower().replace("\\", "/").split("/")
         hit = by_tail.get("/".join(parts[-2:])) if len(parts) > 1 else None
         hit = hit or by_base.get(parts[-1])
         if hit is None:
             continue
-        link = os.path.join(OUT, *s.split("/"))
+        link = os.path.join(OUT, s) if "\\" in s else os.path.join(OUT, *s.split("/"))
         if os.path.islink(link):
             if os.readlink(link) == hit:
                 continue
