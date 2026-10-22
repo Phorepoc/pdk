@@ -835,9 +835,13 @@ def build(key: str, rsc_only: bool = False) -> int:
     kw = dict(module_version=m.version)
     if ehdll:
         kw.update(exception_descriptor=(ext.symbols["Symbian_CPP_Exception_Descriptor"] - ext.code_base) | 1)
+    # the capabilities, vendor and secure ids go into every image's header, not only the device ones: a package installed
+    # from a SIS (make_sis --arm) runs on the stock loader's header (the ROM tool applies its own); without them an
+    # installed app had no capabilities (the camera LDD answered KErrPermissionDenied)
+    kw.update(cap1=m.cap_bits(), vendor_id=m.vendorid, secure_id=uid3)
     if device:
         # the stock loader checks these: a DLL's capabilities must cover the process that loads it
-        kw.update(cap1=m.cap_bits(), vendor_id=m.vendorid, secure_id=uid3, imp_elf=True, exports_in_code=True,
+        kw.update(imp_elf=True, exports_in_code=True,
                   # where the unwinder finds this image's tables (device_excdesc.s): code offset | 1
                   exception_descriptor=(ext.symbols["Symbian_CPP_Exception_Descriptor"] - ext.code_base) | 1)
     if m.is_exe:
