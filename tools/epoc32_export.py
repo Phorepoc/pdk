@@ -215,7 +215,7 @@ def run(pkgs, scan_only=False):
     baseline = os.path.dirname(BASE)
     for pkg in pkgs:
         for root, dirs, files in os.walk(os.path.join(BASE, pkg)):
-            dirs[:] = [d for d in dirs if d.lower() not in SKIP_DIRS and d != ".git"]
+            dirs[:] = [d for d in dirs if d.lower() not in SKIP_DIRS and not d.lower().endswith(("_test", "_tests")) and d != ".git"]
             for f in files:
                 if f.lower() != "bld.inf":
                     continue
