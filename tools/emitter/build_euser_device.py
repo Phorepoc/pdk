@@ -292,7 +292,12 @@ def main() -> int:
 
     # euser.mmh: `uid 0x1000008d 0x100039e5`. SDK-built apps import euser{000a0000}[100039e5].dll and the loader matches that
     # UID3, so the image must carry it
-    img = build_dll(ext.code, export_offsets, uid2=0x1000008D, uid3=0x100039E5,
+    if (len(ext.data) + ext.bss_size) and os.environ.get("EUSER_ALLOW_WSD") != "1":
+        # euser is imported by EVERY image: any .data/.bss makes rombuild mark all of them DataPresent (rombuild prelink_e32), every
+        # dll-ref table then lists all deps and a big process closure passes 256 -> KERN-EXEC 39. No statics in euser: use DllTls.
+        sys.exit(f"build_euser_device: euser has writable static data (data {len(ext.data)} B, bss {ext.bss_size} B) -- forbidden")
+    # entry_fix: euser has no _E32Dll, so entry offset 0 would be a random function that the loader calls at process attach
+    img = build_dll(ext.code, export_offsets, entry_fix=True, uid2=0x1000008D, uid3=0x100039E5,
                     code_relocs=ext.code_relocs, code_base=ext.code_base,
                     data=ext.data, data_base=ext.data_base, bss_size=ext.bss_size,
                     data_relocs=ext.data_relocs,

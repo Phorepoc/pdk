@@ -7,6 +7,7 @@ elf2e32 does for the stock toolchain). Everything is little-endian (ARM and x86 
 
 from __future__ import annotations
 
+import os
 import struct
 import zlib
 from dataclasses import dataclass, field
@@ -421,7 +422,7 @@ def build_stage1(code: bytes = b"", *, header_format_v: bool = True,
 
 
 def build_dll(code: bytes, exports: list[int], *,
-              uid2: int = 0, uid3: int = 0, entry_point: int = 0,
+              uid2: int = 0, uid3: int = 0, entry_point: int = 0, entry_fix: bool = False,
               secure_id: int | None = None, vendor_id: int = 0,
               cap1: int = 0, cap2: int = 0,
               code_relocs=None, data: bytes = b"", data_base: int = 0,
@@ -492,6 +493,23 @@ def build_dll(code: bytes, exports: list[int], *,
     # Imports: place `ordinal | (adj<<16)` into each named code word so the code
     # and the import table agree; the loader overwrites it with export_addr+adj.
     code = bytearray(code)
+    if entry_fix and entry_point == 0 and not exe and cpu == CPU_ARMV5 and os.environ.get("PH_ENTRYFIX", "1") != "0":
+        # OPT-IN (euser/hal/efsrv only: no _E32Dll, entry 0 is a random function). Any other DLL's entry 0 IS its _E32Dll
+        # (static ctors) -- the blanket fix skipped libpthread's ctors -> KERN-EXEC 0 in WSERV (r19).
+        # OURS (2026-10-23): a DLL built without an entry symbol got entry offset 0 = the first function of its text, and the loader's
+        # process-attach pass (euser TEntryPointList::CallEPs: entry(KModuleEntryReasonProcessAttach)) CALLED it (hal.dll: HAL code -> EUSRNIMP in
+        # c32exe::ESock_SmsWap; euser: a zeroing helper stored through r0 == 2). Use an existing `mov r0,#0 ; bx lr`, else append one (only when
+        # no data/bss follows the text, so no link address moves).
+        pat = b"\x00\x00\xa0\xe3\x1e\xff\x2f\xe1"
+        j = bytes(code).find(pat)
+        while j >= 0 and j % 4:
+            j = bytes(code).find(pat, j + 1)
+        if j > 0:
+            entry_point = j
+        elif not data and not bss_size:
+            code += b"\x00" * (_align4(len(code)) - len(code))
+            entry_point = len(code)
+            code += pat
     dll_ref_table_count = 0
     text_len = None
     if exports_in_code and exports:

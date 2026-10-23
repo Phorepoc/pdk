@@ -144,7 +144,7 @@ def main() -> int:
           f"{defmap.max_ordinal - real} -> unimpl stub); "
           f"{n_imp} imports; {len(stub_names)} link stubs")
 
-    img = build_dll(ext.code, export_offsets, uid3=UID3, imports=import_list,
+    img = build_dll(ext.code, export_offsets, entry_fix=True, uid3=UID3, imports=import_list,
                     code_relocs=ext.code_relocs, code_base=ext.code_base,
                     data=ext.data, data_base=ext.data_base, bss_size=ext.bss_size,
                     data_relocs=ext.data_relocs,
