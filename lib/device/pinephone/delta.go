@@ -162,6 +162,19 @@ type DeltaResult struct {
 	Hash     string  `json:"hash"`
 	Seconds  float64 `json:"seconds"`
 	Rebooted bool    `json:"rebooted"`
+	Note     string  `json:"note,omitempty"`
+}
+
+// DeltaNote explains a delta that cannot help: when (nearly) every block differs the image layout has shifted -- a
+// file early in the ROM changed size, so everything behind it moved by a few bytes and no 64 KB block still matches
+// (measured 2026-10-23: 3275 of 3439 blocks differ between two builds of the same size, while ~87% of the bytes
+// still exist in the old image at a constant offset). The write volume (flash wear) is then the whole image whatever
+// the push mode; keeping the ROM file placement stable is the cure, not a smarter diff.
+func DeltaNote(changed, blocks int) string {
+	if blocks >= 32 && changed*10 >= blocks*9 {
+		return fmt.Sprintf("%d of %d blocks differ: the image layout shifted (a file early in the ROM changed size); the delta saves nothing", changed, blocks)
+	}
+	return ""
 }
 
 func (d *Driver) pushDelta(ctx context.Context, l device.Link, data []byte, reboot bool) (any, error) {
@@ -180,6 +193,7 @@ func (d *Driver) pushDelta(ctx context.Context, l device.Link, data []byte, rebo
 		total += min(r[1]*deltaBlock, len(padded)) - r[0]*deltaBlock
 		res.Changed += r[1] - r[0]
 	}
+	res.Note = DeltaNote(res.Changed, res.Blocks)
 	// 'G': the phone's top bar shows one DELTA progress over all runs (images before it echo "rx 'G'": harmless)
 	if total > 0 {
 		if err := l.Write(ctx, cmd9('G', uint32(total), 0)); err != nil {

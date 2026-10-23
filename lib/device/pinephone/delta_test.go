@@ -44,3 +44,33 @@ func TestDeltaRuns(t *testing.T) {
 		t.Fatalf("split: %v", r)
 	}
 }
+
+func TestDeltaNote(t *testing.T) {
+	if n := DeltaNote(3275, 3439); n == "" {
+		t.Fatal("a shifted image gave no note")
+	}
+	if n := DeltaNote(40, 3439); n != "" {
+		t.Fatalf("a small delta got a note: %q", n)
+	}
+	if n := DeltaNote(5, 5); n != "" {
+		t.Fatalf("tiny images get no note: %q", n)
+	}
+}
+
+// a one-byte-per-word shift of the content moves every block: the case the note describes
+func TestShiftedImageChangesEveryBlock(t *testing.T) {
+	old := make([]byte, deltaBlock*40)
+	for i := range old {
+		old[i] = byte(i*7 + i/251)
+	}
+	shifted := append([]byte{1, 2, 3, 4}, old[:len(old)-4]...)
+	have, want := BlockHashes(pad512(old)), BlockHashes(pad512(shifted))
+	runs := deltaRuns(have, want)
+	changed := 0
+	for _, r := range runs {
+		changed += r[1] - r[0]
+	}
+	if changed != len(want) || DeltaNote(changed, len(want)) == "" {
+		t.Fatalf("changed %d of %d", changed, len(want))
+	}
+}
