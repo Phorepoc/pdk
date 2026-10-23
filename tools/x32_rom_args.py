@@ -234,6 +234,18 @@ def browser_cenrep() -> str:
     return rel(out)
 
 
+# Capabilities in the ROM (default ON on x86; ALLCAPS=1 or HONOUR_CAPS=0 opts out; ROM_ARCH=arm is untouched): each image gets the
+# CAPABILITY of its mmp in its ROM header instead of ALL, as the Symbian tool chain does -- a missing capability then fails in the
+# image build and not on a device. The map (image name -> first capability word) goes to <build>/rom/caps.tsv for rombuild.py.
+HONOUR_CAPS = (not ARM) and os.environ.get("ALLCAPS") != "1" and os.environ.get("HONOUR_CAPS") != "0"
+_CAPMAP: dict = {}
+# HONOUR_CAPS_ADD="image.exe=allfiles,protserv ..." adds capabilities on top of the mmp's (to test whether a missing one explains a failure)
+_CAP_ADD: dict = {}
+for _kv in os.environ.get("HONOUR_CAPS_ADD", "").split():
+    _n, _, _c = _kv.partition("=")
+    _CAP_ADD[_n.lower()] = sum(1 << MMP.Mmp.CAPS.index(w) for w in _c.lower().split(",") if w in MMP.Mmp.CAPS)
+
+
 def main() -> None:
     out = []
     tail = []   # XIP images placed last (see the --xip loop)
@@ -322,6 +334,8 @@ def main() -> None:
         # an NGA twin has its own image file (rom=ws32_nga.dll) and is staged under rom_as (ws32.dll)
         stage = comp.get("rom_as", rom) if NGA else rom
         xip = ["--xip", "Sys\\Bin\\" + SLOT.get(stage, stage) + "=" + rel(img)]
+        if HONOUR_CAPS:
+            _CAPMAP[SLOT.get(stage, stage).lower()] = m.cap_bits() | _CAP_ADD.get(SLOT.get(stage, stage).lower(), 0)
         # the images that change between pushes go LAST (a delta upload: a rebuilt test EXE then
         # changes only the end of the ROM; rombuild puts the data files before the XIP images): test=True
         # components + ROM_TAIL="key,key" (e.g. the GL libraries while they are being worked on)
@@ -446,6 +460,16 @@ def main() -> None:
             seen[key] = src
             where[key] = len(dedup)
         dedup += [flag, spec]
+    capf = os.environ.get("ROM_CAPS_TSV", os.path.join(os.environ.get("PHOREPOC_BUILD", ""), "rom", "caps.tsv"))
+    if not HONOUR_CAPS:
+        if os.path.isfile(capf):
+            os.remove(capf)         # an all-caps / ARM ROM must not pick up the last honouring ROM's map
+    elif os.environ.get("PHOREPOC_BUILD") or os.environ.get("ROM_CAPS_TSV"):
+        os.makedirs(os.path.dirname(capf), exist_ok=True)
+        with open(capf, "w", newline="\n") as fh:
+            for k in sorted(_CAPMAP):
+                fh.write("%s\t%d\n" % (k, _CAPMAP[k]))
+        print(f"# x32_rom_args: {len(_CAPMAP)} images get their mmp capabilities ({capf})", file=sys.stderr)
     if _UNBUILT:
         print(f"# x32_rom_args: {len(_UNBUILT)} registered components not built (skipped): "
               + " ".join(sorted(_UNBUILT)[:40]) + (" ..." if len(_UNBUILT) > 40 else ""), file=sys.stderr)

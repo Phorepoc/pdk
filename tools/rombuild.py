@@ -62,6 +62,45 @@ KUserLocalDataEnd_Flexible = 0x80000000
 # ARM flexible (include/memmodel/epoc/flexible/arm/mmboot.h): KUserLocalDataEnd.
 KUserLocalDataEnd_FlexibleArm = 0x7f000000
 
+# ---- capabilities in the ROM header
+_CAPS_MAP = None
+# Core images that do not come from the component registry, with the capabilities of their mmps (honoured-capabilities ROMs only).
+# The loader refuses a DLL that lacks a capability of the EXE it is loaded into, and the file systems carry the F32 set:
+# efile.exe: TCB ProtServ DiskAdmin AllFiles PowerMgmt CommDD (f32caps.mmh); e32strt.exe / estart.exe: TCB WriteDeviceData DiskAdmin
+# ProtServ AllFiles PowerMgmt (estart.mmp).
+_CORE_CAPS = {"efile.exe": 0xB07, "e32strt.exe": 0xB25, "estart.exe": 0xB25}
+
+
+def _header_caps(img, fallback1, fallback2):
+    """The long-standing rule: an EXE runs with its own header capabilities (an EXE whose header says none keeps the fallback, ALL by
+    default); a DLL gets the fallback."""
+    if img.is_exe and (img.cap1 or img.cap2):
+        return img.cap1, img.cap2
+    return fallback1, fallback2
+
+
+def _cap_override(zname):
+    """(cap1, cap2) for an XIP image when the ROM honours the mmp capabilities, else None (the header rule applies).
+    x32_rom_args.py writes <build>/rom/caps.tsv (image name -> first capability word) unless ALLCAPS=1 / HONOUR_CAPS=0 / ROM_ARCH=arm.
+    An image outside the map (euser, efsrv, hal ... from the core builders) gets the 20 defined capability bits, not 0xFFFFFFFF."""
+    global _CAPS_MAP
+    if os.environ.get("ALLCAPS") == "1" or os.environ.get("HONOUR_CAPS") == "0":
+        return None
+    if _CAPS_MAP is None:
+        _CAPS_MAP = {}
+        path = os.environ.get("ROM_CAPS_TSV", os.path.join(os.environ.get("PHOREPOC_BUILD", ""), "rom", "caps.tsv"))
+        if os.path.isfile(path):
+            for line in open(path):
+                k, _, v = line.strip().partition("\t")
+                if v:
+                    _CAPS_MAP[k] = int(v)
+    if not _CAPS_MAP:
+        return None
+    name = zname.replace("/", "\\").split("\\")[-1].lower()
+    if name in _CAPS_MAP:
+        return _CAPS_MAP[name], 0
+    return _CORE_CAPS.get(name, 0x000FFFFF), 0
+
 
 
 # EXE heap/stack limits: an mmp sets EPOCHEAPSIZE for the emulator only (#ifdef WINS: WSERV's 3 MB), a device
@@ -835,8 +874,8 @@ def build_xip_section(imgs, base, secondary_name, exe_data_run_base=0, data_file
             # capability, TCB included, could never load or list an engine plug-in installed on C: (ECom and the loader require
             # the plug-in's capabilities to cover the client's). An EXE whose header says none keeps all of them (an image
             # from a tool that does not write capabilities). DLLs keep all capabilities: such a DLL loads into every process.
-            cap1=(img.cap1 if img.is_exe and (img.cap1 or img.cap2) else 0xFFFFFFFF),
-            cap2=(img.cap2 if img.is_exe and (img.cap1 or img.cap2) else 0xFFFFFFFF),
+            cap1=(_cap_override(img.zname) or _header_caps(img, 0xFFFFFFFF, 0xFFFFFFFF))[0],
+            cap2=(_cap_override(img.zname) or _header_caps(img, 0xFFFFFFFF, 0xFFFFFFFF))[1],
             export_count=img.export_count, export_addr=img.export_addr,
             secure_id=img.secure_id, vendor_id=img.vendor_id, exc_desc=img.exc_desc,
             module_version=img.module_version)
@@ -1064,8 +1103,8 @@ def build_kernel_rom(bootstrap, rom_base, kernel_bin, k, variant=None, secondary
                 priority=(img.priority or 350) if is_exe else 0x200,
                 # an EXE runs with its header capabilities (see the same rule in build_xip_section); the --xinfo caps (all, by
                 # the recipes) are the fallback for an EXE whose header has none, and what every DLL gets
-                cap1=(img.cap1 if is_exe and (img.cap1 or img.cap2) else xk.get("cap1", 0xFFFFFFFF)),
-                cap2=(img.cap2 if is_exe and (img.cap1 or img.cap2) else xk.get("cap2", 0xFFFFFFFF)),
+                cap1=(_cap_override(img.zname) or _header_caps(img, xk.get("cap1", 0xFFFFFFFF), xk.get("cap2", 0xFFFFFFFF)))[0],
+                cap2=(_cap_override(img.zname) or _header_caps(img, xk.get("cap1", 0xFFFFFFFF), xk.get("cap2", 0xFFFFFFFF)))[1],
                 export_count=img.export_count, export_addr=img.export_addr,
                 secure_id=img.secure_id, vendor_id=img.vendor_id, exc_desc=img.exc_desc,
             module_version=img.module_version)
