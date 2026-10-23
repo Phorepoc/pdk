@@ -145,7 +145,90 @@ def align4(ba):
         ba.append(0)
 
 
+class SlotMap:
+    """Stable file placement (for delta pushes of an image to a device). A sequentially packed ROM moves every file behind
+    one whose size changed, so two builds differ in nearly every 64 KB block. Here each file owns a SLOT (its size
+    plus slack: 1/8, within 1..128 KB) at a fixed address, remembered in a JSON map next to the build output: the
+    next build keeps a file in its slot when it still fits; a file that outgrew its slot, and every new file, goes to
+    the end of everything placed before; a vanished file leaves a hole (zeros). fresh=True (FULL=1) ignores the old map
+    and packs compactly. Nothing else changes: run addresses of data/bss are allocated as before."""
+    SLACK_DIV, SLACK_MIN, SLACK_MAX, UNIT = 8, 0x400, 0x20000, 16     # slack = size/8, within 1 KB .. 128 KB
+
+    def __init__(self, path, fresh=False):
+        import json
+        self.path, self.old, self.new, self.kept, self.moved = path, {}, {}, 0, []
+        self.region0 = self.tail = 0
+        self.old_region0 = self.old_end = None
+        if path and not fresh and os.path.isfile(path):
+            try:
+                d = json.load(open(path))
+                self.old = {k: tuple(v) for k, v in d["slots"].items()}
+                self.old_region0, self.old_end = d["region0"], d["end"]
+            except (ValueError, KeyError, OSError):
+                self.old = {}
+
+    def begin(self, region0):
+        """The first slotted address; a map made for another region start is dropped."""
+        self.region0 = (region0 + 3) & ~3
+        if self.old_region0 is not None and self.old_region0 != self.region0:
+            print("rombuild: placement map was made for a region at 0x%08X, now 0x%08X: starting fresh"
+                  % (self.old_region0, self.region0), file=sys.stderr)
+            self.old, self.old_end = {}, None
+        self.tail = max(self.region0, self.old_end or 0)
+
+    def reserve(self, name, worst):
+        """A slot of at least `worst` bytes for `name`; returns its start address."""
+        key, n = name.lower(), 2
+        while key in self.new:                      # a name listed twice
+            key, n = "%s#%d" % (name.lower(), n), n + 1
+        o = self.old.get(key)
+        if o and o[1] >= worst:
+            start, size = o
+            self.kept += 1
+        else:
+            slack = min(max(worst // self.SLACK_DIV, self.SLACK_MIN), self.SLACK_MAX)
+            size = (worst + slack + self.UNIT - 1) // self.UNIT * self.UNIT
+            start = (self.tail + 3) & ~3
+            self.tail = start + size
+            self.moved.append(key)
+        self.new[key] = (start, size)
+        return start
+
+    def end(self):
+        return max(self.tail, max((a + b for a, b in self.new.values()), default=self.region0))
+
+    def save(self):
+        import json
+        if self.path:
+            with open(self.path, "w", newline="\n") as fh:
+                json.dump({"region0": self.region0, "end": self.end(),
+                           "slots": {k: list(v) for k, v in sorted(self.new.items())}}, fh, indent=0)
+        print("rombuild: placement: %d file(s) kept in their slot, %d placed at the end%s; region 0x%08X..0x%08X"
+              % (self.kept, len(self.moved), (" (e.g. %s)" % ", ".join(self.moved[:4])) if self.moved else "",
+                 self.region0, self.end()), file=sys.stderr)
+
+
+def placement_from_env(path=None):
+    """A SlotMap for ROM_PLACEMENT=<map file> (or the --placement argument); FULL=1 / ROM_PLACEMENT_FRESH=1 repack."""
+    path = path or os.environ.get("ROM_PLACEMENT")
+    if not path:
+        return None
+    return SlotMap(path, fresh=os.environ.get("FULL") == "1" or os.environ.get("ROM_PLACEMENT_FRESH") == "1")
+
+
 class RomBuilder:
+    slots = None                     # a SlotMap: images are put at their reserved address (add_xip_file place_at)
+
+    def put(self, off, data):
+        """Write `data` at ROM offset `off` (zero-extending the ROM), for slotted files placed out of order."""
+        if len(self.rom) < off + len(data):
+            self.rom.extend(bytes(off + len(data) - len(self.rom)))
+        self.rom[off:off + len(data)] = data
+
+    def pad_to_lin(self, lin_addr):
+        if len(self.rom) < lin_addr - self.rom_base:
+            self.rom.extend(bytes(lin_addr - self.rom_base - len(self.rom)))
+
     def __init__(self, bootstrap: bytes, rom_base: int):
         self.rom_base = rom_base
         self.rom = bytearray(bootstrap)
@@ -173,12 +256,16 @@ class RomBuilder:
         when .data trails); data_addr = ROM LMA of .data; data_size/bss_size drive the
         bootstrap's .data copy + .bss zero.
         """
-        if place_at is not None:
+        slotted = self.slots is not None and place_at is not None
+        if place_at is not None and not slotted:
             target = place_at - self.rom_base
             while len(self.rom) < target:
                 self.rom.append(0)
-        align4(self.rom)
-        addr = self.lin(len(self.rom))
+        if slotted:
+            addr = place_at
+        else:
+            align4(self.rom)
+            addr = self.lin(len(self.rom))
         code_addr = addr + XIP_HDR_SIZE
         total = XIP_HDR_SIZE + len(payload)
         csz = code_size if code_size is not None else len(payload)
@@ -219,8 +306,11 @@ class RomBuilder:
                          # @116 iExceptionDescriptor: the E32 header's (code offset | 1) as an address -- the C++ unwinder
                          # (drtaeabi, UserSvr::ExceptionDescriptor) finds a ROM image's .ARM.exidx through it
                          (code_addr + exc_desc) if exc_desc else 0)
-        self.rom += hdr
-        self.rom += payload
+        if slotted:
+            self.put(addr - self.rom_base, bytes(hdr) + bytes(payload))
+        else:
+            self.rom += hdr
+            self.rom += payload
         if is_primary:
             self.primary_addr = addr
         return addr, total
@@ -791,6 +881,16 @@ def prelink_e32(rom_builder, imgs, exe_data_run_base, data_top=KUserDataAddress_
           f"max per image {max((len(i.ref_deps) for i in imgs), default=0)}", file=sys.stderr)
     cur = len(rom_builder.rom)
     for img in imgs:
+        if rom_builder.slots is not None:
+            # the file's slot: its worst-case size (header + payload + the code-alignment padding) decides whether the old slot fits
+            worst = XIP_HDR_SIZE + len(img.code) + img.code_align + 16
+            if img.data:
+                worst += len(img.data) + 4
+            if img.exports:
+                worst += 4 * len(img.exports) + 8
+            if img.ref_deps:
+                worst += 8 + 4 * len(img.ref_deps)
+            cur = rom_builder.slots.reserve(img.zname, worst) - rom_builder.rom_base
         cur = (cur + 3) & ~3
         # An image keeps its INTERNAL alignment only if it lands congruent to its link base.
         # The XIP header is 120 bytes -- 24 mod 32 -- so a 32-aligned header would put a
@@ -853,7 +953,7 @@ FILE_ATTRIB_RO_XIP = 0x81           # ... | KEntryAttXIP (an execute-in-place E3
 
 
 def build_xip_section(imgs, base, secondary_name, exe_data_run_base=0, data_files=None,
-                      builtin_devices=None):
+                      builtin_devices=None, placement=None):
     """Lay `imgs` (E32Xip) out as a self-describing prelinked XIP section based at `base`.
 
     Layout:  [32-byte section header]
@@ -871,15 +971,24 @@ def build_xip_section(imgs, base, secondary_name, exe_data_run_base=0, data_file
     # Plain (non-E32) ROM files FIRST: resources and skins rarely change, the
     # XIP images after them do -- a rebuilt EXE near the end of the ROM then changes only the blocks after it (the
     # TRomImageHeader: the fileserver reads them straight out of the ROM at the address their TRomEntry carries.
-    for zname, blob in (data_files or []):
+    slots = placement_from_env(placement)
+    if slots is not None:
         align4(b.rom)
-        addr = b.lin(len(b.rom))
-        b.rom += blob
+        slots.begin(b.lin(len(b.rom)))
+        b.slots = slots
+    for zname, blob in (data_files or []):
+        if slots is not None:
+            addr = slots.reserve("d:" + zname, len(blob) + 4)
+            b.put(addr - b.rom_base, blob)
+        else:
+            align4(b.rom)
+            addr = b.lin(len(b.rom))
+            b.rom += blob
         info.append((zname, addr, addr, len(blob)))
         tree.append((zname, addr, len(blob), FILE_ATTRIB_RO))
 
     prelink_e32(b, imgs, exe_data_run_base, data_top=KUserLocalDataEnd_Flexible)
-    for img in imgs:
+    for img in sorted(imgs, key=lambda i: i.hdr_addr):
         addr, size = b.add_xip_file(
             img.payload, place_at=img.hdr_addr,
             uid1=img.uid1, uid2=img.uid2, uid3=img.uid3,
@@ -912,6 +1021,9 @@ def build_xip_section(imgs, base, secondary_name, exe_data_run_base=0, data_file
         # tells the loader the ROM address is usable (RFile::Att gate, sf_cache.cpp).
         tree.append((img.zname, addr, size, FILE_ATTRIB_RO_XIP))
 
+    if slots is not None:
+        b.pad_to_lin(slots.end())           # the device table and the directory tree behind the last slot: a stable address
+        slots.save()
     # Built-in device drivers (add_builtin_device): real ROM files, patched by the bootstrap.
     # builtin_devices = [(z_path, "ldd"|"pdd", device id)]
     dev_table = []
@@ -1044,7 +1156,7 @@ def build_minimal(bootstrap: bytes, rom_base: int, primary_payload: bytes = None
 
 
 def build_kernel_rom(bootstrap, rom_base, kernel_bin, k, variant=None, secondary=None,
-                     xip_e32=None, data_files=None):
+                     xip_e32=None, data_files=None, placement=None):
     """Build a ROM with a real ekern primary. k = dict of ints (see --kinfo).
     variant = (entry_abs, [export_addrs]) to also add the variant extension DLL.
     secondary = (payload_bytes, sk) to add the first USER process (-> iSecondaryFile); sk is a
@@ -1094,10 +1206,18 @@ def build_kernel_rom(bootstrap, rom_base, kernel_bin, k, variant=None, secondary
             raise ValueError("user_at 0x%08X: the kernel part already ends at 0x%08X"
                              % (xip_e32[1]["user_at"], b.lin(len(b.rom))))
         b.rom.extend(bytes(target - len(b.rom)))
+        slots = placement_from_env(placement)
+        if slots is not None:
+            slots.begin(xip_e32[1]["user_at"])
+            b.slots = slots
         for zname, payload in (data_files or []):
-            align4(b.rom)
-            d_addr = b.lin(len(b.rom))
-            b.rom += payload
+            if slots is not None:
+                d_addr = slots.reserve("d:" + zname, len(payload) + 4)
+                b.put(d_addr - b.rom_base, payload)
+            else:
+                align4(b.rom)
+                d_addr = b.lin(len(b.rom))
+                b.rom += payload
             files.append((zname, d_addr, len(payload), 0x01))
         data_files = None
     if xip_e32 is not None:                       # xip_e32 = ([E32Xip...], xk)
@@ -1108,7 +1228,7 @@ def build_kernel_rom(bootstrap, rom_base, kernel_bin, k, variant=None, secondary
                         min_block=0x4000)
         else:
             prelink_e32(b, imgs, databss)
-        for img in imgs:
+        for img in sorted(imgs, key=lambda i: i.hdr_addr):
             is_exe = img.is_exe
             addr, size = b.add_xip_file(
                 img.payload, place_at=img.hdr_addr,
@@ -1166,6 +1286,9 @@ def build_kernel_rom(bootstrap, rom_base, kernel_bin, k, variant=None, secondary
         d_addr = b.lin(len(b.rom))
         b.rom += payload
         files.append((zname, d_addr, len(payload), 0x01))
+    if b.slots is not None:
+        b.pad_to_lin(b.slots.end())         # the directory tree behind the last slot: a stable address
+        b.slots.save()
     rdl = b.add_tree(files)
     return b.finalize(rdl)
 
@@ -1277,6 +1400,9 @@ def main(argv=None):
                     help="with --section: a kernel-linked device driver's ROM file, "
                     r"'Z-path=ldd|pdd:<id>', e.g. 'Sys\Bin\enet.ldd=ldd:1' (xboot.cpp patches "
                     "its entry point + export 1 by id). Repeatable.")
+    ap.add_argument("--placement", help="stable file placement: the JSON map of per-file ROM slots (read, and rewritten after "
+                    "the build); env ROM_PLACEMENT does the same. FULL=1 / ROM_PLACEMENT_FRESH=1 ignores the old map and packs "
+                    "compactly. Files keep their address while they fit their slot, so a delta push sends only what changed.")
     args = ap.parse_args(argv)
 
     # the same data file named twice (the registry's rom_data and a package export, say): kept once; the same ROM path
@@ -1304,7 +1430,7 @@ def main(argv=None):
         devs = [(zn, v.split(":")[0], int(v.split(":")[1], 0)) for zn, _, v in
                 (spec.partition("=") for spec in args.builtin_device)]
         blob, info = build_xip_section(imgs, base, args.secondary_name,
-                                       int(args.exe_data_base, 0), dfiles, devs)
+                                       int(args.exe_data_base, 0), dfiles, devs, args.placement)
         open(args.out, "wb").write(blob)
         rdl, sec = struct.unpack_from("<2I", blob, 20)
         print("wrote %s: %d bytes, section base=0x%08X, %d image(s) + %d data file(s)"
@@ -1351,7 +1477,7 @@ def main(argv=None):
             zname, _, path = spec.partition("=")
             data_files.append((zname, open(path, "rb").read()))
         rom = build_kernel_rom(bootstrap, rom_base, primary, k, variant, secondary,
-                               xip_e32, data_files)
+                               xip_e32, data_files, args.placement)
     else:
         rom = build_minimal(bootstrap, rom_base, primary)
     open(args.out, "wb").write(rom)
