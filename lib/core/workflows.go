@@ -403,7 +403,7 @@ func (s *Session) runInput(ctx context.Context, script string) ([]InputStep, err
 		case "tap", "long":
 			x, e1 := num(f, 1, -1)
 			y, e2 := num(f, 2, -1)
-			hold := 80
+			hold := 200
 			if f[0] == "long" {
 				hold = 1200
 			}

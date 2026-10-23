@@ -108,7 +108,7 @@ func remoteOps() []device.OpSpec {
 				{Name: "x", Type: "int", Required: true, Description: "0..359"},
 				{Name: "y", Type: "int", Required: true, Description: "0..639"},
 				{Name: "action", Type: "string", Description: "tap | down | move | up"},
-				{Name: "hold_ms", Type: "int", Description: "tap duration (default 80; >800 = long tap)"},
+				{Name: "hold_ms", Type: "int", Description: "tap duration (default 200 ms: a game that polls the pointer once per frame misses an 80 ms tap; >800 = long tap)"},
 				{Name: "panel", Type: "bool", Description: "x,y are panel pixels (720x1440: top bar 0-79, OS 80-1359, soft keys 1360+) -- reaches the kernel bars and the golden menu"},
 			}},
 		{Name: "swipe", Capability: "input",
@@ -541,7 +541,7 @@ func (d *Driver) execRemote(ctx context.Context, l device.Link, op string, a dev
 		if err != nil {
 			return nil, true, err
 		}
-		hold, err := ms("hold_ms", 80)
+		hold, err := ms("hold_ms", 200)
 		if err != nil {
 			return nil, true, err
 		}

@@ -150,3 +150,21 @@ func TestProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A default tap must keep the finger down long enough for a game that polls the pointer once per frame
+// ignored 80 ms taps): Down, then Up no sooner than 150 ms later.
+func TestDefaultTapHoldsTheFinger(t *testing.T) {
+	r := newRig(t, 10)
+	c := ctx(t, 10*time.Second)
+	start := time.Now()
+	if _, err := r.s.Exec(c, "test", "touch", device.Args{"x": float64(100), "y": float64(200)}); err != nil {
+		t.Fatal(err)
+	}
+	if d := time.Since(start); d < 150*time.Millisecond {
+		t.Fatalf("default tap lasted %v, want >= 150ms", d)
+	}
+	time.Sleep(50 * time.Millisecond)
+	if got := strings.Join(r.ph.Input, "|"); !strings.Contains(got, "T c80064 0|T c80064 2") {
+		t.Errorf("tap events %q: want Down then Up", got)
+	}
+}
