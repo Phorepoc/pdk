@@ -24,7 +24,10 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# CRML_CONE=1: follow ConE where the old output differed; default off = unchanged output
+CONE = os.environ.get("CRML_CONE") == "1"
+
+HERE =os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
 from paths import SYMBIAN  # noqa: E402
 
@@ -141,6 +144,9 @@ def _sequence_rows(rng, items, pol: str) -> list[str]:
             key = first + (((base + i) << shift) & bits) | int(sub.get("int"), 0)
             meta = 0x01000000 if backup or (sub.get("backup") or "").lower() == "true" else 0
             rows.append(f"0x{key:08x} {ctype} {_value(typ, item[sub.get('ref')])} {meta}" + (" " + pol if pol else ""))
+    if CONE and rows and rng.get("countInt"):
+        # the sequence's item count key (USB manager: 0xff00 = number of Signature items), as ConE writes it
+        rows.append(f"{rng.get('countInt')} int {len(items)} 0" + (" " + pol if pol else ""))
     return rows
 
 
@@ -157,6 +163,7 @@ def generate(crml: str, defaults: dict) -> tuple[str, str] | None:
         lines += ["[owner]", root.get("owner")]
     lines += ["[defaultmeta]", " 0"]
     ranges, rows = [], []
+    nopol_key = False
     for el in root:
         tag = _strip(el.tag)
         acc = [c for c in el if _strip(c.tag) == "access"]
@@ -188,16 +195,35 @@ def generate(crml: str, defaults: dict) -> tuple[str, str] | None:
                         word |= 1 << (int(b.text, 0) - 1)
                 val = "%08X" % word if typ == "binary" else str(word)
             pol = _policy(acc)
+            if CONE and (el.get("readOnly") or "").lower() == "true":
+                # ConE: a readOnly key always gets cap_wr=AlwaysFail, whatever its <access>
+                pol = " ".join([t for t in pol.split() if not t.startswith(("cap_wr=", "sid_wr="))] + ["cap_wr=alwaysfail"])
+                pol = " ".join(sorted(pol.split(), key=lambda t: not t.startswith(("sid_rd", "cap_rd"))))
+            if not pol:
+                nopol_key = True
             rows.append(f"{el.get('int')} {ctype} {val} {meta}" + (" " + pol if pol else ""))
     top = _policy([c for c in root if _strip(c.tag) == "access"])
-    lines += ["[platsec]", " " + (top or "cap_rd=alwayspass cap_wr=alwayspass")] + ranges
+    # ConE writes the repository's own <access> as the default policy and nothing when the crml has none. A repository
+    # whose every key carries its own policy then needs no default; one with unpoliced keys keeps the old fallback.
+    if not top and (nopol_key or not CONE):
+        top = "cap_rd=alwayspass cap_wr=alwayspass"
+    lines += ["[platsec]"] + ([" " + top] if top else []) + ranges
     lines += ["[Main]"] + rows
     return uid, "\r\n".join(lines) + "\r\n"
 
 
 # Repositories whose SHIPPED .txt is stale: the package's .iby comments the .txt out and ConE builds the ROM
 # copy from the crml. 101F874B (Calendar): the .txt has key 0x11 as a string, the crml + code an int.
-CRML_WINS = {"101f874b"}
+CRML_WINS = {"101f874b"} | ({"101f876e", "101f874f", "10207376", "10003a3f", "1028583d"} if CONE else set())
+
+
+EXTRA_FROM = [
+    ("../symbian-rcl3/oss.FCL.sf.mw.securitysrv", {"102824ae"}),
+    ("oss.FCL.sf.app.homescreen", {"2002ffab"}),
+    ("../symbian-rcl3/oss.FCL.sf.mw.appsupport", {"10003a3f", "1028583d"}),
+    ("../symbian-rcl3/oss.FCL.sf.mw.phonesrv", {"101f874f"}),
+    ("../symbian-rcl3/oss.FCL.sf.mw.ipconnmgmt", {"10207376"}),
+]
 
 
 def run(outdir: str, pkgs: list[str], only: set[str] | None = None) -> None:
@@ -255,3 +281,10 @@ if __name__ == "__main__":
     only = next((a.split("=", 1)[1] for a in sys.argv[2:] if a.startswith("--only=")), None)
     pkgs = [a for a in sys.argv[2:] if not a.startswith("--only=")] or default_pkgs
     run(out, pkgs, {u.lower() for u in only.split(",")} if only is not None else None)
+    # repositories ConE generates that no package in the default set carries, or carries only in a thinner copy (cmp.
+    # docs/research/cone-vs-our-cenrep.md): autolock + screensaver (new), and the RCL_3 copies of apparc's closed-content
+    # table, the voicemail box and the connection-method manager (the 2010 crml lacks keys the RCL_3 code reads). Only these
+    # uids are taken from those packages; the rest of them stays on the layer the default set uses.
+    if CONE and only is None and not [a for a in sys.argv[2:] if not a.startswith("--")] and "--no-extra" not in sys.argv:
+        for pkg, uids in EXTRA_FROM:
+            run(out, [pkg], uids)
