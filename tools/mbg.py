@@ -96,8 +96,12 @@ def write_mbg(header: str, items: list[tuple[str, bool]]) -> str:
         print(f"  ! HEADERFILE {header!r} has no file name -- skipped")
         return None
     path = os.path.join(OUT, os.path.basename(header).lower())
-    with open(path, "w") as fh:
-        fh.write("\n".join(out))
+    try:
+        with open(path, "w") as fh:
+            fh.write("\n".join(out))
+    except OSError as e:        # a bld.inf whose HEADERFILE is an unexpanded macro / not a file name: skip it, not the whole run
+        print(f"  ! HEADERFILE {header!r}: {e} -- skipped")
+        return None
     return path
 
 
