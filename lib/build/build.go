@@ -26,7 +26,7 @@ var passThrough = []string{
 	"LEAVE_TRACE", "SCHED_TRACE", "MIF_ALL", "IBY_DATA", "ROM_ARCH", "ROM_TAIL", "ROM_EXCLUDE", "SSM_TEST",
 	"SECONDARY_IMAGE", "PHOREPOC_S4", "PHOREPOC_QT48", "PHETTY", "CENREP_EXTRA", "ROM_DATA_EXTRA", "UTC_OFFSET",
 	"WEBFONTS", "THEMES", "X32_LD", "X32_DEFS", "X32_LIBS", "X32_INCLUDE", "X32_FULLERR", "PRUNE_UNRESOLVED", "ROM_HEAP_LIMITS",
-	"TRACE", "SCREEN", "SCALE", "DBG", "KCLEAN",
+	"TRACE", "SCREEN", "SCALE", "DBG", "KCLEAN", "ARM_VFP",
 }
 
 // Env is where the pieces live.
@@ -146,6 +146,10 @@ func (e *Env) dockerArgs(tty bool, cmd []string) ([]string, error) {
 		if val, ok := os.LookupEnv(v); ok {
 			args = append(args, "-e", v+"="+val)
 		}
+	}
+	// ARM images use the VFP hardware (softfp ABI) for the registry's vfp=True components unless ARM_VFP=0 says otherwise (the x32 build ignores it)
+	if _, ok := os.LookupEnv("ARM_VFP"); !ok {
+		args = append(args, "-e", "ARM_VFP=1")
 	}
 	args = append(args, e.Image)
 	return append(args, cmd...), nil
