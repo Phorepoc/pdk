@@ -63,7 +63,14 @@ phone -> host   @0 hello proto=1 agent=phedbg ver=1.0 ops=info,fs_list,...   on 
                 @<id> ok [k=v ...]                 final reply
                 @<id> err code=<c> [msg=...]       final error
                 # <text>                           session log line (anything else is a log line too)
+                @0 ka                              TCP only: sent after 30 s without anything from the host (keeps the Wi-Fi link busy)
 ```
+
+**Keep-alive.** `<id> ping` is answered at once with `@<id> ok pong=1`, without the pairing code (it carries no data). The host session
+(`device.KeepAliver`; the nokia driver on a tcp transport, default every 20 s, `keepalive_s` in the device options, 0 = off) sends it on an
+idle link and reconnects when nothing at all has come back for four periods. TCP keep-alive probes are switched on both ends (the
+agent sets `KSoTcpKeepAlive` where the stack has it). A host that stops reading is dropped after the agent's 10 s write time-out, as before.
+For headless use the file `c:\data\phedbgutostart` makes the app start its server without the UI (the pairing code is still checked).
 
 Error codes: `auth` (wrong or missing pairing code), `unsupported` (the op is disabled in settings, or the build or
 platform cannot do it), `denied` (outside the write allow-list, or the user rejected the on-phone confirmation),

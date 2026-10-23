@@ -434,6 +434,7 @@ CPheDbgTcp* CPheDbgTcp::NewL(CPheDbgServer& aServer, TInt aPort, TBool aLan)
 void CPheDbgTcp::ConstructL(TInt aPort, TBool aLan)
 	{
 	iLine.CreateL(256);
+	iKa = CPeriodic::NewL(CActive::EPriorityLow);
 	iPort = aPort;
 	iLan = aLan;
 	User::LeaveIfError(iSs.Connect());
@@ -466,6 +467,7 @@ TInt CPheDbgTcp::Listen()
 // Close everything and try again in 2 s, for as long as it takes; the server stays up and resumes by itself.
 void CPheDbgTcp::Relisten()
 	{
+	KaStop();
 	if (iSockOpen)
 		{
 		iSock.Close();
@@ -485,6 +487,7 @@ void CPheDbgTcp::Relisten()
 CPheDbgTcp::~CPheDbgTcp()
 	{
 	Cancel();
+	delete iKa;
 	if (iSockOpen)
 		iSock.Close();
 	if (iListenOpen)
@@ -493,8 +496,29 @@ CPheDbgTcp::~CPheDbgTcp()
 	iSs.Close();
 	}
 
+void CPheDbgTcp::KaStop()
+	{
+	if (iKa)
+		iKa->Cancel();
+	}
+
+// every 30 s of silence from the host the agent sends "@0 ka": traffic keeps the Wi-Fi link out of power save, and a write that
+// fails (or times out after 10 s) tells us the host is gone. The host ignores the line.
+TInt CPheDbgTcp::KaTick(TAny* aSelf)
+	{
+	CPheDbgTcp* self = (CPheDbgTcp*)aSelf;
+	if (self->iConnected)
+		{
+		if (!self->iRxSince)
+			TRAP_IGNORE(self->WriteL(_L8("@0 ka")));
+		self->iRxSince = EFalse;
+		}
+	return 0;
+	}
+
 void CPheDbgTcp::Accept()
 	{
+	KaStop();
 	if (iSockOpen)
 		{
 		iSock.Close();
@@ -550,6 +574,10 @@ void CPheDbgTcp::RunL()
 			}
 		iFails = 0;
 		iConnected = ETrue;
+		iSock.SetOpt(KSoTcpKeepAlive, KSolInetTcp, 1);		// TCP-level probes too, where the stack has them
+		iSock.SetOpt(KSoTcpNoDelay, KSolInetTcp, 1);
+		iRxSince = ETrue;
+		iKa->Start(30000000, 30000000, TCallBack(KaTick, this));
 		iLine.Zero();
 		iServer.ChannelUp(*this);
 		Issue();
@@ -561,6 +589,7 @@ void CPheDbgTcp::RunL()
 		Accept();
 		return;
 		}
+	iRxSince = ETrue;
 	Received(iRead);
 	if (iConnected)
 		Issue();
@@ -733,8 +762,8 @@ void CPheDbgServer::Log(const TDesC& aText)
 
 void CPheDbgServer::ChannelUp(CPheDbgChannel& aCh)
 	{
-	_LIT8(KHello, "@0 hello proto=1 agent=phedbg ver=%d.%d ops=info,fs_list,fs_read,fs_write,fs_delete,exec,ps,screenshot,log");
-	TBuf8<176> hello;
+	_LIT8(KHello, "@0 hello proto=1 agent=phedbg ver=%d.%d ops=info,fs_list,fs_read,fs_write,fs_delete,exec,ps,screenshot,log,ping");
+	TBuf8<200> hello;
 	hello.Format(KHello, KPheDbgVersionMajor, KPheDbgVersionMinor);
 	if (PHEDBG_CAP_SWEVENT)
 		hello.Append(_L8(",key,touch"));	// input works only in a build that was granted SwEvent
@@ -907,6 +936,13 @@ void CPheDbgServer::HandleLineL(CPheDbgChannel& aCh, const TDesC8& aLine)
 			OpWriteDataL(aCh, id, lex.Remainder());
 		else
 			ReplyErrL(aCh, id, _L8("badarg"), _L("no write in progress"));
+		return;
+		}
+
+	// keep-alive: answered at once, without the pairing code, the settings or a log line (it carries no data)
+	if (op == _L8("ping"))
+		{
+		ReplyOkL(aCh, id, _L8("pong=1"));
 		return;
 		}
 

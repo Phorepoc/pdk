@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -121,5 +122,59 @@ func TestTCPListen(t *testing.T) {
 	s := session(t, "t", &transport.TCPOpener{Listen: addr})
 	if _, err := run(t, s, "ps", device.Args{}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestKeepAliveReconnect: on an idle TCP link the session pings the agent; when the agent's side drops the connection the
+// session reconnects by itself and keeps pinging.
+func TestKeepAliveReconnect(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	var pings, accepts atomic.Int32
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			n := accepts.Add(1)
+			fmt.Fprintln(c, "@0 hello proto=1 agent=mock ver=0")
+			go func() {
+				sc := bufio.NewScanner(c)
+				for sc.Scan() {
+					f := strings.Fields(sc.Text())
+					if len(f) >= 2 && f[1] == "ping" {
+						fmt.Fprintf(c, "@%s ok pong=1\n", f[0])
+						if pings.Add(1) == 3 && n == 1 {
+							c.Close() // the agent's Wi-Fi link dies
+							return
+						}
+					}
+				}
+			}()
+		}
+	}()
+	st, err := store.Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, _ := nokia.New(map[string]any{"token": "t", "transport": "tcp", "dial": ln.Addr().String()})
+	d.KeepAliveEvery = 200 * time.Millisecond
+	m := core.NewManager(st)
+	s := core.NewSession("n", d, d.Opener(), st, m.Bus)
+	m.Add(s)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { m.Run(ctx); close(done) }()
+	defer func() { cancel(); <-done; st.Close() }()
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) && !(accepts.Load() >= 2 && pings.Load() >= 6) {
+		time.Sleep(100 * time.Millisecond)
+	}
+	if accepts.Load() < 2 || pings.Load() < 6 {
+		t.Fatalf("keep-alive/reconnect: accepts=%d pings=%d", accepts.Load(), pings.Load())
 	}
 }

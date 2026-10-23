@@ -176,17 +176,34 @@ func (s *Session) setDisconnected(err error) {
 }
 
 var errGone = errors.New("port vanished")
+var errKeepAlive = errors.New("keep-alive: nothing received for four periods")
 
 func (s *Session) readLoop(ctx context.Context, p transport.Port) error {
 	buf := make([]byte, 16384)
 	lastAlive := time.Now()
 	stop := context.AfterFunc(ctx, func() { p.Close() })
 	defer stop()
+	var kaEvery time.Duration
+	var kaLine func() []byte
+	if k, ok := s.Driver.(device.KeepAliver); ok {
+		kaEvery, kaLine = k.KeepAlive()
+	}
+	lastTx, lastRx := time.Now(), time.Now()
 	for {
 		n, err := p.Read(buf)
 		now := time.Now()
 		if n > 0 {
+			lastRx = now
 			s.ingest(buf[:n], now)
+		}
+		if kaEvery > 0 && kaLine != nil {
+			if now.Sub(lastRx) > 4*kaEvery {
+				return errKeepAlive
+			}
+			if now.Sub(lastTx) >= kaEvery {
+				lastTx = now
+				_, _ = p.Write(kaLine()) // a failed write shows up as a read error next round
+			}
 		}
 		if err != nil {
 			if ctx.Err() != nil {

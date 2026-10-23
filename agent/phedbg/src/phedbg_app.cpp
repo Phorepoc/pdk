@@ -225,6 +225,15 @@ void CPheDbgAppUi::ConstructL()
 		}
 	iSettings.iServer = 0;
 	iServer = CPheDbgServer::NewL(iSettings, *this, iEikonEnv->FsSession());
+	// headless/test start: the file c:\data\phedbg\autostart switches the server on (the pairing code is still required)
+	{
+		TEntry e;
+		if (iEikonEnv->FsSession().Entry(_L("c:\\data\\phedbg\\autostart"), e) == KErrNone)
+			{
+			TRAP_IGNORE(iServer->StartL());
+			iSettings.iServer = 1;
+			}
+	}
 	iList = new (ELeave) CPheDbgList(iSettings, *this);
 	iList->SetMopParent(this);
 	iList->ConstructFromResourceL(R_PHEDBG_SETTINGS);

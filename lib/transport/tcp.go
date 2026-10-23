@@ -36,7 +36,7 @@ func (o *TCPOpener) Open(ctx context.Context) (Port, error) {
 		if err != nil {
 			return nil, ErrNotFound // agent not running (yet): retry quietly
 		}
-		return &tcpPort{c: c}, nil
+		return newTCPPort(c), nil
 	}
 	o.mu.Lock()
 	if o.ln == nil {
@@ -61,7 +61,16 @@ func (o *TCPOpener) Open(ctx context.Context) (Port, error) {
 		}
 		return nil, err
 	}
-	return &tcpPort{c: c}, nil
+	return newTCPPort(c), nil
+}
+
+// newTCPPort turns on TCP keep-alive probes: an idle Wi-Fi link is kept busy and a vanished phone is noticed.
+func newTCPPort(c net.Conn) *tcpPort {
+	if tc, ok := c.(*net.TCPConn); ok {
+		_ = tc.SetKeepAlive(true)
+		_ = tc.SetKeepAlivePeriod(15 * time.Second)
+	}
+	return &tcpPort{c: c}
 }
 
 type tcpPort struct{ c net.Conn }

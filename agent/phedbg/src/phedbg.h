@@ -135,6 +135,10 @@ private:
 	TBool iLan;
 	TSockXfrLength iLen;
 	TBuf<24> iName;
+	CPeriodic* iKa;			// idle timer: an unsolicited "@0 ka" line on a quiet link
+	TBool iRxSince;			// the host sent something since the last tick
+	static TInt KaTick(TAny* aSelf);
+	void KaStop();
 	};
 
 class CPheDbgServer : public CBase

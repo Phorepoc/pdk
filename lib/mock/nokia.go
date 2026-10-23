@@ -63,6 +63,9 @@ func (a *NokiaAgent) Handle(line string) []string {
 	}
 	id, op := f[0], f[1]
 	errl := func(code, msg string) []string { return []string{fmt.Sprintf("@%s err code=%s msg=%s", id, code, enc(msg))} }
+	if op == "ping" { // keep-alive: answered before the pairing code is checked, as the phone agent does
+		return []string{fmt.Sprintf("@%s ok pong=1", id)}
+	}
 	if op == "d" { // data for a pending fs_write
 		pw := a.pending[id]
 		if pw == nil || len(f) < 3 {

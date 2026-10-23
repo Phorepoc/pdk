@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"sort"
 	"sync"
+	"time"
 )
 
 // Param describes one argument of an operation. Type is "string", "uint32", "int", "bool", "blob" (the
@@ -87,6 +88,13 @@ type Driver interface {
 	BootStart(line string) bool
 	// Classify turns a log line into zero or more events.
 	Classify(line string) []Event
+}
+
+// KeepAliver is optionally implemented by a driver whose agent wants traffic on an otherwise idle link (a phone's Wi-Fi link is
+// dropped or put to sleep when it carries nothing). The session sends line every `every` and reconnects when nothing at all has
+// come back for four periods.
+type KeepAliver interface {
+	KeepAlive() (every time.Duration, line func() []byte)
 }
 
 // Factory builds a driver from its config section.

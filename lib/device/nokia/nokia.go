@@ -45,10 +45,11 @@ const ChunkBytes = 3072
 
 // Driver is the nokia device family.
 type Driver struct {
-	Token   string
-	Timeout time.Duration
-	opener  transport.Opener
-	id      atomic.Uint32
+	Token          string
+	Timeout        time.Duration
+	KeepAliveEvery time.Duration // protocol keep-alive ("ping" op); default 20 s on tcp, off on serial (keepalive_s = 0 turns it off)
+	opener         transport.Opener
+	id             atomic.Uint32
 }
 
 // New reads the [device.opts] section: token (the pairing code), transport ("serial" default | "tcp"),
@@ -63,6 +64,7 @@ func New(cfg map[string]any) (*Driver, error) {
 	switch t := str("transport"); t {
 	case "", "serial":
 	case "tcp":
+		d.KeepAliveEvery = 20 * time.Second
 		if (str("dial") == "") == (str("listen") == "") {
 			return nil, fmt.Errorf("nokia: transport tcp needs exactly one of dial / listen")
 		}
@@ -70,7 +72,18 @@ func New(cfg map[string]any) (*Driver, error) {
 	default:
 		return nil, fmt.Errorf("nokia: unknown transport %q (serial | tcp)", t)
 	}
+	if v, ok := cfg["keepalive_s"].(int64); ok {
+		d.KeepAliveEvery = time.Duration(v) * time.Second
+	}
 	return d, nil
+}
+
+// KeepAlive makes the session ping the agent on an idle link (device.KeepAliver).
+func (d *Driver) KeepAlive() (time.Duration, func() []byte) {
+	if d.KeepAliveEvery <= 0 {
+		return 0, nil
+	}
+	return d.KeepAliveEvery, func() []byte { return []byte(fmt.Sprintf("%d ping\n", d.id.Add(1))) }
 }
 
 func (*Driver) Name() string { return "nokia" }
