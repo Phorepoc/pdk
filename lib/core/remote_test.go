@@ -151,8 +151,8 @@ func TestProfile(t *testing.T) {
 	}
 }
 
-// A default tap must keep the finger down long enough for a game that polls the pointer once per frame
-// ignored 80 ms taps): Down, then Up no sooner than 150 ms later.
+// A default tap must keep the finger down long enough for a game that polls the pointer once per frame:
+// Down, then Up no sooner than 150 ms later.
 func TestDefaultTapHoldsTheFinger(t *testing.T) {
 	r := newRig(t, 10)
 	c := ctx(t, 10*time.Second)
