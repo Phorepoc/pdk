@@ -230,7 +230,9 @@ void CPheDbgAppUi::ConstructL()
 		TEntry e;
 		if (iEikonEnv->FsSession().Entry(_L("c:\\data\\phedbg\\autostart"), e) == KErrNone)
 			{
-			TRAP_IGNORE(iServer->StartL());
+			RDebug::Printf("[phedbg] autostart file found");
+			TRAPD(sr, iServer->StartL());
+			RDebug::Printf("[phedbg] autostart StartL -> %d", sr);
 			iSettings.iServer = 1;
 			}
 	}

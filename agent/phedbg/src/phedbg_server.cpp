@@ -754,6 +754,11 @@ void CPheDbgServer::Log(const TDesC& aText)
 	TBuf<160> line;
 	TRAP_IGNORE(now.FormatL(line, _L("%J%:1%T%:2%S ")));
 	line.Append(aText.Left(line.MaxLength() - line.Length()));
+	{
+		TBuf8<160> l8;
+		l8.Copy(line);
+		RDebug::Printf("[phedbg] %S", &l8);
+	}			// the same line on the debug port (serial on the x86 image)
 	if (iLog->Count() >= KPheDbgLogLines)
 		iLog->Delete(0);
 	TRAP_IGNORE(iLog->AppendL(line));
