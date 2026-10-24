@@ -71,8 +71,9 @@ def main(argv):
                 blob, path = line.rstrip("\n").split(" ", 1)
                 old[path] = blob
     except OSError:
+        # a full build: every file gets the shared time below, so a later job of a split build does not see its own
+        # checkout as newer than the objects an earlier job compiled
         print(f"srcstamp: no {stamp}: a full build")
-        return
     now = float(os.environ.get("SRCSTAMP_NOW") or time.time())   # one time for every job of a split build
     same = changed = 0
     for path, blob in tracked(roots):
