@@ -554,14 +554,21 @@ func commands(app *cli.App) []*cli.Command {
 			Summary: "Package components as an installable SIS file",
 			Description: "Builds a SIS package (the Symbian installer format) from the components' images and " +
 				"resources, to install on a running device instead of rebuilding the ROM.",
-			Flags:   boardFlag,
+			Flags: func(fs *flag.FlagSet) {
+				fs.String("arch", "x32", "the `architecture` of the images to package: x32 or arm")
+				boardFlag(fs)
+			},
 			Aliases: []string{"sis"},
 			Examples: []cli.Example{
 				{What: "Package the developer terminal:", Cmd: "image sis phettyd pheshell pheterm"},
+				{What: "An ARM package (the PinePhone):", Cmd: "image sis -arch arm pheffmpeg"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {
 				if len(args) == 0 {
 					return cli.Usagef("which components?")
+				}
+				if str(fs, "arch") == "arm" {
+					args = append([]string{"--arm"}, args...)
 				}
 				return python(fs, "tools/make_sis.py", args...)
 			},
