@@ -25,4 +25,3 @@ What a user of the first Phorepoc images should know. The device releases link h
 - Screen composition runs on the CPU (the GPU composes nothing yet): full-screen animations and video use more CPU than
   they will later.
 - The rotated hardware video overlay is not done; landscape video is composed in software.
-- Games with a landscape screen run; some ignore very short taps (under ~0.2 s).
