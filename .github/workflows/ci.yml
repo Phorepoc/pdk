@@ -32,6 +32,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - run: npx quasar prepare
       - run: npx vue-tsc --noEmit
       - run: npm test
       - run: npm run build

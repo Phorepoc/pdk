@@ -5,7 +5,6 @@ package odt
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -57,7 +56,7 @@ func (a *cssApplier) importStyle(file string) error {
 	if !isAbsPath(file) {
 		path = filepath.Join(a.baseDir, file)
 	}
-	data, err := os.ReadFile(path)
+	data, err := readFileFold(path)
 	if err != nil {
 		return fmt.Errorf("css: import %s: %w", file, err)
 	}

@@ -178,13 +178,13 @@ func Compile(m *Manifest, opt Options) (data []byte, err error) {
 			panic(r)
 		}
 	}()
-	xmlData, err := os.ReadFile(filepath.Join(m.Dir, m.XMLFile))
+	xmlData, err := readFileFold(filepath.Join(m.Dir, m.XMLFile))
 	if err != nil {
 		return nil, err
 	}
 	var dtd []byte
 	if m.DTDFile != "" {
-		if dtd, err = os.ReadFile(filepath.Join(m.Dir, m.DTDFile)); err != nil {
+		if dtd, err = readFileFold(filepath.Join(m.Dir, m.DTDFile)); err != nil {
 			return nil, err
 		}
 	}
@@ -193,7 +193,7 @@ func Compile(m *Manifest, opt Options) (data []byte, err error) {
 		return nil, fmt.Errorf("%s: %w", m.XMLFile, err)
 	}
 	if m.CSSFile != "" {
-		cssData, err := os.ReadFile(filepath.Join(m.Dir, m.CSSFile))
+		cssData, err := readFileFold(filepath.Join(m.Dir, m.CSSFile))
 		if err != nil {
 			return nil, err
 		}
