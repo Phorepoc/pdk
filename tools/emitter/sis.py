@@ -127,7 +127,7 @@ def _file_des(target: str, data: bytes, deflated: bytes, caps, index: int) -> by
 
 
 def build_package(files, *, app_uid: int, vendor: str, app_name: str,
-                  version=(1, 0, 0), signer=None, platform_uid=None) -> bytes:
+                  version=(1, 0, 0), signer=None, platform_uid=None, install_type=None) -> bytes:
     """A SISX package. `files` = [(data bytes, target path, caps or None)]; `signer` = (private key,
     certificate DER) from the `cryptography` package -> one SISSignatureCertificateChain.
 
@@ -149,7 +149,7 @@ def build_package(files, *, app_uid: int, vendor: str, app_name: str,
                   + _field(SISDateTime,
                            _field(SISDate, struct.pack("<HBB", now.year, now.month - 1, now.day - 1))
                            + _field(SISTime, struct.pack("<BBB", now.hour, now.minute, now.second)))
-                  + struct.pack("<BB", INSTALL_TYPE_INSTALLATION, 0))
+                  + struct.pack("<BB", INSTALL_TYPE_INSTALLATION if install_type is None else install_type, 0))
     supported_options = _field(SISSupportedOptions, _array(SISSupportedOption, []))
     # SISLanguage = a 4-byte language id (real SWI reads 4)
     supported_langs = _field(SISSupportedLanguages,

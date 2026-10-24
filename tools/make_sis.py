@@ -45,6 +45,7 @@ def main() -> int:
     ap.add_argument("--vendor", default="Phorepoc", help="vendor name shown by the installer")
     ap.add_argument("--file", action="append", default=[], metavar="HOST=TARGET",
                     help="an extra data file (licence text, notices): host path = target path on the device (!:/resource/Qt/LICENSE.LGPL; / becomes a backslash)")
+    ap.add_argument("--type", choices=["sa", "sp", "pu"], default="sa", help="SIS install type: sa (full), sp (patch), pu (partial upgrade of an installed package)")
     a = ap.parse_args()
     files = []
     for key in a.keys:
@@ -74,7 +75,8 @@ def main() -> int:
     signer = None if a.unsigned else SIS.make_dev_signer(os.path.join(BUILD, "dev-cert"))
     # ARM: Symbian^3's product UID, else the installer warns "not compatible"
     pkg = SIS.build_package(files, app_uid=uid, vendor=a.vendor, app_name=a.name or a.keys[0], signer=signer, version=tuple(int(x) for x in a.version.split(".")),
-                            platform_uid=0x20022E6D if a.arm else None)
+                            platform_uid=0x20022E6D if a.arm else None,
+                            install_type={"sa": 0, "sp": 1, "pu": 2}[a.type])
     out = a.out or os.path.join(BUILD, "sis", a.keys[0] + ".sis")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "wb").write(pkg)
