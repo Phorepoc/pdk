@@ -267,7 +267,9 @@ def run(pkgs, scan_only=False):
             rel = os.path.relpath(os.path.join(root, f), our_inc)
             dst = os.path.join(OUT, rel.lower())
             os.makedirs(os.path.dirname(dst), exist_ok=True)
-            shutil.copyfile(os.path.join(root, f), dst)
+            src = os.path.join(root, f)
+            if not (os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False)):   # unchanged keeps its mtime
+                shutil.copyfile(src, dst)
     # RCL_3 ErrorResGt.rss includes <errors/generic/faxerr.ra>, but the fax component that
     # exported it is not in the 2010 release; the only copy is the telephony test tree's.
     fax = os.path.join(BASE, "oss.FCL.sf.os.networkingsrv", "networkingtestandutils",

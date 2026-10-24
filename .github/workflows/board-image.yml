@@ -7,7 +7,9 @@
 #   - checks out the pdk, core and the board's repositories side by side (where ph expects them), at the commits the
 #     caller's board.lock pins ("<repo> <commit>" lines; a repo it does not name: main)
 #   - fetches the pinned Symbian source from the Phorepoc forks (core's fetch.sh)
-#   - builds with ph in the toolchain image, restoring the previous build from the cache (a full x32 build takes hours
+#   - builds with ph in the toolchain image, starting from the published build image build-<board> (core's build.yml
+#     pushes it on every core push; srcstamp.py dates the checkout by content so only real changes recompile; a cold
+#     full x32 build takes hours
 #     on a hosted runner; an incremental one minutes)
 #   - packages: pc -> the bootable ISO + a VirtualBox appliance (.ova); pinephone -> the SD-card image to write with
 #     balenaEtcher (+ the U-Boot source it embeds, which its licence asks us to offer)
@@ -37,6 +39,14 @@ on:
         description: "Layer repositories built in (space separated), besides the board's adaptations"
         type: string
         default: "tls"
+      images:
+        description: "Make the board's images (ISO + .ova / SD card); false = build the components only"
+        type: boolean
+        default: true
+      publish_layer:
+        description: "Push the build tree as ghcr.io/<owner>/build-<board>:<core commit> (+ :main) for later runs to start from"
+        type: boolean
+        default: false
 
 env:
   PHOREPOC_IMAGE: ghcr.io/phorepoc/base:latest
@@ -99,12 +109,28 @@ jobs:
       - name: Pull the toolchain image
         run: docker pull -q "$PHOREPOC_IMAGE"
 
-      - name: Restore the previous build
-        uses: actions/cache/restore@v4
-        with:
-          path: build
-          key: build-${{ inputs.board }}-${{ hashFiles('built-from.txt', 'core/sources.lock') }}
-          restore-keys: build-${{ inputs.board }}-
+      - name: Start from the published build (core's build-<board> image at the pinned core commit, else :main)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          owner=$(echo "${{ github.repository_owner }}" | tr A-Z a-z)
+          core=$(awk '$1 == "core" { print $2 }' built-from.txt)
+          mkdir -p build
+          for tag in "$core" main; do
+            img="ghcr.io/$owner/build-${{ inputs.board }}:$tag"
+            if docker pull -q "$img" 2>/dev/null; then
+              id=$(docker create "$img" true)
+              docker cp "$id:/build/." build/
+              docker rm "$id" >/dev/null
+              docker rmi "$img" >/dev/null
+              echo "started from $img"; du -sh build; break
+            fi
+          done
+          [ -f build/.srcstamp ] || echo "no published build: a full (cold) build"
+
+      - name: Dates from content (unchanged sources older than the restored objects, changed ones now)
+        run: python3 pdk/tools/ci/srcstamp.py apply build ${{ steps.repos.outputs.list }}
 
       - name: Environment
         run: |
@@ -148,15 +174,25 @@ jobs:
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" build
 
-      - name: Save the build for the next run
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: build
-          key: build-${{ inputs.board }}-${{ hashFiles('built-from.txt', 'core/sources.lock') }}
+      - name: Record the source contents this build was made from
+        run: python3 pdk/tools/ci/srcstamp.py save build ${{ steps.repos.outputs.list }}
+
+      - name: Publish the build tree (build-<board>:<core commit> + :main)
+        if: inputs.publish_layer
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr A-Z a-z)
+          core=$(awk '$1 == "core" { print $2 }' built-from.txt)
+          img="ghcr.io/$owner/build-${{ inputs.board }}"
+          printf 'FROM busybox:1.36\nCOPY build /build\n' > Dockerfile.layer
+          printf '*\n!build\n' > .dockerignore
+          docker build -q -f Dockerfile.layer -t "$img:$core" -t "$img:main" \
+            --label org.opencontainers.image.source="https://github.com/${{ github.repository }}" .
+          docker push -q "$img:$core"
+          docker push -q "$img:main"
+          docker rmi "$img:$core" "$img:main" >/dev/null
 
       - name: Images (pc) -- ROM, bootable ISO, VirtualBox appliance
-        if: inputs.board == 'pc'
+        if: inputs.images && inputs.board == 'pc'
         run: |
           ph image zdata -b pc
           ph image skin -b pc                   # the default skin package (the UI needs one)
@@ -168,7 +204,7 @@ jobs:
           cp build/x86/Phorepoc.ova out/phorepoc-pc.ova
 
       - name: Images (pinephone) -- the SD-card image
-        if: inputs.board == 'pinephone'
+        if: inputs.images && inputs.board == 'pinephone'
         run: |
           ph image zdata -b pinephone
           ph image skin -b pinephone
@@ -182,19 +218,21 @@ jobs:
           cp build/pinephone/uboot/u-boot-source-*.tar out/
 
       - name: Checksums + provenance
+        if: inputs.images
         run: |
           mkdir -p out
           cp built-from.txt out/
           (cd out && sha256sum * > SHA256SUMS && cat SHA256SUMS)
 
       - uses: actions/upload-artifact@v4
+        if: inputs.images
         with:
           name: phorepoc-${{ inputs.board }}
           path: out/
           if-no-files-found: warn
 
       - name: Release
-        if: inputs.release
+        if: inputs.images && inputs.release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
