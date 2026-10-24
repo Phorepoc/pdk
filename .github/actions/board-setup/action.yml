@@ -91,6 +91,7 @@ runs:
       shell: bash
       run: |
         {
+          echo "PHOREPOC_PDK=$PWD/pdk"
           echo "PHOREPOC_CORE=$PWD/core"
           echo "PHOREPOC_SYMBIAN=$PWD/core/symbian"
           echo "PHOREPOC_BUILD=$PWD/build"
