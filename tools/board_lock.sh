@@ -12,7 +12,7 @@ layers="${*:-tls}"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 case "$board" in
 	pc)        adapt="adaptation-x86-64 adaptation-pc"; dev=adaptation-pc ;;
-	pinephone) adapt="adaptation-a64 adaptation-pinephone"; dev=adaptation-pinephone ;;
+	pinephone) adapt="adaptation-a64 adaptation-pinephone mesa-symbian"; dev=adaptation-pinephone ;;
 	*) echo "unknown board $board (pc, pinephone)" >&2; exit 1 ;;
 esac
 out="$root/$dev/board.lock"

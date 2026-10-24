@@ -67,7 +67,7 @@ jobs:
         run: |
           case "${{ inputs.board }}" in
             pc)        adapt="adaptation-x86-64 adaptation-pc" ;;
-            pinephone) adapt="adaptation-a64 adaptation-pinephone" ;;
+            pinephone) adapt="adaptation-a64 adaptation-pinephone mesa-symbian" ;;   # (Mesa: phgl's GL on the Mali-400)
             *) echo "unknown board ${{ inputs.board }}"; exit 1 ;;
           esac
           echo "list=pdk core $adapt ${{ inputs.layers }}" >> "$GITHUB_OUTPUT"
@@ -153,6 +153,12 @@ jobs:
           docker run --rm -v "$PWD:$PWD" -w "$PWD" -e PHOREPOC_BUILD="$PWD/build" -e PHOREPOC_PDK="$PWD/pdk" \
             "$PHOREPOC_IMAGE" bash -c 'set -e; bash tls/recipes/fetch_mbedtls.sh; bash tls/recipes/fetch_cacert.sh
               [ "${{ inputs.board }}" = pc ] && bash tls/recipes/build_mbedtls.sh || true'
+
+      - name: Mesa for ARM (mesa-symbian -> build/mesa-build/arm/*.a, which phgl links; after the exports)
+        if: inputs.board == 'pinephone'
+        run: |
+          docker run --rm -v "$PWD:$PWD" -w "$PWD/mesa-symbian" -e PHOREPOC_BUILD="$PWD/build" \
+            -e PHOREPOC_CORE="$PWD/core" -e PHOREPOC_PDK="$PWD/pdk" ghcr.io/phorepoc/mesa ./build.sh
 
       - name: Build every component (pc)
         if: inputs.board == 'pc'
