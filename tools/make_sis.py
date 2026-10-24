@@ -41,6 +41,10 @@ def main() -> int:
     ap.add_argument("--unsigned", action="store_true", help="no signature (Phorepoc needs none)")
     # ARM: the images tools/emitter/build_mmp.py wrote (BUILD/arm/img) instead of x32img
     ap.add_argument("--arm", action="store_true", help="ARM images from BUILD/arm/img (build_mmp.py)")
+    ap.add_argument("--version", default="1.0.0", help="package version major.minor.build (default 1.0.0)")
+    ap.add_argument("--vendor", default="Phorepoc", help="vendor name shown by the installer")
+    ap.add_argument("--file", action="append", default=[], metavar="HOST=TARGET",
+                    help="an extra data file (licence text, notices): host path = target path on the device (!:/resource/Qt/LICENSE.LGPL; / becomes a backslash)")
     a = ap.parse_args()
     files = []
     for key in a.keys:
@@ -63,10 +67,13 @@ def main() -> int:
                 t = "private\\10003a3f\\import\\apps\\" + t.split("\\")[-1]
             hp = host if os.path.isabs(host) else (os.path.join(BUILD, host) if os.path.isfile(os.path.join(BUILD, host)) else resolve(host))
             files.append((open(hp, "rb").read(), "!:\\" + t, None))
+    for spec in a.file:
+        host, _, target = spec.partition("=")
+        files.append((open(host, "rb").read(), target.replace("/", chr(92)), None))
     uid = a.uid if a.uid is not None else uid3
     signer = None if a.unsigned else SIS.make_dev_signer(os.path.join(BUILD, "dev-cert"))
     # ARM: Symbian^3's product UID, else the installer warns "not compatible"
-    pkg = SIS.build_package(files, app_uid=uid, vendor="Phorepoc", app_name=a.name or a.keys[0], signer=signer,
+    pkg = SIS.build_package(files, app_uid=uid, vendor=a.vendor, app_name=a.name or a.keys[0], signer=signer, version=tuple(int(x) for x in a.version.split(".")),
                             platform_uid=0x20022E6D if a.arm else None)
     out = a.out or os.path.join(BUILD, "sis", a.keys[0] + ".sis")
     os.makedirs(os.path.dirname(out), exist_ok=True)
