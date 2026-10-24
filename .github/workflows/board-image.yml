@@ -91,8 +91,9 @@ jobs:
         if: contains(inputs.layers, 'tls')
         run: |
           docker run --rm -v "$PWD:$PWD" -w "$PWD" -e PHOREPOC_BUILD="$PWD/build" -e PHOREPOC_PDK="$PWD/pdk" \
+            -e PHOREPOC_CORE -e PHOREPOC_SYMBIAN -e PHOREPOC_ADAPTATIONS \
             "$PHOREPOC_IMAGE" bash -c 'set -e; bash tls/recipes/fetch_mbedtls.sh; bash tls/recipes/fetch_cacert.sh
-              [ "${{ inputs.board }}" = pc ] && bash tls/recipes/build_mbedtls.sh || true'
+              if [ "${{ inputs.board }}" = pc ]; then bash tls/recipes/build_mbedtls.sh; fi'
 
       - name: Mesa for ARM (mesa-symbian -> build/mesa-build/arm/*.a, which phgl links)
         if: inputs.board == 'pinephone'
