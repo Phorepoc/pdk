@@ -839,6 +839,11 @@ def build(key: str, rsc_only: bool = False) -> int:
     # from a SIS (make_sis --arm) runs on the stock loader's header (the ROM tool applies its own); without them an
     # installed app had no capabilities (the camera LDD answered KErrPermissionDenied)
     kw.update(cap1=m.cap_bits(), vendor_id=m.vendorid, secure_id=uid3)
+    # `sis`: an image a package installs (Qt): the RAM loader validates it (loadercheck.py), so its export directory
+    # sits inside the code part as for `device` -- ROM-only images skip that check
+    sis = comp.get("sis", False)
+    if sis and not device:
+        kw.update(exports_in_code=True)
     if device:
         # the stock loader checks these: a DLL's capabilities must cover the process that loads it
         kw.update(imp_elf=True, exports_in_code=True,
@@ -861,10 +866,10 @@ def build(key: str, rsc_only: bool = False) -> int:
     with open(out_path + ".meta", "w") as fh:
         fh.write(f"stub=0x{ext.symbols[STUB]:X}")
     compile_registration(key, m, rom)
-    if device:
+    if device or sis:
         # for a stock loader: its F32 loader's checks, and the exception descriptor its unwinder needs
         from loadercheck import check_loader
-        bad = check_loader(img, need_exception_descriptor=True)
+        bad = check_loader(img, need_exception_descriptor=device)
         if bad:
             raise SystemExit(f"{key}: the loader would refuse {rom}: " + "; ".join(bad))
     result = check_image(img)
