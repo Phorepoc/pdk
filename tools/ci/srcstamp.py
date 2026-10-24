@@ -13,6 +13,8 @@ objects are newer) and changed or new files the current time (so what they feed 
   srcstamp.py apply <build dir> <root>...   after checkout + restore: set the mtimes from it
 
 <root> = a directory searched for git repositories (each repo's tracked files, from `git ls-files -s`).
+SRCSTAMP_NOW = the time changed files get (default: now); the jobs of one split build share it, so a later job does not
+see them as newer than the objects an earlier job compiled from them.
 """
 
 import os
@@ -71,7 +73,7 @@ def main(argv):
     except OSError:
         print(f"srcstamp: no {stamp}: a full build")
         return
-    now = time.time()
+    now = float(os.environ.get("SRCSTAMP_NOW") or time.time())   # one time for every job of a split build
     same = changed = 0
     for path, blob in tracked(roots):
         rel = os.path.relpath(path)

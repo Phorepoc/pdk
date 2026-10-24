@@ -612,6 +612,8 @@ def build(key: str, rsc_only: bool = False) -> int:
         print(f"  {len(failed)}/{len(jobs)} TUs failed")
         return 1
 
+    if COMPILE_ONLY:                    # --compile-only (a CI shard): the objects only; a later pass links
+        return 0
     if m.targettype == "lib":
         # STATICLIBRARY: an ar archive of its own objects (no runtime), which a
         # consumer's link takes from its mmp's STATICLIBRARY list (static_archive())
@@ -877,8 +879,20 @@ def build(key: str, rsc_only: bool = False) -> int:
     return 0 if result.ok else 1
 
 
+COMPILE_ONLY = False
+
+
 def main() -> int:
+    global COMPILE_ONLY
     args = sys.argv[1:]
+    if "--compile-only" in args:
+        COMPILE_ONLY = True
+        args.remove("--compile-only")
+    shard = None
+    if "--shard" in args:               # --shard i/n: every n-th component from the i-th (a CI matrix job's share)
+        j = args.index("--shard")
+        shard = tuple(int(x) for x in args[j + 1].split("/"))
+        del args[j:j + 2]
     if not args or args == ["--list"]:
         for k, c in C.COMPONENTS.items():
             print(f"{k:20s} {c['mmp']}")
@@ -889,6 +903,9 @@ def main() -> int:
     # of the same ROM name) would build here as link stubs and overwrite its twin's image
     keys = ([k for k, c in C.COMPONENTS.items() if not (c.get("x32_archives") and not c.get("arm_archives"))]
             if args == ["--all"] else args)
+    if shard:
+        keys = keys[shard[0]::shard[1]]
+        print(f"shard {shard[0]}/{shard[1]}: {len(keys)} components")
     # resources include the .rsg headers OTHER resources generate (<avkon.rsg>): on a fresh tree one pass in registry
     # order fails wherever the producer comes later, so the failed ones go round again while a pass makes progress
     passes = 8 if rsc_only else 1

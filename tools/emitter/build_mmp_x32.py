@@ -571,6 +571,8 @@ def build(key: str) -> int:
             # X32_FULLERR=1: the first failure's whole compiler output (include chains, notes)
             print(failed[0][1][:6000])
         return 1
+    if COMPILE_ONLY:                    # --compile-only (a CI shard): the objects only; a later pass links in provider order
+        return 0
     if m.targettype == "lib":
         # STATICLIBRARY: an ar archive the consumers' link pulls members from (static_archive())
         a = static_archive(key)
@@ -864,8 +866,31 @@ def closure(roots: list[str]) -> list[str]:
     return order
 
 
+COMPILE_ONLY = False
+SHARD = None
+
+
+def shard(keys):
+    """--shard i/n: every n-th key from the i-th (a CI matrix job's share of a bulk build)."""
+    if not SHARD:
+        return keys
+    i, n = SHARD
+    mine = keys[i::n]
+    print(f"shard {i}/{n}: {len(mine)} of {len(keys)} components")
+    return mine
+
+
 def main() -> int:
+    global COMPILE_ONLY, SHARD
     keys = sys.argv[1:]
+    if "--compile-only" in keys:
+        COMPILE_ONLY = True
+        keys.remove("--compile-only")
+    if "--shard" in keys:
+        j = keys.index("--shard")
+        i, n = keys[j + 1].split("/")
+        SHARD = (int(i), int(n))
+        del keys[j:j + 2]
     if not keys:
         print(__doc__)
         return 2
@@ -882,6 +907,7 @@ def main() -> int:
         print(" ".join(C.rom_name(k, MMP.parse(os.path.join(MMP.BASE, mmp_of(C.COMPONENTS[k])),
                                                MMP_DEFS).targettype) for k in closure(keys[1:])))
         return 0
+    keys = shard(keys)
     rc = 0
     for k in keys:
         if k not in C.COMPONENTS:

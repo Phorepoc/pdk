@@ -252,6 +252,8 @@ func commands(app *cli.App) []*cli.Command {
 				fs.Bool("r", false, "recursive: also everything the components link against, providers first")
 				fs.Bool("A", false, "every registered component")
 				fs.String("arch", "x32", "the `architecture`: x32 (amd64 CPU, 32-bit pointers) or arm")
+				fs.String("shard", "", "with -A: only every n-th component from the i-th (`i/n`, a CI matrix job's share)")
+				fs.Bool("compile-only", false, "compile the objects, link nothing (the shards of a split build; a later -A links)")
 				boardFlag(fs)
 			},
 			Examples: []cli.Example{
@@ -273,15 +275,25 @@ func commands(app *cli.App) []*cli.Command {
 				case arch == "arm" && rec:
 					return cli.Usagef("-r is x32 only for now")
 				}
+				var extra []string
+				if sh := str(fs, "shard"); sh != "" {
+					if !all {
+						return cli.Usagef("-shard goes with -A")
+					}
+					extra = append(extra, "--shard", sh)
+				}
+				if on(fs, "compile-only") {
+					extra = append(extra, "--compile-only")
+				}
 				if arch == "arm" {
 					if all {
-						return python(fs, "tools/emitter/build_mmp.py", "--all")
+						return python(fs, "tools/emitter/build_mmp.py", append([]string{"--all"}, extra...)...)
 					}
-					return python(fs, "tools/emitter/build_mmp.py", args...)
+					return python(fs, "tools/emitter/build_mmp.py", append(args, extra...)...)
 				}
 				switch {
 				case all:
-					return python(fs, "tools/emitter/build_mmp_x32.py", "--all")
+					return python(fs, "tools/emitter/build_mmp_x32.py", append([]string{"--all"}, extra...)...)
 				case rec:
 					return python(fs, "tools/emitter/build_mmp_x32.py", append([]string{"--closure"}, args...)...)
 				}

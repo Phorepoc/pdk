@@ -1,0 +1,100 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# board-setup -- the steps every job of board-image.yml starts with: free disk, check out the board's repositories at the
+# caller's board.lock, build ph, fetch the pinned Symbian source, pull the toolchain image, set the PHOREPOC_* environment.
+name: board-setup
+description: Check out and prepare a Phorepoc board build
+inputs:
+  board:
+    description: pc or pinephone
+    required: true
+  layers:
+    description: layer repositories besides the board's adaptations
+    required: false
+    default: tls
+outputs:
+  list:
+    description: the repositories checked out
+    value: ${{ steps.repos.outputs.list }}
+  core:
+    description: the core commit checked out
+    value: ${{ steps.pin.outputs.core }}
+runs:
+  using: composite
+  steps:
+    - name: Make room (the source trees + a full build need ~25 GB)
+      shell: bash
+      run: |
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+        docker image prune -af >/dev/null || true
+        df -h /
+
+    - name: The board's repositories
+      id: repos
+      shell: bash
+      run: |
+        case "${{ inputs.board }}" in
+          pc)        adapt="adaptation-x86-64 adaptation-pc" ;;
+          pinephone) adapt="adaptation-a64 adaptation-pinephone mesa-symbian" ;;   # (Mesa: phgl's GL on the Mali-400)
+          *) echo "unknown board ${{ inputs.board }}"; exit 1 ;;
+        esac
+        echo "list=pdk core $adapt ${{ inputs.layers }}" >> "$GITHUB_OUTPUT"
+
+    - name: Check out the caller (for its board.lock)
+      uses: actions/checkout@v4
+      with:
+        path: caller
+
+    - name: Check out the repositories at the pinned commits
+      id: pin
+      shell: bash
+      run: |
+        lock=caller/board.lock
+        : > built-from.txt
+        for r in ${{ steps.repos.outputs.list }}; do
+          ref=main
+          [ -f "$lock" ] && ref=$(awk -v r="$r" '$1 == r { print $2 }' "$lock") && [ -n "$ref" ] || ref=main
+          # the caller's own repository builds at the commit that triggered the run
+          [ "${{ github.repository }}" = "${{ github.repository_owner }}/$r" ] && ref="${{ github.sha }}"
+          echo "$r @ $ref"
+          git init -q "$r"
+          git -C "$r" fetch -q --depth 1 "https://github.com/${{ github.repository_owner }}/$r.git" "$ref"
+          git -C "$r" checkout -q FETCH_HEAD
+          echo "$r $(git -C "$r" rev-parse HEAD)" >> built-from.txt
+        done
+        cat built-from.txt
+        echo "core=$(awk '$1 == "core" { print $2 }' built-from.txt)" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: pdk/go.mod
+        cache-dependency-path: pdk/go.sum
+
+    - name: Build ph
+      shell: bash
+      run: |
+        (cd pdk && go build -o ../bin/ph ./cmd/ph)
+        echo "$PWD/bin" >> "$GITHUB_PATH"
+
+    - name: Fetch the Symbian source (pinned in core's sources.lock)
+      shell: bash
+      run: PHOREPOC_SYMBIAN="$PWD/core/symbian" sh core/fetch.sh > fetch.log && tail -n 3 fetch.log
+
+    - name: Pull the toolchain image + log in to ghcr
+      shell: bash
+      run: |
+        docker pull -q "$PHOREPOC_IMAGE"
+        echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+    - name: Environment
+      shell: bash
+      run: |
+        {
+          echo "PHOREPOC_CORE=$PWD/core"
+          echo "PHOREPOC_SYMBIAN=$PWD/core/symbian"
+          echo "PHOREPOC_BUILD=$PWD/build"
+          echo "PHOREPOC_ADAPTATIONS=$(for r in ${{ steps.repos.outputs.list }}; do case $r in pdk|core) ;; *) printf '%s:' "$PWD/$r" ;; esac; done | sed 's/:$//')"
+          echo "OWNER=$(echo '${{ github.repository_owner }}' | tr A-Z a-z)"
+        } >> "$GITHUB_ENV"
+        mkdir -p build
