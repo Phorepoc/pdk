@@ -260,7 +260,7 @@ def run(pkgs, scan_only=False):
             if f.lower().endswith("symbian.h") or f.lower() == "hbsymbianvariant.h":
                 shutil.copy2(os.path.join(hb, f), os.path.join(OUT, "hb", "hbcore", f.lower()))
     # Our public headers: os/inc/** of core and every layer (OS_ROOT is their merged view), e.g. the browser engine
-    # seam <phorepoc/phewebengine.h> from the phewebengine repo -- engine repos compile against the exported tree
+    # seam <phorepoc/phewebengine.h> from the webengine repo -- engine repos compile against the exported tree
     our_inc = os.path.join(OS_ROOT, "inc")
     for root, dirs, files in os.walk(our_inc, followlinks=True):
         for f in files:
