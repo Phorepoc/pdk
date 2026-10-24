@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
 """e32check.py -- host check of an E32 image against the loader's own validation rules.
 
 Applies the checks of E32ImageHeaderV::ValidateHeader / ValidateExportDescription /
