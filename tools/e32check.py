@@ -168,6 +168,41 @@ def check(d: bytes):
         return bad + [("note", "compressed (%s): relocation/import bodies not walked"
                        % ("bytepair" if comp == BYTEPAIR else "deflate"))]
     rest = d[code_end:]
+    if imp_off and imp_off >= code_end and imp_off + 4 <= fsz:
+        p0 = imp_off - code_end
+        isz = u32(rest, p0)
+        send = p0 + isz
+        if send < p0 + 4 or send > len(rest):
+            fail("import section size", "iSize %x, %x bytes available" % (isz, len(rest) - p0))
+        else:
+            p = p0 + 4
+            fmt = flags & KImageImpFmtMask
+            for _ in range(max(ndll, 0)):
+                if p + 8 > send:
+                    fail("import block header overflows section")
+                    break
+                noff, nimp = struct.unpack_from("<II", rest, p)
+                p += 8
+                if noff >= send or noff < 0:
+                    fail("import dll name outside section", hex(noff))
+                    break
+                e = rest.find(bytes(1), p0 + noff)
+                if e < 0 or e >= send:
+                    fail("import dll name overflows section")
+                if nimp >= 0x20000000:
+                    fail("import count too large", hex(nimp))
+                    break
+                if fmt == KImageImpFmt_PE2:
+                    continue
+                if p + 4 * nimp > send:
+                    fail("import list overflows section", "%d imports" % nimp)
+                    break
+                for i in range(nimp):
+                    v = u32(rest, p + 4 * i)
+                    if v > code_sz - 4 or v & 3:
+                        fail("import slot outside code / unaligned", hex(v))
+                        break
+                p += 4 * nimp
     for name, off, size in (("code", u32(d, 0x70), code_sz), ("data", u32(d, 0x74), data_sz)):
         if not off or off < code_end or off + 8 > fsz:
             continue
