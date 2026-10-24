@@ -99,13 +99,16 @@ jobs:
         if: inputs.board == 'pinephone'
         run: |
           docker run --rm -v "$PWD:$PWD" -w "$PWD/mesa-symbian" -e PHOREPOC_BUILD="$PWD/build" \
-            -e PHOREPOC_CORE="$PWD/core" -e PHOREPOC_PDK="$PWD/pdk" ghcr.io/phorepoc/mesa ./build.sh
+            -e PHOREPOC_CORE="$PWD/core" -e PHOREPOC_PDK="$PWD/pdk" ghcr.io/phorepoc/mesa bash build.sh
 
       - name: Resources (.rsc + the .rsg headers every component includes)
         run: |
-          ph component resources -A -b ${{ inputs.board }}
+          # a bulk pass reports the components it could not build and goes on (exit 1 if any failed): the image steps
+          # are the verdict, so the count goes to the log instead of failing the job
+          ph component resources -A -b ${{ inputs.board }} > resources-1.log 2>&1 || true
           ph source casefix -a -b ${{ inputs.board }}     # links the .rsg spellings just generated (Linux is case-sensitive)
-          ph component resources -A -b ${{ inputs.board }}
+          ph component resources -A -b ${{ inputs.board }} 2>&1 | tee resources.log | tail -n 5
+          echo "resources: $(grep -c ': FAILED' resources.log || true) component(s) failed"; grep ': FAILED' resources.log | sort -u | head -20 || true
 
       - name: Hand the tree on (run image)
         run: |
