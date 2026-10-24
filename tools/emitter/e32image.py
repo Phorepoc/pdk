@@ -520,7 +520,11 @@ def build_dll(code: bytes, exports: list[int], *,
         code += b"\x00" * (text_len - len(code))
         exp_at = len(code)
         code += struct.pack(f"<{len(exports)}I", *(code_base + off for off in exports))
-        extra = {exp_at + 4 * i: RELOC_TEXT for i in range(len(exports))}
+        # a DATA export (QtCore's staticMetaObject / shared_null ...) is a link address inside .data/.bss: it moves with the
+        # DATA delta, not the code one -- typed TEXT it pointed past the end of the loaded code (a data abort at start-up)
+        d_lo, d_hi = data_base, data_base + len(data) + bss_size
+        extra = {exp_at + 4 * i: (RELOC_DATA if d_lo and d_lo <= code_base + off < d_hi else RELOC_TEXT)
+                 for i, off in enumerate(exports)}
         if isinstance(code_reloc_types, dict) and code_reloc_types:
             code_reloc_types = {**code_reloc_types, **extra}
         else:

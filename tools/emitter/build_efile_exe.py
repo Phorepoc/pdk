@@ -110,6 +110,28 @@ _FS_EXTRA = ["-DSYMBIAN_ENABLE_64_BIT_FILE_SERVER_API", "-DSYMBIAN_DISTINCT_LOCA
              "-I" + os.path.join(devlink.SRC, "halservices", "hal", "inc")]
 
 
+_ORD_LINE = "*dest++ = *(TUint32*)(code + *iol++);"
+_ORD_FIX = ("*dest++ = *(TUint32*)(code + *iol++) & 0xffff;"
+            "   // the ordinal only: the import word's high half is the addend (vtable/typeinfo +8 ...), not part of the ordinal")
+
+
+def _patched(src: str, workdir: str) -> str:
+    """The 2010 loader range-checks an ELF import's WHOLE code word as its ordinal (svElfDerivedGetImportInfo copies it
+    unmasked into iCurrentImportList, which CheckRequiredImports then compares with the exporter's export count): an image
+    that imports a vtable or typeinfo with an addend (`vtable for X + 8`, in every GCC typeinfo object) is refused with
+    KErrNotSupported when it is loaded from RAM -- the Qt SIS and the games that import it. Mask the list to the ordinal
+    (relocation, line ~682, already does). Everything else compiles from the baseline file unchanged."""
+    if os.path.basename(src).lower() != "sf_lepoc.cpp":
+        return src
+    text = open(src, encoding="latin-1", newline="").read()
+    if _ORD_LINE not in text:
+        sys.exit("efile: sf_lepoc.cpp: the import-list line to patch is not where it was")
+    out = os.path.join(workdir, "sf_lepoc.cpp")
+    with open(out, "w", encoding="latin-1", newline="") as fh:
+        fh.write(text.replace(_ORD_LINE, _ORD_FIX, 1))
+    return out
+
+
 def _compile_efile(workdir: str) -> list[str]:
     """Compile the fileserver TUs (+ byte_pair.cia) to ARM objects in workdir; returns the object paths."""
     from mmp import nocase
@@ -117,6 +139,7 @@ def _compile_efile(workdir: str) -> list[str]:
     srcs = [os.path.join(FS_DIR, d, n + ".cpp") for d, n in _FS_TUS]
     srcs.append(os.path.join(BE.B, "kernel", "arm", "byte_pair.cia"))
     srcs = [nocase(s) or s for s in srcs]
+    srcs = [_patched(s, workdir) for s in srcs]
 
     def one(src):
         obj = os.path.join(workdir, os.path.basename(src) + ".o")
