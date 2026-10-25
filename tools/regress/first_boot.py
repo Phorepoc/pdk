@@ -41,6 +41,27 @@ def read_ppm(path):
     return w, h, parts[3]
 
 
+def shot(mon, out, n):
+    """screendump through the QEMU monitor -> bootN.ppm + bootN.png; returns (w, h, rgb)."""
+    s = socket.socket(socket.AF_UNIX)
+    for _ in range(20):
+        try:
+            s.connect(mon)
+            break
+        except OSError:
+            time.sleep(0.5)
+    ppm = os.path.join(out, "boot%d.ppm" % n)
+    s.sendall(("screendump %s\n" % ppm).encode())
+    for _ in range(20):
+        time.sleep(0.5)
+        if os.path.exists(ppm) and os.path.getsize(ppm) > 1000:
+            time.sleep(0.5)
+            break
+    w, h, rgb = read_ppm(ppm)
+    write_png(os.path.join(out, "boot%d.png" % n), w, h, rgb)
+    return w, h, rgb
+
+
 def write_png(path, w, h, rgb):
     raw = b"".join(b"\x00" + rgb[y * w * 3:(y + 1) * w * 3] for y in range(h))
 
@@ -105,26 +126,13 @@ def boot(args, n, disk):
         while not fg and time.time() - t0 < args.timeout and p.poll() is None:
             time.sleep(0.5)
         if not fg:
-            return result, "no EAiFwForeground within %ds (the home screen never came up)" % args.timeout
+            if p.poll() is None:
+                shot(mon, out, n)              # what the screen shows instead
+            return result, "no EAiFwForeground within %ds (the home screen never came up; see boot%d.png)" % (args.timeout, n)
         result["fg"] = fg[0]
         while time.time() - t0 < fg[0] + args.settle:
             time.sleep(0.5)
-        s = socket.socket(socket.AF_UNIX)
-        for _ in range(20):
-            try:
-                s.connect(mon)
-                break
-            except OSError:
-                time.sleep(0.5)
-        ppm = os.path.join(out, "boot%d.ppm" % n)
-        s.sendall(("screendump %s\n" % ppm).encode())
-        for _ in range(20):
-            time.sleep(0.5)
-            if os.path.exists(ppm) and os.path.getsize(ppm) > 1000:
-                time.sleep(0.5)
-                break
-        w, h, rgb = read_ppm(ppm)
-        write_png(os.path.join(out, "boot%d.png" % n), w, h, rgb)
+        w, h, rgb = shot(mon, out, n)
         wf, sf = analyse(w, h, rgb)
         result["widgets"], result["softkeys"] = wf, sf
         if wf < 0.15 or sf < 0.3:
