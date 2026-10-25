@@ -44,6 +44,7 @@ import threading
 import build_euser_dll as BE
 import build_euser_device as BD
 import components as C
+import case_shim as CS
 import devlink
 import mmp as MMP
 from e32image import build_dll
@@ -159,6 +160,12 @@ def _compile_one(src, obj, flags, env):
             fh.write("\n".join([*_symcc_cmd(src, flags, env), src, "-O2", "-w", *flags, "-o", obj]))
     # g++ knows .cpp and .CPP only: a source named .Cpp / .cPP (the 2010 tree has them) would be handed to the linker, so no object
     xc = ["-x", "c++"] if os.path.splitext(src)[1].lower() == ".cpp" and os.path.splitext(src)[1] not in (".cpp", ".CPP") else []
+    # the component's own headers under casefix's other spellings, ahead of casefix (case_shim.py); per include-path
+    # configuration and container-local, so not part of the key
+    shim = os.path.join("/tmp/caseshim-arm", hashlib.sha1(" ".join(flags).encode()).hexdigest()[:12])
+    if os.name != "nt" and CS.make(os.path.dirname(os.path.join(PDK, src)), CS.include_dirs(flags, PDK), shim, CASEFIX,
+                                   os.path.join(BUILD, "epoc32")):
+        xc = ["-I" + shim, *xc]
     r = subprocess.run([*_symcc_cmd(src, flags, env), *xc, src, "-O2", "-w", *flags, "-MMD", "-MF", obj + ".d", "-o", obj],
                        capture_output=True, text=True, errors="replace", env=env, cwd=PDK)
     if r.returncode == 0:

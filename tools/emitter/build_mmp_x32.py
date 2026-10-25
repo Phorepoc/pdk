@@ -71,6 +71,7 @@ def _preprocess(path, extra_defs=(), markers=False):
 
 MMP.preprocess = _preprocess
 import components as C                              # noqa: E402
+import case_shim as CS                               # noqa: E402
 import devlink                                      # noqa: E402
 import e32image                                     # noqa: E402
 import elf                                          # noqa: E402
@@ -286,44 +287,10 @@ def _ci_resolve(base: str, rel: str):
     return p if os.path.isfile(p) else None
 
 
-_CASEFIX_NAMES: dict = {}
-_LOCAL_SHIMS: dict = {}
-
-
 def local_case_shim(src: str, flags: list[str], shim: str) -> bool:
-    """On Windows a component's own header wins under any spelling ("UiEvent.h" = stmgesturefw's inc/uievent.h).
-    On Linux that name misses the component's folders and casefix answers it with another package's header
-    (WebCore's UIEvent.h). So link each header of the source's own folder and the component's include folders
-    (not epoc32 or casefix) into the shim under every other spelling casefix knows, unless that spelling exists
-    exactly on the include path, where it would have been found anyway. True if the shim has any link."""
-    if shim in _LOCAL_SHIMS:
-        return _LOCAL_SHIMS[shim]
-    if not _CASEFIX_NAMES and os.path.isdir(CASEFIX):
-        for n in os.listdir(CASEFIX):
-            _CASEFIX_NAMES.setdefault(n.lower(), []).append(n)
-    dirs = [os.path.dirname(os.path.join(BUILD, src))]
-    for i, f in enumerate(flags):
-        if f in ("-I", "-iquote") and i + 1 < len(flags):
-            dirs.append(os.path.join(BUILD, flags[i + 1]))
-    epoc = os.path.join(BUILD, "epoc32")
-    path = [os.path.normpath(d) for d in dirs]
-    own = [d for d in path if not d.startswith((epoc, CASEFIX)) and os.path.isdir(d)]
-    made = False
-    for d in own:
-        for name in sorted(os.listdir(d), key=str.lower):
-            for other in _CASEFIX_NAMES.get(name.lower(), ()):
-                if other == name or os.path.lexists(os.path.join(shim, other)):
-                    continue
-                if any(os.path.exists(os.path.join(p, other)) for p in path):
-                    continue
-                os.makedirs(shim, exist_ok=True)
-                try:
-                    os.symlink(os.path.join(d, name), os.path.join(shim, other))
-                except FileExistsError:         # (another TU of the same component, in parallel)
-                    pass
-                made = True
-    _LOCAL_SHIMS[shim] = made or os.path.isdir(shim)
-    return _LOCAL_SHIMS[shim]
+    """The component's own headers under casefix's other spellings (case_shim.py)."""
+    return CS.make(os.path.dirname(os.path.join(BUILD, src)), CS.include_dirs(flags, BUILD), shim, CASEFIX,
+                   os.path.join(BUILD, "epoc32"))
 
 
 def case_shim(stderr: str, src: str, flags: list[str], shim: str) -> bool:
