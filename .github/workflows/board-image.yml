@@ -190,6 +190,17 @@ jobs:
           arch=x32; [ "${{ inputs.board }}" = pinephone ] && arch=arm
           ph component build -A -arch $arch -b ${{ inputs.board }} 2>&1 | tee component-build.log | tail -n 20
 
+      - name: Relink what was linked before a provider of its existed (x32 import stubs; dependency cycles need passes)
+        if: inputs.board == 'pc'
+        run: |
+          for pass in 1 2 3 4; do
+            keys=$(ph component stale -b pc | awk -F: '/: relink/ { print $1 }')
+            [ -n "$keys" ] || break
+            echo "pass $pass: relink $(echo $keys | wc -w): $(echo $keys | cut -c1-300)"
+            ph component build -b pc $keys >> component-relink.log 2>&1 || true
+          done
+          ph component stale -b pc | tail -n 1
+
       - name: Own the build folder (the container wrote it as root)
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" build
