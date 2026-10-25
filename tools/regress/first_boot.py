@@ -6,7 +6,8 @@
 Boots the image in QEMU twice from the same blank disk (first boot = the configuration install runs; second boot =
 it is already installed) and, for each boot, fails unless
 
-  * the home screen reaches the foreground (aifw's state manager logs "aState: EAiFwForeground"), and
+  * the home screen reaches the foreground (aifw's state manager logs "aState: EAiFwForeground", in builds with
+    the home screen's logging on; otherwise a screendump every 15 s decides), and
   * a screendump taken a few seconds later shows the home screen's widgets (clock/date/profile boxes in the
     top part, the softkey bar at the bottom) and not just the skinned background.
 
@@ -123,12 +124,23 @@ def boot(args, n, disk):
     threading.Thread(target=reader, daemon=True).start()
     result = {"fg": None}
     try:
+        # The marker is an aifw RD-log line, which only builds with the home screen's logging switched on print.
+        # So the screen decides too: from 40 s on it is dumped every 15 s, and the home screen's widgets count as
+        # the foreground. This must happen before SysAp switches the lights off (~3.5 min of guest time).
+        next_poll, wf, sf = 40.0, 0.0, 0.0
         while not fg and time.time() - t0 < args.timeout and p.poll() is None:
             time.sleep(0.5)
+            if time.time() - t0 >= next_poll and not fg:
+                next_poll += 15
+                w, h, rgb = shot(mon, out, n)
+                wf, sf = analyse(w, h, rgb)
+                if wf >= 0.15 and sf >= 0.3:
+                    result.update(fg=time.time() - t0, widgets=wf, softkeys=sf, by="screen")
+                    return result, None
         if not fg:
             if p.poll() is None:
                 shot(mon, out, n)              # what the screen shows instead
-            return result, "no EAiFwForeground within %ds (the home screen never came up; see boot%d.png)" % (args.timeout, n)
+            return result, "no home screen within %ds (no EAiFwForeground, no widgets on screen; see boot%d.png)" % (args.timeout, n)
         result["fg"] = fg[0]
         while time.time() - t0 < fg[0] + args.settle:
             time.sleep(0.5)
@@ -167,7 +179,7 @@ def main():
             failed += 1
             print("FAIL %s: %s" % (what, err))
         else:
-            print("PASS %s: foreground at %.0fs, widget boxes %.0f%%, softkey bar %.0f%%" %
+            print("PASS %s: home screen at %.0fs, widget boxes %.0f%%, softkey bar %.0f%%" %
                   (what, res["fg"], res["widgets"] * 100, res["softkeys"] * 100))
     print("first_boot: %s" % ("FAIL" if failed else "PASS"))
     return 1 if failed else 0
