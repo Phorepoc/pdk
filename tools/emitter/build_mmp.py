@@ -539,6 +539,12 @@ def build(key: str, rsc_only: bool = False) -> int:
     ehdll = comp.get("eh_dll", False)
     if device or ehdll:
         flags += ["-fexceptions", "-D__SUPPORT_CPP_EXCEPTIONS__", "-D__LEAVE_EQUALS_THROW__"]
+    # `cxx_eh`: an image whose own code throws and catches C++ exceptions (osncore, the Alf widgets, Photos: RVCT built
+    # them with exceptions on) -- the same machinery as eh_dll, but leaves stay the ROM's setjmp TRAP (no leave macros:
+    # its TRAPs must still catch User::Leave from euser)
+    elif comp.get("cxx_eh"):
+        flags += ["-fexceptions"]
+        ehdll = True
     env = dict(os.environ, SYMCC_ARM="1")
     # x32_real without x32_mmp (c32): the REAL component from the same mmp, as the x32 build does
     real = comp.get("x32_real") and not comp.get("x32_mmp")
