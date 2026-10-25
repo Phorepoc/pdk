@@ -253,12 +253,18 @@ def run(pkgs, scan_only=False):
                         continue
                     if scan_only:
                         continue
-                    if os.path.exists(dst) and not filecmp.cmp(src, dst, shallow=False):
+                    swapped = os.path.exists(dst) and not filecmp.cmp(src, dst, shallow=False)
+                    if swapped:
                         # a DIFFERENT header of the same name was in place (another package, or the
                         # other branch's copy): components already built against it may no longer
                         replaced.append((mkey, manifest.get(mkey, "?"), msrc))
                     os.makedirs(os.path.dirname(dst), exist_ok=True)
                     shutil.copy2(src, dst)
+                    if swapped:
+                        # copy2 kept the source's checkout time, older than the objects built against the
+                        # header it replaces: date it now, or their dependency check keeps them (a stale
+                        # hash.dll with the other CMD5 layout crashed the SIS registry on the second boot)
+                        os.utime(dst)
                     manifest[mkey] = msrc
                     n_new += 1
     _save_manifest(manifest)
