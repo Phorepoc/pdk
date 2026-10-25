@@ -148,7 +148,7 @@ func (o opener) Open(ctx context.Context) (transport.Port, error) {
 	ph.cur = p
 	if ph.Boots == 0 {
 		ph.Boots = 1
-		go ph.replay(p, "A")
+		go ph.replay(p, "A", 0)
 	}
 	return p, nil
 }
