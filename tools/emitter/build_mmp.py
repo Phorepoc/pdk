@@ -261,7 +261,7 @@ def provider_maps(libs, device=False):
         elif stem in C.COMPONENTS:
             m = MMP.parse(os.path.join(MMP.BASE, C.COMPONENTS[stem]["mmp"]))
             rom = C.rom_name(stem, m.targettype)
-            defp = (os.path.join(MMP.BASE, C.COMPONENTS[stem]["def"])
+            defp = (MMP.nocase(os.path.join(MMP.BASE, C.COMPONENTS[stem]["def"])) or os.path.join(MMP.BASE, C.COMPONENTS[stem]["def"])
                     if "def" in C.COMPONENTS[stem] else m.def_path())
         else:
             print(f"  ! LIBRARY {lib}: no provider registered (its imports -> stubs)")
@@ -636,7 +636,7 @@ def build(key: str, rsc_only: bool = False) -> int:
                         os.path.join(RT, "dll_entry.S"), "-o", entry_o], check=True)
         objs.insert(0, entry_o)
 
-    defp = (os.path.join(MMP.BASE, comp["def"]) if "def" in comp else m.def_path())
+    defp = ((MMP.nocase(os.path.join(MMP.BASE, comp["def"])) or os.path.join(MMP.BASE, comp["def"])) if "def" in comp else m.def_path())
     if m.targettype == "plugin" and "def" not in comp and not m.deffile:
         # no DEFFILE statement: the default-named .def next door can be a stale pre-ECOM
         # leftover (AvKon/EABI/AKNINITU.DEF freezes CAknDllInitializer::NewL) -- the
