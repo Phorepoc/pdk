@@ -408,14 +408,18 @@ def build(key: str) -> int:
     # incs_first: board copies of headers that must win over the mmp's own SYSTEMINCLUDE dirs (the STLport
     # compiler configuration, components.STLPORT_X32) -- searched before everything else
     # (-iquote too: a quoted #include searches the mmp's USERINCLUDE -iquote dirs before any -I -- Open C's "sysif.h")
-    first = [x for p in comp.get("incs_first", []) for x in (f"-iquote{pathres(p)}", f"-I{pathres(p)}")]
+    # Every STL user takes the board's STLport configuration and symcpp.h (components.STLPORT_X32): an mmp that has
+    # STLport on its include path and no incs_first of its own gets them here (the gallery and alf widgets had neither)
+    stl = not comp.get("incs_first") and any("stdapis/stlport" in p.replace("\\", "/").lower() for p in m.sysinc + m.userinc)
+    first = [x for p in (comp.get("incs_first") or (C.STLPORT_X32 if stl else []))
+             for x in (f"-iquote{pathres(p)}", f"-I{pathres(p)}")]
     flags = (BASE_FLAGS + BASE_DEFS + [kind] + [f"-D{x}" for x in m.macros + comp.get("defs", []) + env_defs]
              + first + incs + BASE_INCS + user_sys
              # the variant .hrh BEFORE e32def.h (abld's order): it defines __LEAVE_EQUALS_THROW__,
              # which e32def.h then drops because we build without C++ exceptions
              + ["-include", MMP.variant_for(m.path)] + PRE + env_incs
              + portable_flags(comp.get("flags", []))
-             + comp.get("x32_flags", []))
+             + comp.get("x32_flags", []) + (C.STLPORT_X32_FLAGS if stl else []))
     # PHOREPOC_QT48=1: components_s4 copies x32_flags into flags too (ARM shares them) -> a repeated "-include X" pair; unguarded headers
     # (symcpp.h: std::nothrow_t) then redefine. Keep the first of each force-include.
     _seen, _dedup, _i = set(), [], 0
