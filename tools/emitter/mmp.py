@@ -155,26 +155,30 @@ def _isfile_nocase(path: str) -> str | None:
 
 def nocase(path: str) -> str | None:
     """The tree was authored on Windows (EABI/ vs eabi/, eabiU.def vs eabiu.def): on a case-sensitive host
-    resolve each component of `path` case-insensitively. Returns the real file or directory, or None."""
+    resolve each component of `path` case-insensitively. Returns the real file or directory, or None.
+    A directory can exist in two spellings that a Windows checkout merges into one (os.graphics has
+    inc/graphics/openwfc/ and inc/Graphics/displaymapping.h), so every spelling is tried in turn."""
     if os.path.exists(path):
         return path
     path = os.path.normpath(path)
-    parts = path.replace("\\", "/").split("/")
-    cur = "/" if path.startswith("/") else ""
-    for p in parts:
-        if not p:
-            continue
-        nxt = os.path.join(cur, p) if cur else p
-        if not os.path.exists(nxt):
-            try:
-                hits = sorted(e for e in os.listdir(cur or ".") if e.lower() == p.lower())
-            except OSError:
-                return None
-            if not hits:
-                return None
-            nxt = os.path.join(cur, hits[0]) if cur else hits[0]
-        cur = nxt
-    return cur if os.path.exists(cur) else None
+    parts = [p for p in path.replace("\\", "/").split("/") if p]
+
+    def walk(cur: str, i: int) -> str | None:
+        if i == len(parts):
+            return cur if os.path.exists(cur) else None
+        p = parts[i]
+        exact = os.path.join(cur, p) if cur else p
+        try:
+            hits = sorted(e for e in os.listdir(cur or ".") if e.lower() == p.lower() and e != p)
+        except OSError:
+            hits = []
+        for name in ([p] if os.path.exists(exact) else []) + hits:
+            found = walk(os.path.join(cur, name) if cur else name, i + 1)
+            if found:
+                return found
+        return None
+
+    return walk("/" if path.startswith("/") else "", 0)
 
 
 def _num(tok: str) -> int:
@@ -318,6 +322,7 @@ def _package_unique(full: str, mdir: str) -> str | None:
     name = os.path.basename(full).lower()
     hits = []
     for dp, dns, fns in os.walk(pkg):
+        dns.sort(key=str.lower); fns.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
         dns[:] = [x for x in dns if x.lower() not in ("test", "tsrc", "internal", ".git")]
         hits += [os.path.join(dp, f) for f in fns if f.lower() == name]
         if len(hits) > 1:

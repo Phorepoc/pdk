@@ -69,6 +69,7 @@ def main(pkgs: list[str] | None = None) -> None:
 
     for top in roots:
         for root, dirs, files in os.walk(top):
+            dirs.sort(key=str.lower); files.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
             dirs[:] = [d for d in dirs if d != ".git"]
             for f in files:
                 ext = os.path.splitext(f)[1].lower()

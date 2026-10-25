@@ -174,6 +174,7 @@ def main() -> int:
     for pkg in PACKAGES:
         root = os.path.normpath(os.path.join(EX.BASE, pkg))
         for dp, dns, fns in os.walk(root):
+            dns.sort(key=str.lower); fns.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
             dns[:] = [d for d in dns if d.lower() not in ("tsrc", "test", "internal", "help")]
             for fn in fns:
                 if fn.lower() != "bld.inf":

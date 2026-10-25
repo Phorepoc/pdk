@@ -215,8 +215,11 @@ def run(pkgs, scan_only=False):
     baseline = os.path.dirname(BASE)
     for pkg in pkgs:
         for root, dirs, files in os.walk(os.path.join(BASE, pkg)):
-            dirs[:] = [d for d in dirs if d.lower() not in SKIP_DIRS and not d.lower().endswith(("_test", "_tests")) and d != ".git"]
-            for f in files:
+            # sorted: when two bld.infs export the same header the later one wins, so the walk order must
+            # not depend on the file system (NTFS lists alphabetically, ext4 does not: weakcrypto's hash.h
+            # then replaced weakcryptospi's and cryptospi/hash stopped compiling on Linux)
+            dirs[:] = sorted((d for d in dirs if d.lower() not in SKIP_DIRS and not d.lower().endswith(("_test", "_tests")) and d != ".git"), key=str.lower)
+            for f in sorted(files, key=str.lower):
                 if f.lower() != "bld.inf":
                     continue
                 n_inf += 1

@@ -231,6 +231,7 @@ def run(outdir: str, pkgs: list[str], only: set[str] | None = None) -> None:
     shipped, crmls, confmls = {}, [], []
     for pkg in pkgs:
         for root, _d, files in os.walk(os.path.join(BASE, pkg)):
+            _d.sort(key=str.lower); files.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
             if SKIP.search(root + os.sep):
                 continue
             for f in files:

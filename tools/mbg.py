@@ -179,6 +179,7 @@ def run(pkgs: list[str]) -> None:
     n = 0
     for pkg in pkgs:                       # icon makefiles (*.mk running mifconv)
         for root, _dirs, files in os.walk(os.path.join(BASE, pkg)):
+            _dirs.sort(key=str.lower); files.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
             for f in files:
                 if f.lower().endswith(".mk"):
                     for _mif, hdr, toks in mk_mifconv(os.path.join(root, f)):
@@ -186,6 +187,7 @@ def run(pkgs: list[str]) -> None:
                             n += 1
     for pkg in pkgs:                       # bmconv headers from mmp START BITMAP blocks
         for root, _dirs, files in os.walk(os.path.join(BASE, pkg)):
+            _dirs.sort(key=str.lower); files.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
             for f in files:
                 if f.lower().endswith((".mmp", ".mmpi", ".mmh")):
                     for mbm, blk in BITMAP.findall(open(os.path.join(root, f), errors="replace").read()):
@@ -193,6 +195,7 @@ def run(pkgs: list[str]) -> None:
                             n += 1
     for pkg in pkgs:
         for root, _dirs, files in os.walk(os.path.join(BASE, pkg)):
+            _dirs.sort(key=str.lower); files.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
             for f in files:
                 if f.lower() != "bld.inf":
                     continue
