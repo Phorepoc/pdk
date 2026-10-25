@@ -50,7 +50,7 @@ import mmp as MMP
 from e32image import build_dll
 from elf import extract
 from euser_def import parse_def
-from paths import PDK, OS_ROOT, SYMBIAN, BUILD, prefix_maps, resolve as rpath
+from paths import PDK, OS_ROOT, SYMBIAN, BUILD, has_layer, prefix_maps, resolve as rpath
 from refcheck import check_image, format_result
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -918,7 +918,8 @@ def main() -> int:
     args = [a for a in args if a != "--rsc"]    # bulk build so every <x.rsg> exists
     # --all on ARM: an entry that only carries x32 archives (the x32 variant of a prebuilt engine, whose ARM twin is the *_arm key
     # of the same ROM name) would build here as link stubs and overwrite its twin's image
-    keys = ([k for k, c in C.COMPONENTS.items() if not (c.get("x32_archives") and not c.get("arm_archives"))]
+    keys = ([k for k, c in C.COMPONENTS.items() if not (c.get("x32_archives") and not c.get("arm_archives"))
+             and (not c.get("needs") or has_layer(c["needs"]))]
             if args == ["--all"] else args)
     if shard:
         keys = keys[shard[0]::shard[1]]

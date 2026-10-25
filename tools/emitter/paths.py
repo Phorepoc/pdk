@@ -42,6 +42,12 @@ SYMBIAN = _dir("PHOREPOC_SYMBIAN", os.path.join(CORE, "symbian"))
 BUILD = _dir("PHOREPOC_BUILD", os.path.join(CORE, "build"))
 EPOC32_ROOT = os.path.join(BUILD, "epoc32")
 ADAPTATIONS = [os.path.abspath(a) for a in os.environ.get("PHOREPOC_ADAPTATIONS", "").split(os.pathsep) if a]
+# a registry entry's `needs`: the repository it builds against (phebrowser: webengine). --all leaves it out unless that
+# checkout is one of the build's adaptations; naming the key still builds it
+def has_layer(name: str) -> bool:
+    return any(os.path.basename(a) == name for a in ADAPTATIONS)
+
+
 ADAPTATION_REGISTRIES = [os.path.join(a, "registry") for a in ADAPTATIONS if os.path.isdir(os.path.join(a, "registry"))]
 for _r in ADAPTATION_REGISTRIES:
     if _r not in sys.path:
