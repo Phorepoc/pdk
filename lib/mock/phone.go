@@ -198,39 +198,49 @@ func (ph *Phone) reboot() {
 		ph.mu.Lock()
 		ph.offline = false
 		ph.mu.Unlock()
-		// the phone streams whether or not the host has reopened yet; the real one buffers 256 KB
+		// the phone streams whether or not the host has reopened yet; the real one buffers 256 KB, so what it
+		// wrote while the host was reconnecting arrives on the next port: a port that closes mid-transcript
+		// hands the rest (from the line it refused) to the next one the host opens
+		next, last := 0, p
 		for i := 0; i < 400; i++ {
 			ph.mu.Lock()
 			q := ph.cur
 			ph.mu.Unlock()
-			if q != nil && q != p && !q.closed {
-				ph.replay(q, slot)
-				return
+			if q != nil && q != last && !q.closed {
+				if next = ph.replay(q, slot, next); next < 0 {
+					return
+				}
+				last, i = q, 0
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
 	}()
 }
 
-func (ph *Phone) replay(p *port, slot string) {
+// replay plays the boot transcript on p from line `from`; it returns -1 when it is done, or the index of the line
+// p refused (it closed) so the next port carries on from there.
+func (ph *Phone) replay(p *port, slot string, from int) int {
 	slotLine := "[EKERN][slot] running slot " + slot + " (mock)"
+	lines := make([]string, 0, len(ph.boot)+1)
 	sawSlot := false
-	defer func() {
-		if !sawSlot { // a short transcript still reports its slot
-			p.emit(slotLine + "\n")
-		}
-	}()
 	for _, l := range ph.boot {
 		if strings.Contains(l, "[EKERN][slot] running slot") {
 			l, sawSlot = slotLine, true
 		}
-		if p.emit(l + "\n") {
-			return
+		lines = append(lines, l)
+	}
+	if !sawSlot { // a short transcript still reports its slot
+		lines = append(lines, slotLine)
+	}
+	for i := from; i < len(lines); i++ {
+		if p.emit(lines[i] + "\n") {
+			return i
 		}
 		if ph.LineDelay > 0 {
 			time.Sleep(ph.LineDelay)
 		}
 	}
+	return -1
 }
 
 // Say emits a line now (tests use it to inject log output).
