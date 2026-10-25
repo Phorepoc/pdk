@@ -859,7 +859,8 @@ def main() -> int:
         keys = closure(keys[1:])
         print("closure: " + " ".join(keys))
     elif keys[0] == "--all":            # every registry component, providers first 
-        keys = closure(list(C.COMPONENTS))
+        # (arm_only: ARM runtimes for SDK apps -- drtaeabi, scppnwdl, stdnew, libstdcppv5 -- which no x86 image imports)
+        keys = closure([k for k, c in C.COMPONENTS.items() if not c.get("arm_only")])
         print(f"all: {len(keys)} components")
     if keys[:1] == ["--list-closure"]:
         print(" ".join(closure(keys[1:])))
