@@ -208,19 +208,44 @@ def _save_manifest(m):
             fh.write(k + "\t" + m[k] + "\n")
 
 
+_INF_INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+\.inf)"', re.I | re.M)
+
+
+def included_infs(top):
+    """The bld.infs under `top` that another bld.inf #includes. Those are exported through their includer only, with
+    its macros: commsbufs/group/bld.inf takes version1/mbufmgr/group/BLD.INF only without
+    SYMBIAN_ZERO_COPY_NETWORKING, and on its own that legacy copy replaced mbuf.h, es_mbuf.h ... (tcpip6 failed)."""
+    seen = set()
+    for root, dirs, files in os.walk(top):
+        dirs[:] = [d for d in dirs if d != ".git"]
+        for f in files:
+            if f.lower() != "bld.inf":
+                continue
+            try:
+                text = open(os.path.join(root, f), errors="replace").read()
+            except OSError:
+                continue
+            for inc in _INF_INCLUDE.findall(text):
+                p = os.path.normpath(os.path.join(root, inc.replace("\\", "/")))
+                p = _mmp().nocase(p) or p
+                seen.add(os.path.normcase(os.path.normpath(p)).lower())
+    return seen
+
+
 def run(pkgs, scan_only=False):
     n_inf = n_new = n_same = n_missing = 0
     replaced = []
     manifest = _load_manifest()
     baseline = os.path.dirname(BASE)
     for pkg in pkgs:
+        nested = included_infs(os.path.join(BASE, pkg))
         for root, dirs, files in os.walk(os.path.join(BASE, pkg)):
             # sorted: when two bld.infs export the same header the later one wins, so the walk order must
             # not depend on the file system (NTFS lists alphabetically, ext4 does not: weakcrypto's hash.h
             # then replaced weakcryptospi's and cryptospi/hash stopped compiling on Linux)
             dirs[:] = sorted((d for d in dirs if d.lower() not in SKIP_DIRS and not d.lower().endswith(("_test", "_tests")) and d != ".git"), key=str.lower)
             for f in sorted(files, key=str.lower):
-                if f.lower() != "bld.inf":
+                if f.lower() != "bld.inf" or os.path.normcase(os.path.normpath(os.path.join(root, f))).lower() in nested:
                     continue
                 n_inf += 1
                 for src, rel in exports(os.path.join(root, f)):
