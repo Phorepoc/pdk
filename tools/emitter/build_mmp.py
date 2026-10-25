@@ -166,8 +166,18 @@ def _compile_one(src, obj, flags, env):
     if os.name != "nt" and CS.make(os.path.dirname(os.path.join(PDK, src)), CS.include_dirs(flags, PDK), shim, CASEFIX,
                                    os.path.join(BUILD, "epoc32")):
         xc = ["-I" + shim, *xc]
-    r = subprocess.run([*_symcc_cmd(src, flags, env), *xc, src, "-O2", "-w", *flags, "-MMD", "-MF", obj + ".d", "-o", obj],
-                       capture_output=True, text=True, errors="replace", env=env, cwd=PDK)
+    def cc():
+        return subprocess.run([*_symcc_cmd(src, flags, env), *xc, src, "-O2", "-w", *flags, "-MMD", "-MF", obj + ".d",
+                               "-o", obj], capture_output=True, text=True, errors="replace", env=env, cwd=PDK)
+    r = cc()
+    # an include casefix has no link for (a Windows path, ..\debuglog\DEBUGLOG.H): resolve it case-insensitively
+    # against this compile's include path, link it into the shim and try again (case_shim.py, as the x86 builder)
+    for _ in range(4):
+        if r.returncode == 0 or os.name == "nt" or not CS.missing(r.stderr, src, flags, shim, PDK):
+            break
+        if "-I" + shim not in xc:
+            xc = ["-I" + shim, *xc]
+        r = cc()
     if r.returncode == 0:
         open(stamp, "w").write(key)
     return src, r.returncode, (r.stdout + r.stderr)

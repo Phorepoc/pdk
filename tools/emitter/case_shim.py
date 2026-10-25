@@ -58,3 +58,60 @@ def make(src_dir: str, dirs: list[str], shim: str, casefix: str, epoc: str) -> b
                 made = True
     _SHIMS[shim] = made or os.path.isdir(shim)
     return _SHIMS[shim]
+
+
+_LISTING: dict = {}
+
+
+def _ci_child(d: str, name: str):
+    if d not in _LISTING:
+        try:
+            _LISTING[d] = {n.lower(): n for n in os.listdir(d)}
+        except OSError:
+            _LISTING[d] = {}
+    real = _LISTING[d].get(name.lower())
+    return os.path.join(d, real) if real else None
+
+
+def _ci_resolve(base: str, rel: str):
+    p = base
+    for part in [x for x in rel.split("/") if x]:
+        if part == "..":
+            p = os.path.dirname(p)
+            continue
+        p = _ci_child(p, part)
+        if not p:
+            return None
+    return p if os.path.isfile(p) else None
+
+
+def missing(stderr: str, src: str, flags: list[str], shim: str, base: str) -> bool:
+    """Symlink every 'fatal error: X: No such file' that a case-insensitive, slash-agnostic lookup
+    finds in the include path into the shim under the exact name requested. True if any was made."""
+    import re as _re
+    made = False
+    for m in _re.finditer(r"^(.*?):\d+:\d+: fatal error: (.+?): (?:No such file or directory|Invalid argument)",
+                          stderr, _re.M):
+        includer, req = m.group(1), m.group(2)
+        if "\\" in req and req.startswith("/"):           # EINVAL reports <include dir>/<requested name>
+            req = req[req.rfind("/", 0, req.find("\\")) + 1:]
+        dirs = [os.path.dirname(os.path.join(base, includer)), os.path.dirname(os.path.join(base, src))]
+        for i, f in enumerate(flags):
+            if f in ("-I", "-iquote") and i + 1 < len(flags):
+                dirs.append(flags[i + 1])
+            elif f.startswith("-iquote") and len(f) > 7:
+                dirs.append(f[7:])
+            elif f.startswith("-I") and len(f) > 2:
+                dirs.append(f[2:])
+        rel = req.replace("\\", "/")
+        hit = next((h for h in (_ci_resolve(os.path.join(base, d), rel) for d in dirs) if h), None)
+        if not hit:
+            continue
+        link = os.path.join(shim, req)
+        os.makedirs(os.path.dirname(link), exist_ok=True)
+        try:
+            os.symlink(hit, link)
+        except FileExistsError:
+            pass
+        made = True
+    return made
