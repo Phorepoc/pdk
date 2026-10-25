@@ -478,7 +478,10 @@ def build(key: str, rsc_only: bool = False) -> int:
     # incs_first (as build_mmp_x32.py): board copies of headers that must win over the mmp's own dirs (the STLport compiler
     # configuration, components.STLPORT_X32) -- searched before everything else, -iquote too
     # (opt-in, `arm_incs_first`: the registry's incs_first were written for x32 and stay x32-only)
-    first = [x for p in (comp.get("incs_first", []) if comp.get("arm_incs_first") else [])
+    # Every STL user takes the board's STLport configuration and symcpp.h, as build_mmp_x32.py: an mmp that has STLport
+    # on its include path and no ARM incs_first of its own gets them here (the gallery and alf widgets had neither)
+    stl = not comp.get("arm_incs_first") and any("stdapis/stlport" in p.replace("\\", "/").lower() for p in m.sysinc + m.userinc)
+    first = [x for p in (comp.get("incs_first", []) if comp.get("arm_incs_first") else C.STLPORT_X32 if stl else [])
              for x in ("-iquote" + rpath(p), "-I" + rpath(p))]
     incs = first + [x for p in m.userinc for x in ("-iquote", p)] + _sf_layout(comp, m)
     # `noinc`: drop include dirs containing any of these substrings (e.g. P.I.P.S. "stdapis"
@@ -500,6 +503,7 @@ def build(key: str, rsc_only: bool = False) -> int:
                 if ":" in d and d.split(":", 1)[0] == key]
              + incs + ["-idirafter", CASEFIX, "-idirafter", SYMBIAN]   # case-insensitive #include fallback (tools/casefix.py)
              + comp.get("flags", []) + comp.get("arm_flags", [])     # (arm_flags: the ARM side of x32_flags)
+             + (C.STLPORT_X32_FLAGS if stl else [])
              # 2010-era C++ (`nullptr` as an identifier: etelmm, cntmodel), as build_mmp_x32.py compiles everything
              + ["-std=gnu++03"]
              # RVCT-only __declspec(notshared/...) under __EABI__ (cntmodel/cntsrv NONSHARED): no meaning to GCC,
