@@ -78,20 +78,34 @@ def _variant(path):
 def preprocess(path):
     # (app.webuis) is missing here and STOPS cpp -- the whole package exported nothing. Rewrite such includes
     # and give the markers back the real file name (exports() tracks the current dir from them).
+    # A NESTED bld.inf's includes need the same fix, and cpp opens those files itself: so an included bld.inf is
+    # inlined here (fixed in turn), between line markers that name the real file. commsfw/group/bld.inf ->
+    # commsdatabaseshim/group/BLD.INF -> "../commdbshim/group/bld.inf" (really BLD.INF) stopped cpp on Linux and
+    # everything after it in commsfw was not exported: the legacy version1 mbuf.h stayed in place.
     import mmp as _MMP
+
+    def fixed_text(p, depth=0):
+        d = os.path.dirname(os.path.abspath(p))
+        text = open(p, errors="replace").read()
+
+        def fix(m):
+            full = os.path.normpath(os.path.join(d, m.group(2).replace("\\", "/")))
+            hit = full if os.path.exists(full) else _MMP.nocase(full)   # written for a case-insensitive file system
+            if hit and hit.lower().endswith(".inf") and depth < 16:
+                line = text.count("\n", 0, m.start()) + 1
+                me, child = p.replace("\\", "/"), hit.replace("\\", "/")
+                return f'# 1 "{child}"\n{fixed_text(hit, depth + 1)}\n# {line + 1} "{me}"'
+            if os.path.exists(full):
+                return m.group(0)
+            if hit:                     # (sf.mw.web: Browser_platform_variant.hrh)
+                return m.group(1) + hit.replace("\\", "/") + m.group(3)
+            mapped = _MMP.map_sf_path(full, d)
+            return m.group(1) + mapped.replace("\\", "/") + m.group(3) if mapped != full else m.group(0)
+        return _MMP._REL_INCLUDE.sub(fix, text)
+
     d = os.path.dirname(os.path.abspath(path))
     text = open(path, errors="replace").read()
-
-    def fix(m):
-        full = os.path.normpath(os.path.join(d, m.group(2).replace("\\", "/")))
-        if os.path.exists(full):
-            return m.group(0)
-        ci = _MMP.nocase(full)          # written for a case-insensitive file system (sf.mw.web: Browser_platform_variant.hrh)
-        if ci:
-            return m.group(1) + ci.replace("\\", "/") + m.group(3)
-        mapped = _MMP.map_sf_path(full, d)
-        return m.group(1) + mapped.replace("\\", "/") + m.group(3) if mapped != full else m.group(0)
-    fixed = _MMP._REL_INCLUDE.sub(fix, text)
+    fixed = fixed_text(path)
     src, stdin = (path, None) if fixed == text else ("-", fixed)
     r = subprocess.run([CPP, "-undef", "-nostdinc", "-x", "c", "-w",
                         "-DEPOC32", "-DMARM", "-DEABI", "-DMARM_ARMV5", "-DGCCE",
