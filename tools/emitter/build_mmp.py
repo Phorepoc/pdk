@@ -348,8 +348,17 @@ def build_resources(key: str, m, rom: str) -> int:
             rss = rpath(delta)
             print(f"  resource delta: {os.path.basename(b['rss'])} <- {delta}")
         # rsc_incs FIRST: they override stale epoc32 exports (RCL_3 phoneappcommands.hrh vs master's)
-        ok, log = rsc.compile_rss(rss, out, rsg, incs=[rpath(x) for x in C.COMPONENTS[key].get("rsc_incs", [])] + extra_inc + m.userinc + m.sysinc + [CASEFIX], uids=b["uids"],
+        incs = [rpath(x) for x in C.COMPONENTS[key].get("rsc_incs", [])] + extra_inc + m.userinc + m.sysinc + [CASEFIX]
+        ok, log = rsc.compile_rss(rss, out, rsg, incs=incs, uids=b["uids"],
                                    defs=C.COMPONENTS[key].get("rdefs", ()), variant_of=b["rss"])
+        # an include spelled otherwise than the file (webkitutils: "ToolBar.rssi" = data/toolbar.rssi): resolve it
+        # case-insensitively, link it into a shim ahead of the include path and compile again (case_shim.py)
+        shim = os.path.join("/tmp/caseshim-rsc", hashlib.sha1(rss.encode()).hexdigest()[:12])
+        for _ in range(4):
+            if ok or os.name == "nt" or not CS.missing(log.removeprefix("cpp: "), rss, [f"-I{d}" for d in incs], shim, PDK):
+                break
+            ok, log = rsc.compile_rss(rss, out, rsg, incs=[shim] + incs, uids=b["uids"],
+                                       defs=C.COMPONENTS[key].get("rdefs", ()), variant_of=b["rss"])
         if ok:
             # the header is written lower case; its users mostly spell it as the resource file is named
             # (<VPbkEng.rsg>): on a case-sensitive file system that spelling gets a link next to it at once (casefix
