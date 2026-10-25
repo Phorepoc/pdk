@@ -467,6 +467,7 @@ def parse(path: str, extra_defs=()) -> Mmp:
             block = None
             if len(args) >= 2 and args[0].lower() == "resource":
                 rss = os.path.join(srcpath, args[1].replace("\\", "/"))
+                rss = nocase(os.path.normpath(rss)) or rss     # (oodmonitor: lafmemorywatcher.rss is LafMemoryWatcher.rss)
                 m.resources.append(rss)
                 block = dict(rss=rss, target="", targetpath="", header=False, uids=[])
                 m.resource_blocks.append(block)
@@ -475,6 +476,7 @@ def parse(path: str, extra_defs=()) -> Mmp:
         elif kw in ("resource", "systemresource"):
             for a in args:
                 rss = os.path.join(srcpath, a.replace("\\", "/"))
+                rss = nocase(os.path.normpath(rss)) or rss
                 m.resources.append(rss)
                 m.resource_blocks.append(dict(rss=rss, target="", header=True, uids=[],
                                               targetpath=m.targetpath or
