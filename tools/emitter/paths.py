@@ -55,7 +55,7 @@ def _osview(layers: list) -> str:
     files = {}
     for layer in layers:
         for root, dirs, names in os.walk(layer):
-            dirs.sort(key=str.lower); names.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
+            dirs.sort(key=str.upper); names.sort(key=str.upper)   # NTFS order on every file system (see epoc32_export.py)
             dirs[:] = [d for d in dirs if d != ".git"]
             for n in names:
                 p = os.path.join(root, n)

@@ -322,7 +322,7 @@ def _package_unique(full: str, mdir: str) -> str | None:
     name = os.path.basename(full).lower()
     hits = []
     for dp, dns, fns in os.walk(pkg):
-        dns.sort(key=str.lower); fns.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
+        dns.sort(key=str.upper); fns.sort(key=str.upper)   # NTFS order on every file system (see epoc32_export.py)
         dns[:] = [x for x in dns if x.lower() not in ("test", "tsrc", "internal", ".git")]
         hits += [os.path.join(dp, f) for f in fns if f.lower() == name]
         if len(hits) > 1:

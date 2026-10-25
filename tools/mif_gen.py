@@ -100,7 +100,7 @@ def art_index(extra: list[str]) -> dict[str, str]:
         if not os.path.isdir(d):
             continue
         for root, _dirs, files in os.walk(d):
-            _dirs.sort(key=str.lower); files.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
+            _dirs.sort(key=str.upper); files.sort(key=str.upper)   # NTFS order on every file system (see epoc32_export.py)
             for f in files:
                 stem, ext = os.path.splitext(f.lower())
                 if ext == ".svg":

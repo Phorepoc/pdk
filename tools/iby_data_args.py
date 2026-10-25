@@ -68,7 +68,7 @@ def our_rom(args_file: str) -> set[str]:
 def walk(exts: tuple[str, ...]):
     for t in TREES:
         for root, dirs, files in os.walk(t):
-            dirs.sort(key=str.lower); files.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
+            dirs.sort(key=str.upper); files.sort(key=str.upper)   # NTFS order on every file system (see epoc32_export.py)
             dirs[:] = [d for d in dirs if d not in (".git", "tsrc", "test", "tests", "internal_test")]
             for f in files:
                 if f.lower().endswith(exts):
@@ -124,7 +124,7 @@ def find_in_package(pkg: str, name: str) -> str | None:
     if pkg not in _pkg_files:
         files: dict[str, list[str]] = {}
         for root, dirs, fs in os.walk(pkg):
-            dirs.sort(key=str.lower); fs.sort(key=str.lower)   # NTFS order on every file system (see epoc32_export.py)
+            dirs.sort(key=str.upper); fs.sort(key=str.upper)   # NTFS order on every file system (see epoc32_export.py)
             dirs[:] = [d for d in dirs if d.lower() not in (".git", "tsrc", "test", "tests", "internal_test")]
             for f in fs:
                 files.setdefault(f.lower(), []).append(os.path.join(root, f))
