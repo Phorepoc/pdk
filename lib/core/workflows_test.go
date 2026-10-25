@@ -46,6 +46,13 @@ func TestPushWaitReportsTheNewBoot(t *testing.T) {
 	if err := writeFile(p, img); err != nil {
 		t.Fatal(err)
 	}
+	// the rig's first boot (slot A) registers asynchronously: read "before" only once it has, or the wait takes
+	// boot #1 itself for the new boot and never sees slot B
+	for deadline := time.Now().Add(10 * time.Second); r.s.Health().Boot == 0; time.Sleep(20 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the rig never booted")
+		}
+	}
 	before := r.s.Health().Boot
 	res, err := r.m.Exec(ctx(t, 60*time.Second), r.s, "test", "push", device.Args{"file": p, "wait": "running slot B", "wait_timeout_s": 30})
 	if err != nil {
