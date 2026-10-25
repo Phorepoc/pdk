@@ -189,6 +189,9 @@ jobs:
         run: |
           arch=x32; [ "${{ inputs.board }}" = pinephone ] && arch=arm
           ph component build -A -arch $arch -b ${{ inputs.board }} 2>&1 | tee component-build.log | tail -n 20
+          # a bulk build goes on past a component that fails (exit 1): the image steps are the verdict, so name them here
+          failed=$(awk '/^=== /{c=$2} /FAIL/{print c}' component-build.log | tr -d : | sort -u)
+          echo "components failed: $(echo "$failed" | grep -c . || true)"; echo $failed | fold -w 200
 
       - name: Relink what was linked before a provider of its existed (x32 import stubs; dependency cycles need passes)
         if: inputs.board == 'pc'
