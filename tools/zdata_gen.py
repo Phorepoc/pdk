@@ -191,6 +191,17 @@ def main() -> int:
             missing += 1
     gen = os.path.join(BUILD, "zdata-gen")
     os.makedirs(gen, exist_ok=True)
+    # an .rsg shipped as data ends its lines CRLF, as Nokia's rcomp wrote them on Windows: the hierarchy navigator's
+    # parser (hnmdlocalizationelement.cpp ParseRsgContentL) cuts one character before each LF -- on an LF-only file
+    # that is the id's last digit, and every foldersuite_rsc:R_... key showed raw in the menu's Options
+    for key, (rom, src) in list(out.items()):
+        if rom.lower().endswith(".rsg"):
+            with open(src, "rb") as fh:
+                data = fh.read().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+            crlf = os.path.join(gen, os.path.basename(rom))
+            with open(crlf, "wb") as fh:
+                fh.write(data)
+            out[key] = (rom, crlf)
     with open(os.path.join(gen, "manifest.txt"), "w", newline="\n") as fh:
         for rom, src in sorted(out.values()):
             fh.write(rom.replace("/", "\\") + "=" + os.path.abspath(src).replace("\\", "/") + "\n")
