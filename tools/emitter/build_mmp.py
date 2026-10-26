@@ -571,7 +571,10 @@ def build(key: str, rsc_only: bool = False) -> int:
              # vfp=True: hardware floating point, soft-float ABI (links with the rest of the ROM); on unless
              # ARM_VFP=0 (ph sets ARM_VFP=1 only when it starts the container, so in-container and CI builds
              # were silently soft-float); the kernel must switch VFP state (__CPU_HAS_VFP: the SMP kernel)
-             + (["-mfpu=vfp", "-mfloat-abi=softfp"] if comp.get("vfp") and os.environ.get("ARM_VFP", "1") != "0" else []))
+             + (["-mfpu=vfp", "-mfloat-abi=softfp"] if comp.get("vfp") and os.environ.get("ARM_VFP", "1") != "0" else [])
+             # ARM_CPU_FLAGS (experiment, 2026-10-26): extra target flags appended last, e.g. a PinePhone-only DLL at
+             # "-march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=softfp" (softfp: the ROM's ABI stays)
+             + os.environ.get("ARM_CPU_FLAGS", "").split())
     # The C-library <stdarg.h> (stdapis = P.I.P.S., libc = estlib) re-#defines va_start/va_arg
     # as `char*` stack walking -- wrong for the ARM EABI (first varargs live in r0-r3). The
     # real RVCT/GCCE builds found the COMPILER's stdarg.h first; mirror that: pre-set the two
