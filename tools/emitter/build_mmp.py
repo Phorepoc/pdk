@@ -565,8 +565,6 @@ def build(key: str, rsc_only: bool = False) -> int:
         rt += [os.path.join(RT, "device_rt.cpp")]
     if device or ehdll:
         rt += [os.path.join(RT, "device_excdesc.s")]
-    if comp.get("cxx_eh"):
-        rt += [os.path.join(RT, "eh_getenv.cpp")]   # libsupc++'s eh_alloc pool reads one variable; no libc linked here
     if m.is_exe:
         rt += [os.path.join(RT, "exe_dso_handle.cpp")]
         rt += [os.path.join(BE.B, "euser", "epoc", "arm", "uc_exe.cia"),
@@ -770,7 +768,10 @@ def build(key: str, rsc_only: bool = False) -> int:
         link(objs, elf1, True)
     missing = sorted(BE._nm("--undefined-only", elf1) - {""})
     # `libs`: extra providers the mmp does not name (e.g. estlib standing in for P.I.P.S. libc/libm)
-    resolve, dll_order = provider_maps(comp.get("libs", []) + m.libs + (DEVICE_RUNTIME_LIBS if device else []),
+    # cxx_eh: the linked-in libsupc++ (eh_alloc's pool, the verbose terminate handler) calls malloc, getenv, fputs ...
+    # -- from libc, which an mmp written for RVCT's runtime need not list (glxdataprovider: EUSRNIMP on malloc)
+    resolve, dll_order = provider_maps(comp.get("libs", []) + m.libs + (DEVICE_RUNTIME_LIBS if device else [])
+                                       + (["libc.lib"] if comp.get("cxx_eh") else []),
                                        device)
     imports = {n: resolve[n] for n in missing if n in resolve and resolve[n][0] != rom}
     # typeinfo (_ZTI/_ZTS) is never imported: RVCT-era .defs rarely freeze it and a
