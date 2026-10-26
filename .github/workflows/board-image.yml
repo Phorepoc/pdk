@@ -234,6 +234,18 @@ jobs:
           cp build/x86/ekern/phorepoc-ekern.iso out/phorepoc-pc.iso
           cp build/x86/Phorepoc.ova out/phorepoc-pc.ova
 
+      # the image links the AArch64 entry shim; the build container has no AArch64 GCC (locally tools/make_arm_shim.sh
+      # builds it in another image), the runner gets one from apt -- the same commands
+      - name: The AArch64 entry shim (pinephone)
+        if: inputs.images && inputs.board == 'pinephone'
+        run: |
+          sudo apt-get install -y -qq gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu > /dev/null
+          mkdir -p build/arm/a53
+          aarch64-linux-gnu-gcc -c -DTARGET=0x40300000 adaptation-a64/os/src/phorepoc-arm/a53shim/shim.S -o "$RUNNER_TEMP/shim.o"
+          aarch64-linux-gnu-ld -Ttext=0 "$RUNNER_TEMP/shim.o" -o "$RUNNER_TEMP/shim.elf"
+          aarch64-linux-gnu-objcopy -O binary "$RUNNER_TEMP/shim.elf" build/arm/a53/shim-ram-noprobe.bin
+          ls -l build/arm/a53/shim-ram-noprobe.bin
+
       - name: Images (pinephone) -- the SD-card image
         if: inputs.images && inputs.board == 'pinephone'
         run: |
