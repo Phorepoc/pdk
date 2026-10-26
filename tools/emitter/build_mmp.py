@@ -565,6 +565,8 @@ def build(key: str, rsc_only: bool = False) -> int:
         rt += [os.path.join(RT, "device_rt.cpp")]
     if device or ehdll:
         rt += [os.path.join(RT, "device_excdesc.s")]
+    if comp.get("cxx_eh"):
+        rt += [os.path.join(RT, "eh_find_exidx.cpp")]   # the linked-in unwinder's table lookup (the kernel's descriptors)
     if m.is_exe:
         rt += [os.path.join(RT, "exe_dso_handle.cpp")]
         rt += [os.path.join(BE.B, "euser", "epoc", "arm", "uc_exe.cia"),
