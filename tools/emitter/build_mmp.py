@@ -756,6 +756,13 @@ def build(key: str, rsc_only: bool = False) -> int:
     for a in comp.get("arm_archives", []):
         if os.path.isfile(rpath(a)):
             defined |= BE._nm("--defined-only", rpath(a))
+    # ... and the mmp's STATICLIBRARY archives: ImageConversion exports CImageProcessorExtension, which lives in
+    # imageprocessorperf.lib; nothing in the DLL calls its constructor, so unrooted it never came in and ordinal 590 was
+    # the unimpl stub (jpegcodec -> EUSRNIMP: ThumbnailServer opening a full-size picture, 2026-10-26)
+    for sl in m.staticlibs:
+        a = static_archive(LIB_ALIASES.get(sl.rsplit(".", 1)[0], sl.rsplit(".", 1)[0]))
+        if os.path.isfile(a):
+            defined |= BE._nm("--defined-only", a)
     # `gcc_exports` (compsupp: dfpaeabi/drtaeabi): the generic exports come from GCC's own libgcc / libsupc++ where
     # the release linked RVCT's -- rooted with -u like an object's, so the archive member comes in
     if comp.get("gcc_exports"):
