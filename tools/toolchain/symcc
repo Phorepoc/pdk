@@ -79,6 +79,10 @@ if [ "$KERNEL" -eq 1 ]; then
          -I"${PHOREPOC_KINC:-$OS_ROOT/toolchain/kinc}")
 fi
 
+# the case-insensitive #include fallback (tools/casefix.py), searched last, as the component builders do: the device
+# builds include Windows spellings too (efsrv's cl_std.h: <f32plugin.h> = fileserver/inc/F32plugin.h)
+[ -n "${PHOREPOC_BUILD:-}" ] && [ -d "$PHOREPOC_BUILD/casefix" ] && INCS+=(-idirafter "$PHOREPOC_BUILD/casefix")
+
 # SYMCC_PREINC="dir ...": include dirs searched BEFORE all of the above (overlays of baseline headers, e.g.
 # a board timer header; a plain -I in "$@" comes after INCS and would lose).
 PRE=(); for d in ${SYMCC_PREINC:-}; do PRE+=(-I"$d"); done
