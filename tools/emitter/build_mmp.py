@@ -37,6 +37,7 @@ import glob
 import hashlib
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import threading
@@ -48,7 +49,7 @@ import case_shim as CS
 import devlink
 import mmp as MMP
 from e32image import build_dll
-from elf import extract
+from elf import Elf32, extract
 from euser_def import parse_def
 from paths import PDK, OS_ROOT, SYMBIAN, BUILD, has_layer, prefix_maps, resolve as rpath
 from refcheck import check_image, format_result
@@ -299,6 +300,59 @@ def provider_maps(libs, device=False):
             for name in BD.EXTRA_EXPORTS:
                 resolve[name] = (rom, BD.extra_export_ordinal(name, d.max_ordinal))
     return resolve, [rom for _, rom, _ in order]
+
+
+_TI_KINDS = {"_ZTVN10__cxxabiv117__class_type_infoE": 0, "_ZTVN10__cxxabiv120__si_class_type_infoE": 1,
+             "_ZTVN10__cxxabiv121__vmi_class_type_infoE": 2}
+_ELF_CACHE = {}
+
+
+def _provider_elfs(libs):
+    """the ELFs of our own builds of an image's LIBRARY providers (+ a `<key>_real` twin: the ROM's real DLL when the
+    default key is a null stand-in)"""
+    out = []
+    for lib in libs:
+        stem = LIB_ALIASES.get(lib.rsplit(".", 1)[0].lower(), lib.rsplit(".", 1)[0])
+        for key in (stem + "_real", stem):
+            p = os.path.join(OUT_ROOT, key, key + ".elf")
+            if os.path.isfile(p) and p not in out:
+                out.append(p)
+    return out
+
+
+def _ti_shape(name, elfs):
+    """The typeinfo object `name` as one of our provider builds defines it: (vtable symbol, [("ti", base) | ("word", v)])
+    -- the class's real kind and bases -- or None when no provider ELF defines it. A provider that only has the class
+    as a root (its own synthesized copy) is passed over for one with bases."""
+    root = None
+    for p in elfs:
+        if p not in _ELF_CACHE:
+            with open(p, "rb") as fh:
+                e = Elf32(fh.read())
+            by_name = {s.name: s for s in e.symbols if s.shndx and s.name}
+            _ELF_CACHE[p] = (e, by_name)
+        e, by_name = _ELF_CACHE[p]
+        s = by_name.get(name)
+        if not s or s.shndx >= len(e.sections):
+            continue
+        sec = e.sections[s.shndx]
+        rel = {r.offset: e.symbols[r.sym].name for r in e.relocs_for(sec.name)}
+        word = lambda i: struct.unpack_from("<I", sec.data, s.value - sec.addr + 4 * i)[0]
+        vt = rel.get(s.value)
+        if vt not in _TI_KINDS:
+            continue
+        if _TI_KINDS[vt] == 0:
+            root = (vt, [])
+            continue
+        n = (2, 3, None)[_TI_KINDS[vt]]
+        if n is None:                   # vmi: flags, base count, then (base, offset flags) pairs
+            n = 4 + 2 * word(3)
+        items = []
+        for i in range(2, n):
+            target = rel.get(s.value + 4 * i)
+            items.append(("ti", target) if target and target.startswith("_ZTI") else ("word", word(i)))
+        return vt, items
+    return root
 
 
 def _is_registration(m, block) -> bool:
@@ -809,10 +863,30 @@ def build(key: str, rsc_only: bool = False) -> int:
             fh.write(f"\t.globl {n}\n{n}:\n\t.word 0\n")
         if ti_names:
             fh.write("\t.section .rodata.synth_typeinfo,\"a\"\n\t.align 2\n")
+            # `typeinfo_bases`: rebuild each with the kind + bases our provider build gives it (recursively, the bases
+            # this image lacks too), so a cast that walks past the DLL boundary works: widget code dynamic_casts a
+            # CAlfControl* (alfclient) to its own CAlfWidgetControl -- against a base-less root that is NULL and the
+            # control never got hosted (Photos' full-screen cover-flow, 2026-10-26). No provider ELF = the root.
+            shapes = {}
+            if comp.get("typeinfo_bases"):
+                elfs = _provider_elfs(comp.get("libs", []) + m.libs)
+                defined = BE._nm("--defined-only", elf1)
+                queue = list(ti_names)
+                while queue:
+                    n = queue.pop()
+                    if n in shapes:
+                        continue
+                    shapes[n] = _ti_shape(n, elfs)
+                    for kind, v in (shapes[n] or ("", []))[1]:
+                        if kind == "ti" and v not in defined and v not in ti_names:
+                            ti_names.append(v)
+                            queue.append(v)
             for n in ti_names:
-                fh.write(f"\t.globl {n}\n{n}:\n"
-                         f"\t.word _ZTVN10__cxxabiv117__class_type_infoE+8\n\t.word 1f\n"
-                         f"1:\t.asciz \"{n[4:]}\"\n\t.align 2\n")
+                vt, items = shapes.get(n) or ("_ZTVN10__cxxabiv117__class_type_infoE", [])
+                fh.write(f"\t.globl {n}\n{n}:\n\t.word {vt}+8\n\t.word 1f\n")
+                for kind, v in items:
+                    fh.write(f"\t.word {v}\n" if kind == "ti" else f"\t.word {v:#x}\n")
+                fh.write(f"1:\t.asciz \"{n[4:]}\"\n\t.align 2\n")
     stub_o = stub_s + ".o"
     subprocess.run([BE.GCC, "-march=armv5te", "-marm", "-c", stub_s, "-o", stub_o], check=True)
 
