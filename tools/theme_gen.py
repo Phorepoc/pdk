@@ -47,6 +47,14 @@ def gen(name: str) -> int:
     enc = "utf-16" if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else "latin-1"
     text = raw.decode(enc)
     text = re.sub(r"(?im)^(\s*BITMAPPATH\s+)(\S+)", lambda m: m.group(1) + m.group(2).replace("\\", "/"), text)
+    # Nokia built on Windows: the descriptor names lay_ah_*.svg, the files are LAY_AH_*.svg (167 Haze items dropped on
+    # a case-sensitive file system). Every file and every file reference lower case.
+    for dp, _, fns in os.walk(stage):
+        for fn in fns:
+            if fn != fn.lower():
+                os.rename(os.path.join(dp, fn), os.path.join(dp, fn.lower()))
+    text = re.sub(r"[\w\-]+\.(?:svg|bmp)\b", lambda m: m.group(0).lower(), text, flags=re.I)
+    desc = os.path.join(stage, name + ".txt")
     with open(desc, "wb") as fh:
         fh.write(text.encode(enc))
     r = subprocess.run([COMPILER, "-m" + out, "-t" + out, name + ".txt", name], cwd=stage,
