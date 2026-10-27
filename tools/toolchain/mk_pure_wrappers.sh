@@ -26,7 +26,8 @@ if [ "$ARCH" = arm ]; then
   GINC=$(arm-none-eabi-gcc -print-file-name=include)
   POST="-fno-pic"   # after the caller's flags: libraries asking for -fPIC get GOT relocations, which E32 images cannot carry
 else
-  CROSS=; CFL=; MFL=-mx32; GINC=$(gcc -print-file-name=include); POST=""
+  # the compiler's va_list, not Open C's char* one (libc.dll reads the System V structure)
+  CROSS=; CFL=; MFL="-mx32 -include $OVR/pure/ph_x32_prefix.h"; GINC=$(gcc -print-file-name=include); POST=""
 fi
 mapfile -t FL < <(python3 "$PDK/tools/openc_cflags.py" --exe $CFL | grep -v -x -E -e '-x|c|-march=armv5te|-marm|-mthumb-interwork|-mfloat-abi=soft|-DSYMCC_C_DRIVER|-std=gnu11|-fno-exceptions|-fno-rtti|-fshort-wchar|-w|-ffreestanding|-fno-builtin|-masm=intel|-Dwchar_t=unsigned short|-D__SOFTFP=')
 [ "${#FL[@]}" -gt 10 ] || { echo "mk_pure_wrappers: openc_cflags.py failed (is the include tree exported, the build dir writable?)"; exit 1; }
