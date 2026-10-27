@@ -58,6 +58,9 @@ _INC_PATH = re.compile(r"^(\s*#\s*include\s*[<\"])([^>\"]*)", re.M)
 
 
 def _preprocess(path, extra_defs=(), markers=False):
+    # the mmp is read as the ARMV5 line (MARM, EABI ... are defined): PHOREPOC_X32 lets an mmp pick x32-only paths
+    # (pheffmpeg: its FFmpeg media set's include dir)
+    extra_defs = tuple(extra_defs) + ("-DPHOREPOC_X32",)
     text = open(path, errors="replace").read()
     if not _BSLASH_INC.search(text):
         return _pp(path, extra_defs, markers=markers)
