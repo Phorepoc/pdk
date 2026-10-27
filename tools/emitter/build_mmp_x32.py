@@ -106,6 +106,10 @@ def img_dir(rom: str) -> str:
 
 
 STUB = "__unimpl_export"
+# ld rewrites .eh_frame (drops / merges entries) but leaves the --emit-relocs entries behind: an eh module's objects get the
+# section renamed so the link script can place it verbatim (x32_dll_eh.ld / x32_exe_eh.ld, as cxxrt's recipes do for archives)
+EH_RENAME = ".eh_frame=.ph_eh_frame,alloc,load,readonly,data,contents"
+EH_RENAME_ON = os.environ.get("X32_EH_RENAME") == "1"   # (off: ld.lld keeps .eh_frame consistent with comdat discards itself)
 SUPCXX = "/usr/lib/gcc/x86_64-linux-gnu/13/x32/libsupc++.a"   # the x32 multilib (GCC 13, Ubuntu 24.04)
 JOBS = int(os.environ.get("MMP_JOBS", str(os.cpu_count() or 8)))
 DEFAULT_STACK = 0x5000
@@ -436,7 +440,17 @@ def build(key: str) -> int:
     rt_flags = BASE_FLAGS + BASE_DEFS + [kind] + BASE_INCS + PRE
     # one needs a typeinfo slot in its vtable -> on for the mw/app layers + opt-in (`rtti`). The
     # runtime is the x32 libsupc++ () + toolchain/dll_rt/rtti_rt.cpp (its strcmp).
-    rtti = comp.get("rtti", MMP.variant_for(m.path) == MMP.S60_VARIANT_HRH)
+    # ehdll: a DLL whose own code throws / catches (component option eh=True): compiled with exceptions, linked with
+    # x32_dll_eh.ld (keeps .eh_frame + the LSDAs), and its frames are registered with pheeh.dll (the process's one unwinder)
+    # when it attaches. Needs typeinfo that carries the real vptr, so rtti is forced on.
+    ehdll = bool(comp.get("eh")) and not m.is_exe
+    rtti = comp.get("rtti", MMP.variant_for(m.path) == MMP.S60_VARIANT_HRH) or ehdll
+    if ehdll:
+        flags = [f for f in flags if f != "-fno-exceptions"] + ["-fexceptions"]
+        # (the board's GCCE-style placement new, as the ARM eh builds: with exceptions on it must say throw ())
+        # (first of the force-includes: symcpp.h declares the operators with __NO_THROW, and port_prelude.h only defines it if unset)
+        flags = ["-include", os.path.join(OS_ROOT, "toolchain/shims/stdcpp_board/gcce_nothrow.h")] + flags
+        flags = flags + ["-DPH_EH_NEW=1"]       # (core's stlport_board/stl/_new.h)
     if rtti:
         flags = [f for f in flags if f != "-fno-rtti"] + ["-frtti"]
 
@@ -479,7 +493,7 @@ def build(key: str) -> int:
     if m.is_exe:
         entry_src = (os.path.join(XU, "xu_exe.cpp"), [])
     else:
-        entry_src = (os.path.join(XU, "xu_dll.cpp"), [f"-DDLL_UID3=0x{uid3:08x}"])
+        entry_src = (os.path.join(XU, "xu_dll.cpp"), [f"-DDLL_UID3=0x{uid3:08x}"] + (["-DPH_DLL_EH=1"] if ehdll else []))
         rt += [(os.path.join(EKA, "euser", "epoc", "up_dll_tls.cpp"), []),
                (os.path.join(EKA, "euser", "epoc", "up_dll_file.cpp"), [])]
     if rtti:
@@ -515,6 +529,16 @@ def build(key: str) -> int:
         rt_objs.append(o)
     if m.targettype == "lib":           # a static library: its own objects only, no entry/runtime
         jobs = jobs[:len(objs)]
+    # `x32_sys_archives`: toolchain archives (by file name, found with gcc -print-file-name) linked into this component. With
+    # eh they are copied with .eh_frame renamed like the objects (pheeh.dll: libgcc_eh.a, libsupc++.a)
+    sys_archives = []
+    for an in comp.get("x32_sys_archives", []):
+        src_a = run(["gcc", "-mx32", f"-print-file-name={an}"]).stdout.strip()
+        dst_a = os.path.join(work, "sys_" + an)
+        shutil.copyfile(src_a, dst_a)
+        if ehdll and EH_RENAME_ON:
+            run(["objcopy", "--rename-section", EH_RENAME, dst_a])
+        sys_archives.append(dst_a)
     failed = []
     with cf.ThreadPoolExecutor(JOBS) as ex:
         for src, rc, out in ex.map(lambda j: compile_one(*j), jobs):
@@ -538,6 +562,12 @@ def build(key: str) -> int:
         return 1
     if COMPILE_ONLY:                    # --compile-only (a CI shard): the objects only; a later pass links in provider order
         return 0
+    if ehdll and EH_RENAME_ON:
+        for o in [entry_o] + objs + rt_objs:
+            r = run(["objcopy", "--rename-section", EH_RENAME, o])
+            if r.returncode:
+                print(r.stderr[-1000:])
+                return 1
     if m.targettype == "lib":
         # STATICLIBRARY: an ar archive the consumers' link pulls members from (static_archive())
         a = static_archive(key)
@@ -585,6 +615,7 @@ def build(key: str) -> int:
         print("  ! no .def found -- DLL would export nothing")
         return 1
     all_objs = objs + rt_objs
+    archives = archives + sys_archives
     # a STATICLIBRARY can define exports too (ImageConversion.mmp: CImageProcessorExtension lives in
     # imageprocessorperf.lib): counting them makes them `-u` roots, which pulls the members in 
     defined = nm("--defined-only", entry_o, *all_objs, *archives)
@@ -598,7 +629,8 @@ def build(key: str) -> int:
                 served[o] = n
     entry = "_E32Startup" if m.is_exe else "_E32Dll"
     roots = sorted(set(served.values())) + [STUB, entry]
-    ld = os.path.join(HERE, ("x32_exe_eh.ld" if comp.get("eh") else "x32_exe.ld") if m.is_exe else "x32_dll.ld")
+    ld = os.path.join(HERE, ("x32_exe_eh.ld" if comp.get("eh") else "x32_exe.ld") if m.is_exe
+                      else "x32_dll_eh.ld" if ehdll else "x32_dll.ld")
 
     def link(extra_objs, out, ignore):
         rsp = os.path.join(work, "link.rsp")
@@ -607,7 +639,7 @@ def build(key: str) -> int:
             # archives as a group: armlink rescans every library until nothing new resolves, GNU ld
             # scans each once in order -- WebCore's 15 STATICLIBRARYs reference each other in cycles
             grp = ["--start-group"] + archives + ["--end-group"] if len(archives) > 1 else archives
-            fh.write("\n".join([entry_o] + all_objs + extra_objs + grp + ([SUPCXX] if rtti else [])) + "\n")
+            fh.write("\n".join([entry_o] + all_objs + extra_objs + grp + ([SUPCXX] if rtti and not ehdll else [])) + "\n")
         # 260 MB of archives in seconds). X32_LD=bfd forces GNU ld.
         args = [LD, "-m", "elf32_x86_64", "-n", "-q", "--gc-sections", "--no-demangle",
                 "-T", ld, f"@{rsp}", "-o", out]
@@ -632,6 +664,8 @@ def build(key: str) -> int:
     # euser is always a provider: a few tiny mmps (lookuptable, the stub rasterizer) omit euser.lib
     # and would otherwise stub User::Panic
     libs = comp.get("libs", []) + m.libs + env_libs(key)
+    if ehdll and key != "pheeh":        # the process's one unwinder and exception runtime (os/src/pheeh)
+        libs = libs + ["pheeh.lib"]
     if not any(l.lower().startswith("euser.") for l in libs):
         libs = libs + ["euser.lib"]
     resolve, dll_order, data_names, sidecars = provider_maps(libs)
@@ -679,7 +713,7 @@ def build(key: str) -> int:
     phase("elf extract")
     if entry not in ext.symbols:
         raise SystemExit(f"{key}: entry {entry} missing")
-    if not m.is_exe and (ext.data or ext.bss_size) and not (comp.get("allow_wsd") or m.allowdlldata):
+    if not m.is_exe and (ext.data or ext.bss_size) and not (comp.get("allow_wsd") or m.allowdlldata or ehdll):
         print(f"  ! DLL has writable static data: data={len(ext.data)} bss={ext.bss_size}")
         syms = run(["nm", "-S", "--size-sort", "-C", elf2]).stdout.splitlines()
         for l in [l for l in syms if l.split()[2:3] and l.split()[2] in "bBdD"][-8:]:
