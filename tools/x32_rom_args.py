@@ -213,7 +213,9 @@ def devmenu_cenrep() -> str:
              "0x00000005 int %d 0x00000000 cap_rd=alwayspass cap_wr=alwayspass" % UIR_MASK,
              "0x00000006 int %d 0x00000000 cap_rd=alwayspass cap_wr=alwayspass" % SHELLS_MASK,
              # key 7: UI anti-aliasing of the VG renderer, 0 Best (16 samples) | 1 Fast (8) | 2 Off (1)
-             "0x00000007 int 0 0x00000000 cap_rd=alwayspass cap_wr=alwayspass"]
+             "0x00000007 int 0 0x00000000 cap_rd=alwayspass cap_wr=alwayspass",
+             # key 8: UI GPU acceleration of the Alfred renderer (phvg), 0 off | 1 on
+             "0x00000008 int 0 0x00000000 cap_rd=alwayspass cap_wr=alwayspass"]
     os.makedirs(ZGEN, exist_ok=True)
     out = os.path.join(ZGEN, "e7015a01.txt")
     with open(out, "wb") as fh:
