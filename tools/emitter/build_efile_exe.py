@@ -74,7 +74,7 @@ EXTRA_SOURCES = [
 # each one implements:
 #   ldr_builtin_devices.cpp  LoadLogicalDevice of a driver built into ekern = KErrAlreadyExists, not KErrNotFound
 FS_DIR = os.path.join(SYMBIAN, "symbian-2010", "oss.FCL.sf.os.kernelhwsrv", "userlibandfileserver", "fileserver")
-FS_SOURCES = [os.path.join(EE, "ldr_builtin_devices.cpp")]
+FS_SOURCES = [os.path.join(EE, "ldr_builtin_devices.cpp"), os.path.join(EE, "ph_vfpvec.cpp")]
 FS_FLAGS = ["-DSYMBIAN_ENABLE_64_BIT_FILE_SERVER_API", "-DSYMBIAN_DISTINCT_LOCALE_MODEL", "-fno-access-control",
             *[a for d in ("inc", "sfile", "sfsrv", "ftrace") for a in ("-iquote", os.path.join(FS_DIR, d))],
             *["-I" + os.path.join(FS_DIR, d) for d in ("sfsrv", "sfile", "inc", "ftrace", "sfat32")]]
@@ -115,6 +115,14 @@ _ORD_FIX = ("*dest++ = *(TUint32*)(code + *iol++) & 0xffff;"
             "   // the ordinal only: the import word's high half is the addend (vtable/typeinfo +8 ...), not part of the ordinal")
 
 
+# After relocation, mark the VFP short-vector blocks of a RAM-loaded image for the kernel's emulation (ph_vfpvec.cpp):
+# ARMv8 AArch32 has no FPSCR.LEN vectors, ARM11-era game code relies on them.
+_RELOC_LINE = "r = RelocateCode();"
+_RELOC_FIX = ("r = RelocateCode();"
+              "\n\tif (r == KErrNone && !iUseCodePaging) { extern void PhPatchVfpVectors(TUint32*, TInt); "
+              "PhPatchVfpVectors((TUint32*)iCodeLoadAddress, iTextSize); }")
+
+
 def _patched(src: str, workdir: str) -> str:
     """The 2010 loader range-checks an ELF import's WHOLE code word as its ordinal (svElfDerivedGetImportInfo copies it
     unmasked into iCurrentImportList, which CheckRequiredImports then compares with the exporter's export count): an image
@@ -127,8 +135,10 @@ def _patched(src: str, workdir: str) -> str:
     if _ORD_LINE not in text:
         sys.exit("efile: sf_lepoc.cpp: the import-list line to patch is not where it was")
     out = os.path.join(workdir, "sf_lepoc.cpp")
+    if _RELOC_LINE not in text:
+        sys.exit("efile: sf_lepoc.cpp: the RelocateCode line to patch is not where it was")
     with open(out, "w", encoding="latin-1", newline="") as fh:
-        fh.write(text.replace(_ORD_LINE, _ORD_FIX, 1))
+        fh.write(text.replace(_ORD_LINE, _ORD_FIX, 1).replace(_RELOC_LINE, _RELOC_FIX, 1))
     return out
 
 
