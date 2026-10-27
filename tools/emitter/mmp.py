@@ -114,6 +114,14 @@ class Mmp:
                      if len(ln.split()) > 1 and ln.split()[0].lower() == "deffile"]
             if armcc and armcc[-1] != self.deffile:
                 hit = self._def_path(armcc[-1]) or hit
+        if hit is not None and re.search(r"gcce", os.path.basename(hit), re.I):
+            # `#ifdef GCCE deffile x_gcce.def #endif` (stdcpp, the locale DLLs): a GCCE-only numbering. Device
+            # binaries are ARMV5 (RVCT) builds and import by the ARMCC numbering -- libstdcpp's two .defs differ from
+            # ordinal 97 on, so every third-party app bound to the wrong functions (Let's Golf 2 imports 986-992 =
+            # operator new/delete, beyond the GCCE table). Take what an ARMV5 build reads.
+            armv5 = [ln.split()[1] for ln in preprocess(self.path, ("-DARMCC", "-UGCCE", "-UGCC32")).splitlines()
+                     if len(ln.split()) > 1 and ln.split()[0].lower() == "deffile"]
+            hit = (self._def_path(armv5[-1]) if armv5 else self._def_path("")) or hit
         return hit
 
     def _def_path(self, deffile: str) -> str | None:
