@@ -18,6 +18,7 @@ typedef __builtin_va_list va_list;
 #define va_arg(v, l) __builtin_va_arg(v, l)
 #define va_copy(d, s) __builtin_va_copy(d, s)
 #define __va_copy(d, s) __builtin_va_copy(d, s)
+#define _VA_COPY_DEFINED    // Open C's <stdio.h> would make va_copy an assignment (x32's va_list is an array)
 #define __e32_va_list va_list
 #ifndef __GNUC_VA_LIST
 #define __GNUC_VA_LIST
