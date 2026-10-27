@@ -30,13 +30,20 @@ else
 fi
 mapfile -t FL < <(python3 "$PDK/tools/openc_cflags.py" --exe $CFL | grep -v -x -E -e '-x|c|-march=armv5te|-marm|-mthumb-interwork|-mfloat-abi=soft|-DSYMCC_C_DRIVER|-std=gnu11|-fno-exceptions|-fno-rtti|-fshort-wchar|-w|-ffreestanding|-fno-builtin|-masm=intel|-Dwchar_t=unsigned short|-D__SOFTFP=')
 [ "${#FL[@]}" -gt 10 ] || { echo "mk_pure_wrappers: openc_cflags.py failed (is the include tree exported, the build dir writable?)"; exit 1; }
-OUTA=(); skip=0; prev=""
+OUTA=(); LATE=(); skip=0; prev=""
 for f in "${FL[@]}"; do
   if [ $skip = 1 ]; then skip=0; continue; fi
   case "$f" in
     -include) skip=1; continue;;
-    -I) prev=-I; continue;;
+    -I|-idirafter) prev=$f; continue;;
   esac
+  if [ "$prev" = -idirafter ]; then
+    prev=""
+    # the x32 line's case-folded mirror of the whole tree (casefix/): searched before stdapis it hands out the old estlib
+    # <signal.h> / <sys/types.h> (no sigset_t, no ssize_t) -- kept only as the very last fallback, after GCC's own
+    case "$f" in */casefix) LATE+=("-idirafter" "$f");; *) OUTA+=("-idirafter" "$f");; esac
+    continue
+  fi
   if [ "$prev" = -I ]; then prev=""; p="$f"; else p="${f#-I}"; [ "$p" = "$f" ] && { OUTA+=("$f"); continue; }; fi
   case "$p" in
     */toolchain/*|*/kernel/eka/*|*/halservices/*|*/tools/phorepoc-x86/port) continue;;
@@ -53,7 +60,7 @@ for t in gcc g++; do
   { echo "#!/bin/sh"
     [ "$ARCH" = arm ] && echo 'for a; do shift; [ "$a" = -pthread ] || set -- "$@" "$a"; done'
     echo -n "exec $CROSS$t $MFL -include $OVR/ph_cxx_compat.h "'"$@"'" $POST -I$OVR/pure "
-    printf "'%s' " "${OUTA[@]}" "-D__SOFTFP=" "-I$OVR" -include "$OVR/ph_cxx_compat.h" "-idirafter" "$GINC"
+    printf "'%s' " "${OUTA[@]}" "-D__SOFTFP=" "-I$OVR" -include "$OVR/ph_cxx_compat.h" "-idirafter" "$GINC" ${LATE[@]+"${LATE[@]}"}
     echo; } > "$W/bin/pp-$t"
   chmod +x "$W/bin/pp-$t"
 done
