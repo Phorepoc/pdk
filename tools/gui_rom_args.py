@@ -14,7 +14,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import SYMBIAN, BUILD  # noqa: E402
+from paths import OS_ROOT, SYMBIAN, BUILD  # noqa: E402
 import components as C  # noqa: E402
 import mmp as MMP  # noqa: E402
 
@@ -141,7 +141,8 @@ def main() -> None:
     stubs = os.path.join(SYMBIAN, "symbian-2010", "oss.FCL.sf.adapt.stubs", "systemswstubs", "hwrmstubplugins", "data")
     for f in ("HWRMLightsPolicy.ini", "HWRMVibraPolicy.ini"):
         if os.path.isfile(os.path.join(stubs, f)):
-            out += ["--data", "private\\101f7a02\\" + f + "=" + rel(os.path.join(stubs, f))]
+            ours = os.path.join(OS_ROOT, "src", "hwrm", "data", f)   # ours where the stub's is empty (the vibra feedback client)
+            out += ["--data", "private\\101f7a02\\" + f + "=" + rel(ours if os.path.isfile(ours) else os.path.join(stubs, f))]
     # the icon files (tools/mif_gen.py)
     icons = os.path.join(BUILD, "icon-gen")
     if os.path.isdir(icons):
