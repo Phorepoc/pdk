@@ -22,7 +22,7 @@ func otherCommands(app *cli.App) []*cli.Command {
 				"the adaptations at /adapt/<n>.",
 			Flags: boardFlag,
 			Examples: []cli.Example{
-				{What: "Look around a PinePhone build:", Cmd: "shell -b pinephone"},
+				{What: "Look around a board build:", Cmd: "shell -b myboard"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {
 				if err := noArgs(args); err != nil {

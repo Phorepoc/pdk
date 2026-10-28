@@ -24,10 +24,10 @@ The indexes are read in order: those given with -index, then $PHOREPOC_INDEXES, 
 
 ## Examples
 
-Everything for the PinePhone:
+Everything for a phone:
 
 ```sh
-ph package list -a arm -b pinephone
+ph package list -a arm -b myboard
 ```
 
 Games, from a second index too:

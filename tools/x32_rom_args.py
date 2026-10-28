@@ -216,7 +216,7 @@ def devmenu_cenrep() -> str:
              "0x00000007 int 0 0x00000000 cap_rd=alwayspass cap_wr=alwayspass",
              # key 8: UI GPU acceleration of the Alfred renderer (phvg), 0 off | 1 on
              "0x00000008 int 0 0x00000000 cap_rd=alwayspass cap_wr=alwayspass",
-             # key 9: GPU composition (libWFC on the Mali), 1 on | 0 the CPU composes
+             # key 9: GPU composition (libWFC on the GPU), 1 on | 0 the CPU composes
              "0x00000009 int 1 0x00000000 cap_rd=alwayspass cap_wr=alwayspass"]
     os.makedirs(ZGEN, exist_ok=True)
     out = os.path.join(ZGEN, "e7015a01.txt")

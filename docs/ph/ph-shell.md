@@ -18,9 +18,9 @@ An interactive shell in the toolchain image, with the same mounts and settings a
 
 ## Examples
 
-Look around a PinePhone build:
+Look around a board build:
 
 ```sh
-ph shell -b pinephone
+ph shell -b myboard
 ```
 

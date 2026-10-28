@@ -63,7 +63,7 @@ func packageCommands() []*cli.Command {
 				indexFlags(fs)
 			},
 			Examples: []cli.Example{
-				{What: "Everything for the PinePhone:", Cmd: "package list -a arm -b pinephone"},
+				{What: "Everything for a phone:", Cmd: "package list -a arm -b myboard"},
 				{What: "Games, from a second index too:", Cmd: "package list -c game -index https://example.org/index.json"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {

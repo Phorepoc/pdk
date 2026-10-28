@@ -72,7 +72,7 @@ ph device shot -o screen.png                      # a screenshot
 
 ## Releases
 
-Release images are built by GitHub Actions. The device repositories (adaptation-pc and adaptation-pinephone) call
+Release images are built by GitHub Actions. The device repositories (the per-board repositories) call
 [board-image.yml](.github/workflows/board-image.yml) here, which runs the steps above at the commits listed in that
 repository's `board.lock`. When a `v*` tag is pushed, the images get attached to a draft release. `tools/board_lock.sh`
 updates `board.lock`.

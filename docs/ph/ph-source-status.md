@@ -19,9 +19,9 @@ Prints the locations ph uses (from the PHOREPOC_* settings, "ph help environment
 
 ## Examples
 
-Where a PinePhone build would look:
+Where a board build would look:
 
 ```sh
-ph source status -b pinephone
+ph source status -b myboard
 ```
 

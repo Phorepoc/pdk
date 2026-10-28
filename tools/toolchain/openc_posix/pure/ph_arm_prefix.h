@@ -1,7 +1,7 @@
 /* Copyright The Phorepoc Authors
  * SPDX-License-Identifier: Apache-2.0 */
 
-// ph_arm_prefix.h -- force-included first on the ARM "pure Open C" line (mk_pure_wrappers.sh ARCH=arm, the PinePhone browser).
+// ph_arm_prefix.h -- force-included first on the ARM "pure Open C" line (mk_pure_wrappers.sh ARCH=arm, the ARM browser).
 // The ARM line keeps -D_STDARG_H -D_STDARG_E_H -D__e32_va_list=va_list (as build_mmp.py gives a stdapis client): Open C's
 // char* va_list is skipped, but those guards also skip GCC's own <stdarg.h>, so va_list and the va_* macros come from here --
 // the compiler's AAPCS va_list, the type Open C's ARM libc was built with. IMPORT_C/EXPORT_C as overlay/pure/e32def.h.

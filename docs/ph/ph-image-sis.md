@@ -25,7 +25,7 @@ Package the developer terminal:
 ph image sis phettyd pheshell pheterm
 ```
 
-An ARM package (the PinePhone):
+An ARM package (for a phone):
 
 ```sh
 ph image sis -arch arm pheffmpeg

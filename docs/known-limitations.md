@@ -14,13 +14,13 @@ What a user of the first Phorepoc images should know. The device releases link h
 - The kernel reports a wrong nanokernel tick period through the HAL (`ENanoTickPeriod` = 10000); apps that time
   themselves from it run at the wrong pace.
 
-## PC (QEMU, VirtualBox, VMware)
+## PC (virtual machines)
 
 - **No Wi-Fi** (the WLAN engine is left out); networking is the emulated Intel e1000 card.
 - No 3D (OpenGL ES) yet; apps that need it do not start.
-- VirtualBox first boot on the `.ova` has been checked on one host only.
+- First boot of the `.ova` in a desktop hypervisor has been checked on one host only.
 
-## PinePhone
+## ARM phone
 
 - Screen composition runs on the CPU (the GPU composes nothing yet): full-screen animations and video use more CPU than
   they will later.

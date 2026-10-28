@@ -43,7 +43,7 @@ def norm(v):
     v = re.sub(r"\b(REPO|OS_ROOT|PHOREPOC|SYMBIAN|BUILD)\b", "R", v)
     v = re.sub(r"\s+", "", v.replace('"', "").replace("'", ""))
     v = v.replace("_PUBSHIMS+/", "toolchain/shims/").replace("baseline/", "").replace(".epoc32/", "").replace("core/os/", "")
-    v = v.replace("src/phorepoc-arm/a64/hwrm/", "src/hwrm/")
+    v = re.sub(r"src/phorepoc-arm/\w+/hwrm/", "src/hwrm/", v)
     return v
 
 

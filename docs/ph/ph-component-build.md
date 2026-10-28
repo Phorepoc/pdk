@@ -43,10 +43,10 @@ Everything (a clean build):
 ph component build -A -b pc
 ```
 
-An ARM image for the PinePhone:
+An ARM image for a phone:
 
 ```sh
-ph component build -b pinephone -arch arm phetty
+ph component build -b myboard -arch arm phetty
 ```
 
 ## Formerly

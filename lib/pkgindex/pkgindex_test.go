@@ -26,7 +26,7 @@ func server(t *testing.T, payload string) (*httptest.Server, string) {
 	mux.HandleFunc("/index.json", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"format": 1, "generated": "x", "items": [
 		  {"id": "hello", "name": "Hello", "summary": "s", "category": "app", "license": "EPL-1.0",
-		   "compatibility": {"arch": ["arm"], "boards": ["pinephone"]},
+		   "compatibility": {"arch": ["arm"], "boards": ["armboard"]},
 		   "resolved": [{"tag": "v1", "published": "2026-01-01T00:00:00Z", "asset": "hello.sis",
 		                 "url": "%[1]s/hello.sis", "size": %[2]d, "sha256": "%[3]s"},
 		                {"tag": "v2", "published": "2026-02-01T00:00:00Z", "asset": "hello.sis",
@@ -49,7 +49,7 @@ func TestLoadFitsLatest(t *testing.T) {
 		t.Fatalf("items: %+v", items)
 	}
 	hello, _ := Find(items, "hello")
-	if !hello.Fits("arm", "pinephone") || hello.Fits("arm", "pc") || hello.Fits("x32", "") {
+	if !hello.Fits("arm", "armboard") || hello.Fits("arm", "pc") || hello.Fits("x32", "") {
 		t.Error("Fits")
 	}
 	if r := hello.Latest(); r == nil || r.Tag != "v2" {

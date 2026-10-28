@@ -572,7 +572,7 @@ def build(key: str, rsc_only: bool = False) -> int:
              # ARM_VFP=0 (ph sets ARM_VFP=1 only when it starts the container, so in-container and CI builds
              # were silently soft-float); the kernel must switch VFP state (__CPU_HAS_VFP: the SMP kernel)
              + (["-mfpu=vfp", "-mfloat-abi=softfp"] if comp.get("vfp") and os.environ.get("ARM_VFP", "1") != "0" else [])
-             # ARM_CPU_FLAGS (experiment, 2026-10-26): extra target flags appended last, e.g. a PinePhone-only DLL at
+             # ARM_CPU_FLAGS (experiment, 2026-10-26): extra target flags appended last, e.g. a board-only DLL at
              # "-march=armv8-a -mtune=cortex-a53 -mfpu=neon-fp-armv8 -mfloat-abi=softfp" (softfp: the ROM's ABI stays)
              + os.environ.get("ARM_CPU_FLAGS", "").split())
     # The C-library <stdarg.h> (stdapis = P.I.P.S., libc = estlib) re-#defines va_start/va_arg

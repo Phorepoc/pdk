@@ -168,7 +168,7 @@ func commands(app *cli.App) []*cli.Command {
 				fs.Bool("H", false, "script mode: no header, fields separated by a tab")
 			},
 			Examples: []cli.Example{
-				{What: "Where a PinePhone build would look:", Cmd: "source status -b pinephone"},
+				{What: "Where a board build would look:", Cmd: "source status -b myboard"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {
 				if err := noArgs(args); err != nil {
@@ -261,7 +261,7 @@ func commands(app *cli.App) []*cli.Command {
 				{What: "Build two components for the PC:", Cmd: "component build -b pc estor bafl"},
 				{What: "A component and everything below it:", Cmd: "component build -r avkon"},
 				{What: "Everything (a clean build):", Cmd: "component build -A -b pc"},
-				{What: "An ARM image for the PinePhone:", Cmd: "component build -b pinephone -arch arm phetty"},
+				{What: "An ARM image for a phone:", Cmd: "component build -b myboard -arch arm phetty"},
 			},
 			Aliases: []string{"build", "closure=-r", "all=-A", "arm=-arch arm"},
 			Run: func(fs *flag.FlagSet, args []string) error {
@@ -536,7 +536,7 @@ func commands(app *cli.App) []*cli.Command {
 			Aliases: []string{"sis"},
 			Examples: []cli.Example{
 				{What: "Package the developer terminal:", Cmd: "image sis phettyd pheshell pheterm"},
-				{What: "An ARM package (the PinePhone):", Cmd: "image sis -arch arm pheffmpeg"},
+				{What: "An ARM package (for a phone):", Cmd: "image sis -arch arm pheffmpeg"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {
 				if len(args) == 0 {
