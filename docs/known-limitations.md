@@ -22,6 +22,8 @@ What a user of the first Phorepoc images should know. The device releases link h
 
 ## ARM phone
 
+- **SD card:** use a card of 32 GB or more. C: is a fixed 1 GiB; E: takes the rest of the card and is sized and formatted
+  on the first boot, which makes that boot longer. E: is FAT32, so a single file cannot be larger than 4 GB.
 - Screen composition runs on the CPU (the GPU composes nothing yet): full-screen animations and video use more CPU than
   they will later.
 - The rotated hardware video overlay is not done; landscape video is composed in software.
