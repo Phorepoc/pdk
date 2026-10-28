@@ -109,32 +109,30 @@ GENERATED = [
     # baseline/symbian-rcl3/oss.FCL.sf.app.homescreen/menufw/menusuites/foldersuite/group)
     ("resource/apps/gridroot.mbg", ".epoc32/include/gridroot.mbg"),
     ("resource/apps/matrixmenudata.mbg", ".epoc32/include/matrixmenudata.mbg"),
-    # the SWI policy: exported by the release only for non-S60 builds -> a board file
-    ("system/data/swipolicy.ini", "tools/phorepoc-x86/board/swi/swipolicy.ini"),
+    # the SWI policy: exported by the release only for non-S60 builds -> core's default (config/)
+    ("system/data/swipolicy.ini", "config/swi/swipolicy.ini"),
     # the organizer's alarm tones, decoded to WAV on the build host under their release names
     # (python3 tools/transcode_tones.py)
     ("data/sounds/digital/clock.aac", ".zdata-gen/tones/clock.aac"),
     ("data/sounds/digital/alarm.aac", ".zdata-gen/tones/alarm.aac"),
-    # the ARM board's Bluetooth HCI plug-ins (OURS hctl_h5 + the stock initialisor for now) and its UART1 port
-    ("private/101f7989/bluetooth/corehci_symbian.ini", "src/phorepoc-arm/board/bt/corehci_symbian.ini"),
-    ("private/101f7989/bluetooth/hctl_h5.ini", "src/phorepoc-arm/board/bt/hctl_h5.ini"),
-    # R3: the Realtek initialisor's options and the RTL8723CS firmware (linux-firmware's, unmodified, with Realtek's
-    # notice -- the licence allows binary redistribution so; never into deliverables/)
-    ("private/101f7989/bluetooth/initialisor_rtl.ini", "src/phorepoc-arm/board/bt/initialisor_rtl.ini"),
-    # the ARM board's auto-rotate activation rule: the stock rule minus its device-lock condition -- no
-    # lockapp in the ROM yet, so the lock status context stays "uninitialised" (see the file's header)
-    ("private/10282bc4/rules/autorotateui_activate.rul", "src/phorepoc-arm/board/cf/autorotateui_activate.rul"),
-    ("private/101f7989/bluetooth/rtl8723cs_xx_fw.bin", "src/phorepoc-arm/board/bt/fw/rtl8723cs_xx_fw.bin"),
-    ("private/101f7989/bluetooth/rtl8723cs_xx_config.bin", "src/phorepoc-arm/board/bt/fw/rtl8723cs_xx_config.bin"),
-    ("private/101f7989/bluetooth/LICENCE.rtlwifi_firmware.txt", "src/phorepoc-arm/board/bt/fw/LICENCE.rtlwifi_firmware.txt"),
-    # WiFi (the chip core): the RTL8703B 8051 firmware (linux-firmware's, unmodified, same licence); the kernel reads
-    # it out of the XIP ROM (a64wlan.cpp) until the OURS wlanhwinit loads it from user side
-    ("resource/wlan/rtw8703b_fw.bin", "src/phorepoc-arm/board/wlan/fw/rtw8703b_fw.bin"),
-    ("resource/wlan/rtw8703b_wow_fw.bin", "src/phorepoc-arm/board/wlan/fw/rtw8703b_wow_fw.bin"),
-    ("resource/wlan/LICENCE.rtlwifi_firmware.txt", "src/phorepoc-arm/board/wlan/fw/LICENCE.rtlwifi_firmware.txt"),
 ]
 # never from here: SIS stubs (no software installer on the board)
 SKIP = ("system/install/",)
+
+
+def board_zdata():
+    """the board's own Z: files: board/zdata.txt in the OS tree (docs/layering.md), one `rom path = OS tree path`
+    per line, # comments. A board without one adds nothing."""
+    path = resolve("board/zdata.txt")
+    if not os.path.isfile(path):
+        return []
+    out = []
+    for line in open(path, encoding="utf-8"):
+        line = line.split("#", 1)[0].strip()
+        if line:
+            rom, _, rel = (t.strip() for t in line.partition("="))
+            out.append((rom, rel))
+    return out
 
 
 def zdata(bldinf):
@@ -184,7 +182,7 @@ def main() -> int:
                         missing += 1
                         continue
                     out[rom.lower()] = (rom, src)
-    for rom, rel in GENERATED:
+    for rom, rel in GENERATED + board_zdata():
         if os.path.isfile(resolve(rel)):
             out[rom.lower()] = (rom, resolve(rel))
         else:
