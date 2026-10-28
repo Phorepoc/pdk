@@ -209,7 +209,7 @@ if [ -n "${BOOT:-}" ]; then
                                     "S60_HWSTATE_KEYCODE1 EKeyDeviceA" "S60_HWSTATE_SCREENMODE1 2" "S60_HWSTATE_ALT_SCREENMODE1 1" "${FADER_INI[@]}")
   # touch feedback: WSERV loads the tactile click plug-in named here (KEYCLICK.CPP CClick::InitStaticsL; S60's own
   # wsini line) -- without it the touch feedback client finds no plug-in and no tap ever reaches the vibra/audio players
-  ls "$BUILD"/{arm/img,x32img}/tactileclickplugin.dll >/dev/null 2>&1 && FADER_INI+=("KEYCLICKPLUGIN tactileclickplugin.dll" "KEYCLICKPLUGINFIXED")
+  [ -f "$BUILD/arm/img/tactileclickplugin.dll" ] || [ -f "$BUILD/x32img/tactileclickplugin.dll" ] && FADER_INI+=("KEYCLICKPLUGIN tactileclickplugin.dll" "KEYCLICKPLUGINFIXED")
   if [ "$SSMBOOT" = 1 ]; then python3 "$TOOLS/mkwsini.py" "$BUILD/rom/wsini_app.ini" - "${FADER_INI[@]}"
   else python3 "$TOOLS/mkwsini.py" "$BUILD/rom/wsini_app.ini" bootui "${FADER_INI[@]}"; fi
   python3 "$TOOLS/features_dat.py" "$BUILD/rom/features.dat" >/dev/null
