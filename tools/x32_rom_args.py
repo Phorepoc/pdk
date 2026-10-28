@@ -263,6 +263,8 @@ def main() -> None:
     bex = os.path.join(BOARD, "rom_exclude.txt")
     if os.path.isfile(bex):
         exclude |= {l.split("#", 1)[0].strip() for l in open(bex)} - {""}
+    alf_taken = {c["rom_as"].lower() for c in C.COMPONENTS.values()
+                 if c.get("alf") and c["alf"] != "build" and ALF_LV >= int(c["alf"]) and c.get("rom_as")}
     for key, comp in C.COMPONENTS.items():
         if key in OWN or key in TEXT_SHELL or key in exclude:
             continue
@@ -275,6 +277,9 @@ def main() -> None:
         if comp.get("alf") and (comp["alf"] == "build" or ALF_LV < int(comp["alf"])):
             continue
         if ALF_LV >= 2 and (key in ("alfclient", "alfdecoderserverclient", "libegl", "sflibopenvgrefimpl") or key == "goommonitor" or key == "goommonitor_alfnull" and ALF_LV >= 3):
+            continue
+        # any other default whose ROM name an active alf twin takes (rom_as): gfxtransadapter's stub -> the real adapter
+        if not comp.get("alf") and (comp.get("rom") or "").lower() in alf_taken:
             continue
         if NGA and comp.get("nga") and key[:-4] in NGA_KEEP and key.endswith("_nga"):
             continue                               # (NGA_KEEP: its non-NGA twin ships instead)
