@@ -5,13 +5,15 @@
 # layering.sh [<repository>] -- fail if the repository names a layer above it (docs/layering.md). The repository's
 # .layering file lists what it must not name: one extended regular expression per line (case-insensitive), # comments.
 # Lines of tracked files matching one are reported; a line may carry "layering: ok" to accept a mention on purpose.
+# A line "!<path>" leaves a path out: vendored upstream files, which stay unmodified.
 set -eu
 repo="${1:-.}"
 deny="$repo/.layering"
 [ -f "$deny" ] || { echo "layering: no $deny, nothing to check"; exit 0; }
-pat=$(grep -v '^[[:space:]]*\(#\|$\)' "$deny" | paste -sd'|' -)
+pat=$(grep -v '^[[:space:]]*\(#\|!\|$\)' "$deny" | paste -sd'|' -)
+skip=$(sed -n 's/^!//p' "$deny" | tr -d '\r' | sed "s/^/:!/")
 [ -n "$pat" ] || exit 0
-hits=$(git -C "$repo" grep -nIiE "$pat" -- . ':!.layering' | grep -v 'layering: ok' || true)
+hits=$(git -C "$repo" grep -nIiE "$pat" -- . ':!.layering' $skip | grep -v 'layering: ok' || true)
 if [ -n "$hits" ]; then
 	echo "$hits" | head -100
 	echo "layering: $(echo "$hits" | wc -l) line(s) name a layer above this repository (see the pdk's docs/layering.md)" >&2
