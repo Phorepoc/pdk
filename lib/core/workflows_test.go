@@ -54,7 +54,7 @@ func TestPushWaitReportsTheNewBoot(t *testing.T) {
 		}
 	}
 	before := r.s.Health().Boot
-	res, err := r.m.Exec(ctx(t, 60*time.Second), r.s, "test", "push", device.Args{"file": p, "wait": "running slot B", "wait_timeout_s": 30})
+	res, err := r.m.Exec(ctx(t, 60*time.Second), r.s, "test", "push", device.Args{"file": p, "unverified": true, "wait": "running slot B", "wait_timeout_s": 30})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -55,6 +55,7 @@ func baseOps() []device.OpSpec {
 				{Name: "file", Type: "file", Description: "path of an image on the server's disk (e.g. .phone-build/symbian.img)"},
 				{Name: "reboot", Type: "bool", Description: "reboot into slot B after a good upload (default true)"},
 				{Name: "mode", Type: "string", Description: "auto (default: delta if the running image supports it, else full) | full | delta -- delta sends only the 64 KB blocks that differ from slot B"},
+				{Name: "unverified", Type: "bool", Description: "push an image without a clean build record (resource\\versions\\build.txt: every repository committed). Refused by default; only for deliberate kernel experiments"},
 			}},
 		{Name: "peek", Capability: "memory",
 			Description: "Read 32-bit words from a physical address (registers or RAM).",
@@ -291,12 +292,13 @@ func (d *Driver) peek(ctx context.Context, l device.Link, addr uint32, n int) ([
 }
 
 type PushResult struct {
-	Bytes    int     `json:"bytes"`
-	Sum      string  `json:"sum"`
-	PhoneSum string  `json:"phone_sum"`
-	Seconds  float64 `json:"seconds"`
-	KBps     float64 `json:"kbps"`
-	Rebooted bool    `json:"rebooted"`
+	Bytes      int         `json:"bytes"`
+	Sum        string      `json:"sum"`
+	PhoneSum   string      `json:"phone_sum"`
+	Seconds    float64     `json:"seconds"`
+	KBps       float64     `json:"kbps"`
+	Rebooted   bool        `json:"rebooted"`
+	Provenance *Provenance `json:"provenance,omitempty"` // the image's build record (nil = an unverified push)
 }
 
 func (d *Driver) push(ctx context.Context, l device.Link, a device.Args) (any, error) {
@@ -330,6 +332,20 @@ func (d *Driver) push(ctx context.Context, l device.Link, a device.Args) (any, e
 	if len(data) == 0 || len(data) > SlotBMax {
 		return nil, fmt.Errorf("image size %d not in 1..%d", len(data), SlotBMax)
 	}
+	unverified, _ := a["unverified"].(bool)
+	prov, err := checkProvenance(data, unverified)
+	if err != nil {
+		return nil, err
+	}
+	res, err := d.upload(ctx, l, a, data)
+	if err != nil {
+		return res, err
+	}
+	return withProvenance(res, prov), nil
+}
+
+// upload sends a checked image to slot B (delta or full) and, by default, reboots into it.
+func (d *Driver) upload(ctx context.Context, l device.Link, a device.Args, data []byte) (any, error) {
 	reboot := true
 	if v, ok := a["reboot"].(bool); ok {
 		reboot = v

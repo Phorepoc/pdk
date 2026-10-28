@@ -153,16 +153,17 @@ func (d *Driver) slotHashes(ctx context.Context, l device.Link, n int) ([]uint32
 var errNoDelta = fmt.Errorf("the running image has no delta upload (no 'delta' in its caps)")
 
 type DeltaResult struct {
-	Mode     string  `json:"mode"`
-	Bytes    int     `json:"bytes"`
-	Sent     int     `json:"sent_bytes"`
-	Blocks   int     `json:"blocks"`
-	Changed  int     `json:"changed_blocks"`
-	Runs     int     `json:"runs"`
-	Hash     string  `json:"hash"`
-	Seconds  float64 `json:"seconds"`
-	Rebooted bool    `json:"rebooted"`
-	Note     string  `json:"note,omitempty"`
+	Mode       string      `json:"mode"`
+	Bytes      int         `json:"bytes"`
+	Sent       int         `json:"sent_bytes"`
+	Blocks     int         `json:"blocks"`
+	Changed    int         `json:"changed_blocks"`
+	Runs       int         `json:"runs"`
+	Hash       string      `json:"hash"`
+	Seconds    float64     `json:"seconds"`
+	Rebooted   bool        `json:"rebooted"`
+	Note       string      `json:"note,omitempty"`
+	Provenance *Provenance `json:"provenance,omitempty"` // the image's build record (nil = an unverified push)
 }
 
 // DeltaNote explains a delta that cannot help: when (nearly) every block differs the image layout has shifted -- a

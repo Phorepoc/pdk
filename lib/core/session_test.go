@@ -123,7 +123,7 @@ func TestPushRebootsIntoSlotB(t *testing.T) {
 	sub := r.m.Bus.Subscribe(100000)
 	defer sub.Close()
 	mark := r.s.Health().Lines
-	res, err := r.s.Exec(ctx(t, 20*time.Second), "test", "push", device.Args{"file": p})
+	res, err := r.s.Exec(ctx(t, 20*time.Second), "test", "push", device.Args{"file": p, "unverified": true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestPushRebootsIntoSlotB(t *testing.T) {
 func TestPushFailedVerdict(t *testing.T) {
 	r := newRig(t, 10)
 	r.ph.FailSum = true
-	_, err := r.s.Exec(ctx(t, 10*time.Second), "test", "push", device.Args{"file": writeTemp(t, []byte("hello world!"))})
+	_, err := r.s.Exec(ctx(t, 10*time.Second), "test", "push", device.Args{"file": writeTemp(t, []byte("hello world!")), "unverified": true})
 	if err == nil || !strings.Contains(err.Error(), "UPLOAD FAILED") {
 		t.Fatalf("want UPLOAD FAILED, got %v", err)
 	}

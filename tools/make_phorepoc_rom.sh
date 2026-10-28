@@ -224,6 +224,20 @@ if [ -n "${BOOT:-}" ]; then
   MODEL_NAME=$( { head -1 "$BOARDDIR/model" 2>/dev/null || true; } | tr -d '\r')
   python3 -c 'import sys; open(sys.argv[1], "wb").write(b"\xff\xfe" + sys.argv[2].encode("utf-16-le"))' \
     "$BUILD/rom/model.txt" "${MODEL_NAME:-Phorepoc}"
+  # the build record (plain text in the ROM, so the image carries it): the commit of every repository next to pdk, "+dirty"
+  # when its checkout had uncommitted changes. PhoneLab's push reads it and refuses an image without one.
+  {
+    echo "PHOREPOC-BUILD v1"
+    echo "board ${PHOREPOC_BOARD:-?}"
+    echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    for d in "$(cd "${PHOREPOC_PDK:-$TOOLS/..}/.." && pwd)"/*/; do
+      git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
+      [ "$(git -C "$d" rev-parse --show-toplevel)" = "${d%/}" ] || continue
+      dirty=$([ -n "$(git -C "$d" status --porcelain --untracked-files=no 2>/dev/null)" ] && echo "+dirty")
+      echo "repo $(basename "$d") $(git -C "$d" rev-parse HEAD)$dirty"
+    done
+    echo "END"
+  } > "$BUILD/rom/build.txt"
   ARGS="$BUILD/rom/full.args"
   # every registered component's icon files (bld.inf mifconv) before the recipe stages BUILD/icon-gen (MIF_ALL=0 = off):
   # missing .mif files crash apps that load their icons at start
@@ -305,6 +319,7 @@ if [ -n "${BOOT:-}" ]; then
       printf -- '--data\nresource\\versions\\sw.txt=%s\n' "$BUILD/rom/sw.txt"
     grep -qiF 'resource\versions\model.txt=' "$ARGS" || \
       printf -- '--data\nresource\\versions\\model.txt=%s\n' "$BUILD/rom/model.txt"
+    printf -- '--data\nresource\\versions\\build.txt=%s\n' "$BUILD/rom/build.txt"
     if [ "$COMMSDAT" = 1 ]; then
       [ -f "$BUILD/rom/phorepoc_ced.xml" ] && printf -- '--data\nSys\\Data\\phorepoc_ced.xml=%s\n' "$BUILD/rom/phorepoc_ced.xml"
       # CommsDat's repository: the default database commsdat.iby ships (CED replaces its content)
