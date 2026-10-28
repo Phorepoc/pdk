@@ -219,6 +219,11 @@ if [ -n "${BOOT:-}" ]; then
   printf '\377\3760\0001\000,\000d\000\r\000\n\000' > "$BUILD/rom/languages.txt"
   # one software version per ROM build: apparc drops its C: app-list cache when it changes
   python3 "$([ -f "$BOARDDIR/sw_version.py" ] && echo "$BOARDDIR" || echo "$TOOLS")/sw_version.py" "$BUILD/rom/sw.txt" >/dev/null
+  # the model name (UTF-16LE + BOM, one line): the Phone app's *#0000# appends it to the version and shows an error note
+  # without it. The board's os/board/model (one line of text), else "Phorepoc".
+  MODEL_NAME=$( { head -1 "$BOARDDIR/model" 2>/dev/null || true; } | tr -d '\r')
+  python3 -c 'import sys; open(sys.argv[1], "wb").write(b"\xff\xfe" + sys.argv[2].encode("utf-16-le"))' \
+    "$BUILD/rom/model.txt" "${MODEL_NAME:-Phorepoc}"
   ARGS="$BUILD/rom/full.args"
   # every registered component's icon files (bld.inf mifconv) before the recipe stages BUILD/icon-gen (MIF_ALL=0 = off):
   # missing .mif files crash apps that load their icons at start
@@ -298,6 +303,8 @@ if [ -n "${BOOT:-}" ]; then
     printf -- '--data\nresource\\bootdata\\languages.txt=%s\n' "$BUILD/rom/languages.txt"
     grep -qiF 'resource\versions\sw.txt=' "$ARGS" || \
       printf -- '--data\nresource\\versions\\sw.txt=%s\n' "$BUILD/rom/sw.txt"
+    grep -qiF 'resource\versions\model.txt=' "$ARGS" || \
+      printf -- '--data\nresource\\versions\\model.txt=%s\n' "$BUILD/rom/model.txt"
     if [ "$COMMSDAT" = 1 ]; then
       [ -f "$BUILD/rom/phorepoc_ced.xml" ] && printf -- '--data\nSys\\Data\\phorepoc_ced.xml=%s\n' "$BUILD/rom/phorepoc_ced.xml"
       # CommsDat's repository: the default database commsdat.iby ships (CED replaces its content)
