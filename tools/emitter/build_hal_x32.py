@@ -10,7 +10,7 @@ ECPUSpeed / EPowerGood.
 HAL turned out to be almost entirely board-independent: the two real TUs
 (halservices/hal/src/{hal_main,userhal}.cpp) compile unmodified, and every handler the config
 names lives in that same generic userhal.cpp. The only board-specific inputs are two TEXT files
--- tools/phorepoc-x86/hal/{values.hda,config.hcf} -- which the REAL generator (halcfg.pl) turns
+-- board/hal/{values.hda,config.hcf} (the board's) -- which the REAL generator (halcfg.pl) turns
 into the attribute-default and attribute-to-handler tables. See port/hal_census_x32.sh.
 
     python3 tools/emitter/build_hal_x32.py [out.dll]     (default BUILD/x32core/hal_x32.dll; SKIP_CENSUS=1 reuses objects)

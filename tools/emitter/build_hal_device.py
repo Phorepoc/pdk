@@ -48,7 +48,7 @@ def _generate(workdir: str) -> list[str]:
     def _perl(*args):
         subprocess.run(["perl", *args], check=True)
     _perl(halcfg, hal_data, os.path.join(SYBHAL, "values.hda"), values_cpp)
-    # the board's additions to syborg's config.hcf (OS_ROOT/src/phorepoc-arm/board/hal/config_extra.hcf, optional):
+    # the board's additions to syborg's config.hcf (OS_ROOT/board/hal/config_extra.hcf, optional):
     # e.g. EDisplayMemoryHandle -> userhal's GetDisplayMemoryHandle -> the display HAL. Without it HAL::Get fails,
     # CSurfaceStream::GetBufferPtrL leaves holding its stream lock (the setjmp TRAP runs no destructors) and WSERV
     # deadlocks in GetHeader on the next DSA
@@ -57,7 +57,7 @@ def _generate(workdir: str) -> list[str]:
         text = f.read().replace("\r\n", "\n").rstrip("\n") + "\n"
     # an extra line for an attribute syborg already names REPLACES syborg's line (halcfg takes each attribute once)
     import re
-    extra = os.path.join(OS_ROOT, "src", "phorepoc-arm", "board", "hal", "config_extra.hcf")
+    extra = os.path.join(OS_ROOT, "board", "hal", "config_extra.hcf")
     with open(extra, encoding="latin-1") if os.path.isfile(extra) else open(os.devnull) as f:
         for line in f.read().splitlines():
             m = re.match(r"\s*(E\w+)\s*=", line)

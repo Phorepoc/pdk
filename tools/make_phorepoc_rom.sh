@@ -16,7 +16,7 @@
 #
 # Paths: PHOREPOC_OS_ROOT (board files, our components), PHOREPOC_SYMBIAN (the Symbian source),
 # PHOREPOC_BUILD (all output; the ROM goes to $BUILD/rom). The kernel boot files the section is wrapped by (ekern
-# link, board lists under tools/phorepoc-x86/board) live in OS_ROOT.
+# link, board lists under board/) live in OS_ROOT.
 #
 # SKIP_CENSUS=1 reuses the euser objects from a previous run (much faster).
 # SECONDARY_IMAGE names the bundled image the kernel starts first (the ROM's secondary). Default efile.exe.
@@ -33,10 +33,10 @@ OS_ROOT="$PHOREPOC_OS_ROOT"
 SYMBIAN="$PHOREPOC_SYMBIAN"
 BUILD="$PHOREPOC_BUILD"
 SYM10="$SYMBIAN/symbian-2010"
-PX86="$OS_ROOT/tools/phorepoc-x86"
+BOARDDIR="$OS_ROOT/board"
 # the board CommsDat source for CED (the x86 board brings its generator; a board that ships the CED-built database
 # itself, os/data/commsdat/cccccc00.cre, needs none)
-mk_ced_xml() { [ -f "$PX86/commdb_xml.py" ] && python3 "$PX86/commdb_xml.py" "$BUILD/rom/phorepoc_ced.xml" >/dev/null || true; }
+mk_ced_xml() { [ -f "$BOARDDIR/commdb_xml.py" ] && python3 "$BOARDDIR/commdb_xml.py" "$BUILD/rom/phorepoc_ced.xml" >/dev/null || true; }
 mkdir -p "$BUILD/rom"
 
 # UI_RENDERER=classic|alfred|both (default: both on NGA boards, classic elsewhere): which render path(s) the image carries.
@@ -129,7 +129,7 @@ if [ -n "${BOOT:-}" ]; then
     # S60 apps write to c:\system\temp\ and rely on it
     BOOT="=101f75b6:102047b7:0 =101f8766:42:100 =101f8766:41:109 =101f8766:43:101 =101f8766:44:101 =101f8766:46:104 sysagt2svr !domainsrv ~2:10000 baksrvs featmgrserver !rightsserver cdlserver ssmutilsrv tzserver +capserver +lights calensvr !${BOOT_APP:-matrixmenu}";;
   esac
-  # NET=1: the comms stack. CED imports the board's CommsDat (tools/phorepoc-x86/commdb_xml.py,
+  # NET=1: the comms stack. CED imports the board's CommsDat (board/commdb_xml.py,
   # the Ethernet config with this board's PDD + NAT addresses), c32start brings up the root
   # server + ESOCK, ntpsync sets the clock over SNTP, and nettest walks RConnection -> DNS -> a TCP GET (NET_TEST="<host> <port>").
   # All go in before the foreground app (the list's last item). Without NET=1 an S60 ROM runs only CED.
@@ -218,7 +218,7 @@ if [ -n "${BOOT:-}" ]; then
   # the language list: UTF-16LE with a BOM, "01,d" (English, default)
   printf '\377\3760\0001\000,\000d\000\r\000\n\000' > "$BUILD/rom/languages.txt"
   # one software version per ROM build: apparc drops its C: app-list cache when it changes
-  python3 "$([ -f "$PX86/sw_version.py" ] && echo "$PX86" || echo "$TOOLS")/sw_version.py" "$BUILD/rom/sw.txt" >/dev/null
+  python3 "$([ -f "$BOARDDIR/sw_version.py" ] && echo "$BOARDDIR" || echo "$TOOLS")/sw_version.py" "$BUILD/rom/sw.txt" >/dev/null
   ARGS="$BUILD/rom/full.args"
   # every registered component's icon files (bld.inf mifconv) before the recipe stages BUILD/icon-gen (MIF_ALL=0 = off):
   # missing .mif files crash apps that load their icons at start
@@ -234,9 +234,9 @@ if [ -n "${BOOT:-}" ]; then
   while IFS= read -r f; do
     case "$f" in ''|'#'*) continue ;; esac
     u=${f##*/}; u=${u%.txt}; case "$f" in ../../*) p="$OS_ROOT/${f#../../}" ;; *) p="$SYM10/$f" ;; esac; CENREP[${u,,}]="$p"   # ../../ = ours, in OS_ROOT
-  done < <(tr -d '\r' < "$OS_ROOT/tools/kernel/cenrep_files.txt")
+  done < <(tr -d '\r' < "$OS_ROOT/config/cenrep_files.txt")
   # the board's own repositories (whole files)
-  if [ "${ROM_ARCH:-}" = arm ]; then for f in "$OS_ROOT"/src/phorepoc-arm/board/cenrep/*.txt; do [ -f "$f" ] && { u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; }; done; fi
+  if [ "${ROM_ARCH:-}" = arm ]; then for f in "$OS_ROOT"/board/cenrep/*.txt; do [ -f "$f" ] && { u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; }; done; fi
   # CENREP_EXTRA="<path>/<uid>.txt ..." = per-run overrides, read last -- e.g. a wallpaper test
   for f in ${CENREP_EXTRA:-}; do u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; done
   # LeaveAppsInMemory (AvkonInternalCRKeys.h KCRUidLeaveAppsInMemory 102858F2, CAknAppUi::ExitHidesInBackground FindEqL on the app
@@ -307,7 +307,7 @@ if [ -n "${BOOT:-}" ]; then
       if [ "$SSMBOOT" = 1 ]; then
         if [ -f "$BUILD/commsdat/cccccc00.cre" ]; then CDB="$BUILD/commsdat/cccccc00.cre"
         elif [ -f "$OS_ROOT/data/commsdat/cccccc00.cre" ]; then CDB="$OS_ROOT/data/commsdat/cccccc00.cre"   # the board's own
-        else echo "BOOT=ssm: no CED-built CommsDat -- ESOCK/connmon will fail (bash $PX86/make_commsdat.sh)" >&2; fi
+        else echo "BOOT=ssm: no CED-built CommsDat -- ESOCK/connmon will fail (bash $BOARDDIR/make_commsdat.sh)" >&2; fi
       fi
       printf -- '--data\nprivate\\10202be9\\cccccc00.cre=%s\n' "$CDB"
     fi
@@ -363,7 +363,7 @@ elif [ "${GUI:-0}" = 1 ]; then
   done
   if [ -n "$OPTIONAL" ]; then
     # central repository initialisation files, Z:\private\10202be9\<uid>.txt (tools/crml2cenrep.py's output,
-    # overridden by OS_ROOT/tools/kernel/cenrep_files.txt)
+    # overridden by OS_ROOT/config/cenrep_files.txt)
     CGEN="$BUILD/cenrep-gen"
     # the base set once (.base = complete; a folder holding only the media apps used to skip it: no 102858f2)
     [ -f "$CGEN/.base" ] || { python3 "$TOOLS/crml2cenrep.py" "$CGEN" >/dev/null && touch "$CGEN/.base"; }
@@ -372,8 +372,8 @@ elif [ "${GUI:-0}" = 1 ]; then
     while IFS= read -r f; do
       case "$f" in ''|'#'*) continue ;; esac
       u=${f##*/}; u=${u%.txt}; case "$f" in ../../*) p="$OS_ROOT/${f#../../}" ;; *) p="$SYM10/$f" ;; esac; CENREP[${u,,}]="$p"   # ../../ = ours, in OS_ROOT
-    done < <(tr -d '\r' < "$OS_ROOT/tools/kernel/cenrep_files.txt")
-    if [ "${ROM_ARCH:-}" = arm ]; then for f in "$OS_ROOT"/src/phorepoc-arm/board/cenrep/*.txt; do [ -f "$f" ] && { u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; }; done; fi
+    done < <(tr -d '\r' < "$OS_ROOT/config/cenrep_files.txt")
+    if [ "${ROM_ARCH:-}" = arm ]; then for f in "$OS_ROOT"/board/cenrep/*.txt; do [ -f "$f" ] && { u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; }; done; fi
     for f in ${CENREP_EXTRA:-}; do u=${f##*/}; u=${u%.txt}; CENREP[${u,,}]="$f"; done
     # LeaveAppsInMemory: see the BOOT= block
     python3 "$TOOLS/cenrep_set.py" "${CENREP[102858f2]}" "$BUILD/rom/102858f2.txt" 0x1=$((0x100058C5)) 0x2=$((0x101F4CCE)) 0x3=$((0x101F4CD5)) \

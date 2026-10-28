@@ -15,7 +15,7 @@ Walks the registry (tools/emitter/components*.py) over the images in BUILD/x32im
 The modules make_phorepoc_rom.sh adds itself (euser/efsrv/hal/efile/estart) are skipped, and so is the
 text window server trio (ewsrv/econs/edisp), whose ROM slots the graphical ones take. mmps are parsed
 with the board's variant.mmh on the include path, as build_mmp_x32.py does (the key map needs it).
-Board files (variant.mmh, estart.txt, cenrep/) are read from OS_ROOT/tools/phorepoc-x86/board.
+Board files (variant.mmh, estart.txt, cenrep/) are read from OS_ROOT/board.
 """
 import os
 import sys
@@ -27,7 +27,7 @@ from paths import OS_ROOT, SYMBIAN, BUILD, resolve  # noqa: E402
 import components as C  # noqa: E402
 import mmp as MMP  # noqa: E402
 
-BOARD = os.path.join(OS_ROOT, "tools", "phorepoc-x86", "board")
+BOARD = os.path.join(OS_ROOT, "board")
 X32 = os.path.join(BUILD, "x32img")
 ROMFILES = os.path.join(BUILD, "romfiles")     # <image>.romfiles: `<rom path>=<host path>` lines of the resource step
 PLUGINS = os.path.join(BUILD, "plugins")       # <stem>.rsc: an ECOM plug-in's registration resource

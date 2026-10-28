@@ -82,10 +82,10 @@ from euser_def import DefMap, parse_def             # noqa: E402
 STRINGTABLE_PL = os.path.join(MMP.BASE, "oss.FCL.sf.os.ossrv", "lowlevellibsandfws", "apputils",
                               "stringtools", "stringtable.pl")
 
-PORT = os.path.join(OS_ROOT, "tools", "phorepoc-x86", "port")       # port_prelude.h, x64user/ ...
+PORT = os.path.join(OS_ROOT, "toolchain", "x32")                    # port_prelude.h, x64user/ ... (core: the x32 runtime)
 XU = os.path.join(PORT, "x64user")
 # the board's variant.mmh (board-specific mmps such as the key map #include it)
-MMP_DEFS = ("-I", os.path.join(OS_ROOT, "tools", "phorepoc-x86", "board"))
+MMP_DEFS = ("-I", os.path.join(OS_ROOT, "board"))
 # PHOREPOC_S4=1 (Symbian^4): a SEPARATE output root -- work files and images go to BUILD/s4, while providers
 # resolve there first and then from the plain images (one OS, built once).
 # PHOREPOC_QT48=1 (the Qt 4.8 set): its own root BUILD/qt48; the Qt 4.7 images in BUILD/s4 stay untouched.
