@@ -208,8 +208,10 @@ if [ -n "${BOOT:-}" ]; then
                                     "S60_HWSTATE_KEYCODE0 EKeyDeviceB" "S60_HWSTATE_SCREENMODE0 1" "S60_HWSTATE_ALT_SCREENMODE0 2"
                                     "S60_HWSTATE_KEYCODE1 EKeyDeviceA" "S60_HWSTATE_SCREENMODE1 2" "S60_HWSTATE_ALT_SCREENMODE1 1" "${FADER_INI[@]}")
   # touch feedback: WSERV loads the tactile click plug-in named here (KEYCLICK.CPP CClick::InitStaticsL; S60's own
-  # wsini line) -- without it the touch feedback client finds no plug-in and no tap ever reaches the vibra/audio players
-  [ -f "$BUILD/arm/img/tactileclickplugin.dll" ] || [ -f "$BUILD/x32img/tactileclickplugin.dll" ] && FADER_INI+=("KEYCLICKPLUGIN tactileclickplugin.dll" "KEYCLICKPLUGINFIXED")
+  # wsini line) -- without it the touch feedback client finds no plug-in and no tap ever reaches the vibra/audio players.
+  # OPT-IN (TACTILE=1) for now: with the vibra player live in WSERV, alfredserver hit a use-after-free in its effect
+  # cache at boot (CHuiFxEffectParser::ParseL on a deleted parser, 4 boots of 4, 2026-10-28) -- under investigation
+  [ "${TACTILE:-0}" = 1 ] && { [ -f "$BUILD/arm/img/tactileclickplugin.dll" ] || [ -f "$BUILD/x32img/tactileclickplugin.dll" ] && FADER_INI+=("KEYCLICKPLUGIN tactileclickplugin.dll" "KEYCLICKPLUGINFIXED"); }
   if [ "$SSMBOOT" = 1 ]; then python3 "$TOOLS/mkwsini.py" "$BUILD/rom/wsini_app.ini" - "${FADER_INI[@]}"
   else python3 "$TOOLS/mkwsini.py" "$BUILD/rom/wsini_app.ini" bootui "${FADER_INI[@]}"; fi
   python3 "$TOOLS/features_dat.py" "$BUILD/rom/features.dat" >/dev/null
