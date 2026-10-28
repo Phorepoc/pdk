@@ -120,15 +120,27 @@ def main():
                 if r.get('error'):
                     fails.append('scenario: %s %s failed: %s' % (kind, arg, r['error']))
         time.sleep(6)                                               # the next [mon] line
-        frame = lab.lines(after=m, any_=['[EKERN][frame]', 'white-flashes='], limit=500)
+        frame = lab.lines(after=m, any_=['[EKERN][frame]', 'frames='], limit=500)
+        counts, woke = [], 0
         for l in frame:
             t = l['text']
             if 'WHITE frame' in t:
                 fails.append('white frame: %s' % t.strip())
-            mm = re.search(r'screen-on shows .* white%=(0x[0-9a-fA-F]+)', t)
-            if mm and int(mm.group(1), 16) >= 85:
-                fails.append('the screen came on showing a white frame: %s' % t.strip())
-        print('  scenario: %d frame-log lines' % len(frame))
+            mm = re.search(r'first frame after screen-on .* white%=(0x[0-9a-fA-F]+)', t)
+            if mm:
+                woke += 1
+                if int(mm.group(1), 16) >= 85:
+                    fails.append('the screen came on showing a white frame: %s' % t.strip())
+            mm = re.search(r'frames=(0x[0-9a-fA-F]+)', t)
+            if mm:
+                counts.append(int(mm.group(1), 16))
+        # the frame log must have SEEN the scenario, or the checks above prove nothing
+        seen = counts[-1] - counts[0] if len(counts) >= 2 else 0
+        if seen < 10:
+            fails.append('frame log saw only %d frames during the scenario (not sampling what the panel shows?)' % seen)
+        if not woke:
+            fails.append('no "first frame after screen-on" line: the wake was not observed')
+        print('  scenario: %d frames sampled, %d wake(s), %d frame-log lines' % (seen, woke, len(frame)))
 
     for f in fails:
         print('  FAIL ' + f)
