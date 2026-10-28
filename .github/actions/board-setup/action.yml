@@ -1,18 +1,20 @@
 # Copyright The Phorepoc Authors
 # SPDX-License-Identifier: Apache-2.0
 
-# board-setup -- the steps every job of board-image.yml starts with: free disk, check out the board's repositories at the
-# caller's board.lock, build ph, fetch the pinned Symbian source, pull the toolchain image, set the PHOREPOC_* environment.
+# board-setup -- the steps every build job starts with: free disk, check out the repositories, build ph, fetch the
+# pinned Symbian source, pull the toolchain image, set the PHOREPOC_* environment.
+#
+# Two kinds of build (docs/layering.md):
+#   a board   the caller is a board repository: its board.conf names the repositories (REPOS) and the architecture,
+#             its board.lock pins their commits
+#   core      `arch` is given: pdk + core alone, for that architecture (core-layer.yml)
 name: board-setup
-description: Check out and prepare a Phorepoc board build
+description: Check out and prepare a Phorepoc build
 inputs:
-  board:
-    description: pc or pinephone
-    required: true
-  layers:
-    description: layer repositories besides the board's adaptations
+  arch:
+    description: build core alone for this architecture (x32, arm); empty = the caller is a board repository
     required: false
-    default: tls
+    default: ""
 outputs:
   list:
     description: the repositories checked out
@@ -20,6 +22,15 @@ outputs:
   core:
     description: the core commit checked out
     value: ${{ steps.pin.outputs.core }}
+  board:
+    description: the board's name (empty for a core build)
+    value: ${{ steps.repos.outputs.board }}
+  arch:
+    description: the architecture built for
+    value: ${{ steps.repos.outputs.arch }}
+  release:
+    description: the board's release recipe (board.conf RELEASE)
+    value: ${{ steps.repos.outputs.release }}
 runs:
   using: composite
   steps:
@@ -30,21 +41,23 @@ runs:
         docker image prune -af >/dev/null || true
         df -h /
 
-    - name: The board's repositories
-      id: repos
-      shell: bash
-      run: |
-        case "${{ inputs.board }}" in
-          pc)        adapt="adaptation-x86-64 adaptation-pc" ;;
-          pinephone) adapt="adaptation-a64 adaptation-pinephone mesa-symbian" ;;   # (Mesa: phgl's GL on the Mali-400)
-          *) echo "unknown board ${{ inputs.board }}"; exit 1 ;;
-        esac
-        echo "list=pdk core $adapt ${{ inputs.layers }}" >> "$GITHUB_OUTPUT"
-
-    - name: Check out the caller (for its board.lock)
+    - name: Check out the caller (its board.conf + board.lock)
       uses: actions/checkout@v4
       with:
         path: caller
+
+    - name: The repositories
+      id: repos
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.arch }}" ]; then
+          echo "list=pdk core" >> "$GITHUB_OUTPUT"; echo "arch=${{ inputs.arch }}" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        [ -f caller/board.conf ] || { echo "no board.conf in ${{ github.repository }} (and no arch given)"; exit 1; }
+        NAME= ARCH= REPOS= RELEASE=; . caller/board.conf
+        [ -n "$NAME" ] && [ -n "$ARCH" ] || { echo "board.conf: NAME and ARCH are required"; exit 1; }
+        { echo "list=pdk core $REPOS"; echo "board=$NAME"; echo "arch=$ARCH"; echo "release=$RELEASE"; } >> "$GITHUB_OUTPUT"
 
     - name: Check out the repositories at the pinned commits
       id: pin
@@ -65,6 +78,7 @@ runs:
         done
         cat built-from.txt
         echo "core=$(awk '$1 == "core" { print $2 }' built-from.txt)" >> "$GITHUB_OUTPUT"
+        rm -rf caller   # (a second board.conf next to core would be a second board for ph)
 
     - uses: actions/setup-go@v5
       with:
@@ -95,6 +109,7 @@ runs:
           echo "PHOREPOC_CORE=$PWD/core"
           echo "PHOREPOC_SYMBIAN=$PWD/core/symbian"
           echo "PHOREPOC_BUILD=$PWD/build"
+          echo "PHOREPOC_ARCH=${{ steps.repos.outputs.arch }}"
           echo "PHOREPOC_ADAPTATIONS=$(for r in ${{ steps.repos.outputs.list }}; do case $r in pdk|core) ;; *) printf '%s:' "$PWD/$r" ;; esac; done | sed 's/:$//')"
           echo "OWNER=$(echo '${{ github.repository_owner }}' | tr A-Z a-z)"
         } >> "$GITHUB_ENV"

@@ -1,0 +1,19 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# layering.yml -- the reusable check every repository's lint calls: the repository must not name a layer above it
+# (its .layering file; tools/ci/layering.sh, docs/layering.md).
+name: layering
+
+on:
+  workflow_call:
+
+jobs:
+  layering:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: repo }
+      - uses: actions/checkout@v4
+        with: { repository: Phorepoc/pdk, path: pdk }
+      - run: sh pdk/tools/ci/layering.sh repo

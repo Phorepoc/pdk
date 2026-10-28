@@ -1,26 +1,28 @@
 # Copyright The Phorepoc Authors
 # SPDX-License-Identifier: Apache-2.0
 
-# board-image.yml -- the reusable workflow every device repository calls to build its board's image (and, on a tag,
-# to publish it as a release of that repository), and core's build.yml calls to publish the build tree. One
-# implementation for all boards, split so no job nears the 6-hour limit of a hosted runner:
+# board-image.yml -- the reusable build workflow (docs/layering.md). It knows no board: what it builds comes from the
+# caller.
 #
-#   prepare   checks out pdk, core and the board's repositories at the caller's board.lock (setup: .github/actions/
-#             board-setup), starts from the published build image build-<board> (core's last build; srcstamp.py dates
-#             the checkout by content so only real changes recompile), exports the headers, builds the layers (tls,
-#             Mesa for the PinePhone) and the resources, and hands the tree on as a run image
-#   compile   N shards in parallel, each compiling every N-th component (objects only: `component build -A
-#             -compile-only -shard i/N`); each uploads the files it wrote
-#   finish    the prepared tree + every shard's objects, then `component build -A` links in provider order (the
-#             compiling is done); publishes the tree (publish_layer) and makes the images: pc -> the bootable ISO + a
-#             VirtualBox appliance (.ova); pinephone -> the SD-card image (+ the U-Boot source it embeds, which its
-#             licence asks us to offer); with `release: true` attaches them to the caller's release for its tag
+#   core    core's workflow calls it with `arch`: pdk + core alone, for one architecture; with publish_layer the build
+#           tree becomes ghcr.io/<owner>/core-<arch>:<core commit> (+ :main), the layer every board starts from
+#   board   a board repository calls it without `arch`: its board.conf names the repositories and the architecture,
+#           its board.lock pins their commits; the build starts from core-<arch> at the pinned core commit, runs each
+#           repository's recipes/prepare.sh, builds every component and then the board's RELEASE recipe
+#           (`ph image release`), which writes the files to publish; `release: true` attaches them to the caller's
+#           release for its tag
 #
-# Caller (in adaptation-pc / adaptation-pinephone, .github/workflows/release.yml):
+# Split so no job nears the 6-hour limit of a hosted runner:
+#   prepare   setup (.github/actions/board-setup), the starting tree, exports, prepare recipes, resources; hands the
+#             tree on as a run image
+#   compile   N shards in parallel, each compiling every N-th component (`component build -A -compile-only -shard i/N`)
+#   finish    the tree + every shard's objects, the link pass in provider order, then the layer or the release
+#
+# A board's release workflow:
 #   jobs:
 #     image:
 #       uses: Phorepoc/pdk/.github/workflows/board-image.yml@main
-#       with: { board: pc, release: ${{ startsWith(github.ref, 'refs/tags/') }} }
+#       with: { release: "${{ startsWith(github.ref, 'refs/tags/') }}" }
 #       permissions: { contents: write, packages: write }
 
 name: board-image
@@ -28,30 +30,29 @@ name: board-image
 on:
   workflow_call:
     inputs:
-      board:
-        description: "The board (ph board list): pc or pinephone"
+      arch:
+        description: "Build core alone for this architecture (x32, arm); empty = the caller is a board repository"
         type: string
-        required: true
+        default: ""
       release:
-        description: "Attach the images to the caller's release for this tag"
+        description: "Attach the release files to the caller's release for this tag"
         type: boolean
         default: false
-      layers:
-        description: "Layer repositories built in (space separated), besides the board's adaptations"
-        type: string
-        default: "tls"
       images:
-        description: "Make the board's images (ISO + .ova / SD card); false = build the components only"
+        description: "Run the board's RELEASE recipe; false = build the components only"
         type: boolean
         default: true
       publish_layer:
-        description: "Push the build tree as ghcr.io/<owner>/build-<board>:<core commit> (+ :main) for later runs to start from"
+        description: "Core builds: push the build tree as ghcr.io/<owner>/core-<arch>:<core commit> (+ :main)"
         type: boolean
         default: false
 
 env:
   PHOREPOC_IMAGE: ghcr.io/phorepoc/base:latest
   SHARDS: 4
+  # the run image that hands the tree from job to job: one package per calling repository (a package belongs to
+  # the repository that first pushed it)
+  RUN_IMAGE: run-${{ github.event.repository.name }}:${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   prepare:
@@ -65,18 +66,18 @@ jobs:
 
       - id: setup
         uses: Phorepoc/pdk/.github/actions/board-setup@main
-        with: { board: "${{ inputs.board }}", layers: "${{ inputs.layers }}" }
+        with: { arch: "${{ inputs.arch }}" }
 
-      - name: Start from the published build (build-<board> at the pinned core commit, else :main)
+      - name: Start from the published core layer (core-<arch> at the pinned core commit, else :main)
         run: |
           for tag in "${{ steps.setup.outputs.core }}" main; do
-            img="ghcr.io/$OWNER/build-${{ inputs.board }}:$tag"
+            img="ghcr.io/$OWNER/core-${{ steps.setup.outputs.arch }}:$tag"
             if docker pull -q "$img" 2>/dev/null; then
               id=$(docker create "$img" true); docker cp "$id:/build/." build/; docker rm "$id" >/dev/null
               docker rmi "$img" >/dev/null; echo "started from $img"; du -sh build; break
             fi
           done
-          [ -f build/.srcstamp ] || echo "no published build: a full (cold) build"
+          [ -f build/.srcstamp ] || echo "no published core layer: a full (cold) build"
 
       - name: Dates from content
         env: { SRCSTAMP_NOW: "${{ steps.now.outputs.now }}" }
@@ -84,36 +85,27 @@ jobs:
 
       - name: Exports + header case links
         run: |
-          ph source export -a -b ${{ inputs.board }}
-          ph source mbg -a -b ${{ inputs.board }}
+          ph source export -a
+          ph source mbg -a
 
-      - name: Layer recipes (tls -- mbedTLS + the CA bundle at their pinned versions)
-        if: contains(inputs.layers, 'tls')
+      - name: The repositories' prepare recipes (recipes/prepare.sh)
         run: |
-          docker run --rm -v "$PWD:$PWD" -w "$PWD" -e PHOREPOC_BUILD="$PWD/build" -e PHOREPOC_PDK="$PWD/pdk" \
-            -e PHOREPOC_CORE -e PHOREPOC_SYMBIAN -e PHOREPOC_ADAPTATIONS \
-            "$PHOREPOC_IMAGE" bash -c 'set -e; bash tls/recipes/fetch_mbedtls.sh; bash tls/recipes/fetch_cacert.sh
-              if [ "${{ inputs.board }}" = pc ]; then bash tls/recipes/build_mbedtls.sh; fi'
-
-      - name: Mesa for ARM (mesa-symbian -> build/mesa-build/arm/*.a, which phgl links)
-        if: inputs.board == 'pinephone'
-        run: |
-          docker run --rm -v "$PWD:$PWD" -w "$PWD/mesa-symbian" -e PHOREPOC_BUILD="$PWD/build" \
-            -e PHOREPOC_CORE="$PWD/core" -e PHOREPOC_PDK="$PWD/pdk" ghcr.io/phorepoc/mesa bash build.sh
+          for r in $(echo "$PHOREPOC_ADAPTATIONS" | tr : ' '); do
+            [ -f "$r/recipes/prepare.sh" ] || continue
+            echo "== $(basename "$r")"; (cd "$r" && bash recipes/prepare.sh)
+          done
 
       - name: Resources (.rsc + the .rsg headers every component includes)
         run: |
-          # a bulk pass reports the components it could not build and goes on (exit 1 if any failed): the image steps
-          # are the verdict, so the count goes to the log instead of failing the job
-          ph component resources -A -b ${{ inputs.board }} > resources-1.log 2>&1 || true
-          ph source casefix -a -b ${{ inputs.board }}     # links the .rsg spellings just generated (Linux is case-sensitive)
-          ph component resources -A -b ${{ inputs.board }} 2>&1 | tee resources.log | tail -n 5
+          ph component resources -A > resources-1.log 2>&1 || true
+          ph source casefix -a     # links the .rsg spellings just generated (Linux is case-sensitive)
+          ph component resources -A 2>&1 | tee resources.log | tail -n 5
           echo "resources: $(grep -c ': FAILED' resources.log || true) component(s) failed"; grep ': FAILED' resources.log | sort -u | head -20 || true
 
       - name: Hand the tree on (run image)
         run: |
           sudo chown -R "$(id -u):$(id -g)" build
-          img="ghcr.io/$OWNER/build-${{ inputs.board }}:run-${{ github.run_id }}-${{ github.run_attempt }}"
+          img="ghcr.io/$OWNER/$RUN_IMAGE"
           printf 'FROM busybox:1.36\nCOPY build /build\n' > Dockerfile.layer; printf '*\n!build\n' > .dockerignore
           docker build -q -f Dockerfile.layer -t "$img" .
           docker push -q "$img"
@@ -126,15 +118,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3]   # = SHARDS
     steps:
       - id: setup
         uses: Phorepoc/pdk/.github/actions/board-setup@main
-        with: { board: "${{ inputs.board }}", layers: "${{ inputs.layers }}" }
+        with: { arch: "${{ inputs.arch }}" }
 
       - name: The prepared tree
         run: |
-          img="ghcr.io/$OWNER/build-${{ inputs.board }}:run-${{ github.run_id }}-${{ github.run_attempt }}"
+          img="ghcr.io/$OWNER/$RUN_IMAGE"
           docker pull -q "$img"; id=$(docker create "$img" true); docker cp "$id:/build/." build/; docker rm "$id" >/dev/null
           docker rmi "$img" >/dev/null
           python3 pdk/tools/ci/srcstamp.py apply build ${{ steps.setup.outputs.list }}
@@ -142,8 +134,7 @@ jobs:
 
       - name: Compile shard ${{ matrix.shard }}
         run: |
-          arch=x32; [ "${{ inputs.board }}" = pinephone ] && arch=arm
-          ph component build -A -arch $arch -b ${{ inputs.board }} -compile-only -shard ${{ matrix.shard }}/$SHARDS \
+          ph component build -A -arch "$PHOREPOC_ARCH" -compile-only -shard ${{ matrix.shard }}/$SHARDS \
             2>&1 | tee compile.log | tail -n 20
 
       - name: The files this shard wrote
@@ -154,7 +145,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: shard-${{ inputs.board }}-${{ matrix.shard }}
+          name: shard-${{ matrix.shard }}
           path: shard-${{ matrix.shard }}.tar.zst
           retention-days: 1
           compression-level: 0
@@ -168,18 +159,18 @@ jobs:
     steps:
       - id: setup
         uses: Phorepoc/pdk/.github/actions/board-setup@main
-        with: { board: "${{ inputs.board }}", layers: "${{ inputs.layers }}" }
+        with: { arch: "${{ inputs.arch }}" }
 
       - name: The prepared tree + every shard's objects
         run: |
-          img="ghcr.io/$OWNER/build-${{ inputs.board }}:run-${{ github.run_id }}-${{ github.run_attempt }}"
+          img="ghcr.io/$OWNER/$RUN_IMAGE"
           docker pull -q "$img"; id=$(docker create "$img" true); docker cp "$id:/build/." build/; docker rm "$id" >/dev/null
           docker rmi "$img" >/dev/null
           python3 pdk/tools/ci/srcstamp.py apply build ${{ steps.setup.outputs.list }}
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: shard-${{ inputs.board }}-*
+          pattern: shard-*
           path: shards
 
       - name: Unpack the shards (their objects are newer than every source, so the link pass does not recompile)
@@ -187,22 +178,21 @@ jobs:
 
       - name: Link every component, providers first
         run: |
-          arch=x32; [ "${{ inputs.board }}" = pinephone ] && arch=arm
-          ph component build -A -arch $arch -b ${{ inputs.board }} 2>&1 | tee component-build.log | tail -n 20
+          ph component build -A -arch "$PHOREPOC_ARCH" 2>&1 | tee component-build.log | tail -n 20
           # a bulk build goes on past a component that fails (exit 1): the image steps are the verdict, so name them here
           failed=$(awk '/^=== /{c=$2} /FAIL/{print c}' component-build.log | tr -d : | sort -u)
           echo "components failed: $(echo "$failed" | grep -c . || true)"; echo $failed | fold -w 200
 
       - name: Relink what was linked before a provider of its existed (x32 import stubs; dependency cycles need passes)
-        if: inputs.board == 'pc'
+        if: steps.setup.outputs.arch == 'x32'
         run: |
           for pass in 1 2 3 4; do
-            keys=$(ph component stale -b pc | awk -F: '/: relink/ { print $1 }')
+            keys=$(ph component stale | awk -F: '/: relink/ { print $1 }')
             [ -n "$keys" ] || break
             echo "pass $pass: relink $(echo $keys | wc -w): $(echo $keys | cut -c1-300)"
-            ph component build -b pc $keys >> component-relink.log 2>&1 || true
+            ph component build -arch x32 $keys >> component-relink.log 2>&1 || true
           done
-          ph component stale -b pc | tail -n 1
+          ph component stale | tail -n 1
 
       - name: Own the build folder (the container wrote it as root)
         if: always()
@@ -211,10 +201,10 @@ jobs:
       - name: Record the source contents this build was made from
         run: python3 pdk/tools/ci/srcstamp.py save build ${{ steps.setup.outputs.list }}
 
-      - name: Publish the build tree (build-<board>:<core commit> + :main)
-        if: inputs.publish_layer
+      - name: Publish the core layer (core-<arch>:<core commit> + :main)
+        if: inputs.publish_layer && inputs.arch != ''
         run: |
-          img="ghcr.io/$OWNER/build-${{ inputs.board }}"
+          img="ghcr.io/$OWNER/core-$PHOREPOC_ARCH"
           core="${{ steps.setup.outputs.core }}"
           printf 'FROM busybox:1.36\nCOPY build /build\n' > Dockerfile.layer; printf '*\n!build\n' > .dockerignore
           docker build -q -f Dockerfile.layer -t "$img:$core" -t "$img:main" \
@@ -222,60 +212,26 @@ jobs:
           docker push -q "$img:$core"; docker push -q "$img:main"
           docker rmi "$img:$core" "$img:main" >/dev/null
 
-      - name: Images (pc) -- ROM, bootable ISO, VirtualBox appliance
-        if: inputs.images && inputs.board == 'pc'
-        run: |
-          ph image zdata -b pc
-          ph image skin -b pc                   # the default skin package (the UI needs one)
-          ph image rom -b pc -O prune=1         # (drops what needs layers this board does not ship yet, e.g. Mesa)
-          ph image kernel -b pc
-          ph image vbox -b pc
-          mkdir -p out
-          cp build/x86/ekern/phorepoc-ekern.iso out/phorepoc-pc.iso
-          cp build/x86/Phorepoc.ova out/phorepoc-pc.ova
-
-      # the image links the AArch64 entry shim; the build container has no AArch64 GCC (locally tools/make_arm_shim.sh
-      # builds it in another image), the runner gets one from apt -- the same commands
-      - name: The AArch64 entry shim (pinephone)
-        if: inputs.images && inputs.board == 'pinephone'
-        run: |
-          sudo apt-get install -y -qq gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu > /dev/null
-          mkdir -p build/arm/a53
-          aarch64-linux-gnu-gcc -c -DTARGET=0x40300000 adaptation-a64/os/src/phorepoc-arm/a53shim/shim.S -o "$RUNNER_TEMP/shim.o"
-          aarch64-linux-gnu-ld -Ttext=0 "$RUNNER_TEMP/shim.o" -o "$RUNNER_TEMP/shim.elf"
-          aarch64-linux-gnu-objcopy -O binary "$RUNNER_TEMP/shim.elf" build/arm/a53/shim-ram-noprobe.bin
-          ls -l build/arm/a53/shim-ram-noprobe.bin
-
-      - name: Images (pinephone) -- the SD-card image
-        if: inputs.images && inputs.board == 'pinephone'
-        run: |
-          ph image zdata -b pinephone
-          ph image skin -b pinephone
-          ph image pinephone -b pinephone
-          sudo chown -R "$(id -u):$(id -g)" build
-          # the SD card (on the host: its script runs docker for the FAT tools + Debian's U-Boot)
-          (cd adaptation-pinephone/os && O="$GITHUB_WORKSPACE/build/pinephone" RELEASE=1 bash tools/phorepoc-arm/make_pinephone_sd.sh)
-          mkdir -p out
-          cp --sparse=always build/pinephone/phorepoc-pinephone-sd.img out/phorepoc-pinephone.img
-          xz -T0 -6 out/phorepoc-pinephone.img
-          cp build/pinephone/uboot/u-boot-source-*.tar out/
+      - name: The board's release files (board.conf RELEASE)
+        if: inputs.images && inputs.arch == ''
+        run: ph image release -b "${{ steps.setup.outputs.board }}" -o "$PWD/out"
 
       - name: Checksums + provenance
-        if: inputs.images
+        if: inputs.images && inputs.arch == ''
         run: |
           mkdir -p out
           cp built-from.txt out/
           (cd out && sha256sum * > SHA256SUMS && cat SHA256SUMS)
 
       - uses: actions/upload-artifact@v4
-        if: inputs.images
+        if: inputs.images && inputs.arch == ''
         with:
-          name: phorepoc-${{ inputs.board }}
+          name: phorepoc-${{ steps.setup.outputs.board }}
           path: out/
           if-no-files-found: warn
 
       - name: Release
-        if: inputs.images && inputs.release
+        if: inputs.images && inputs.release && inputs.arch == ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
