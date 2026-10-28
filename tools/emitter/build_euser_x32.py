@@ -179,7 +179,7 @@ def compile_objects() -> None:
     if os.environ.get("SKIP_CENSUS") == "1" and os.path.isdir(os.path.join(CENSUS, "obj")):
         print("SKIP_CENSUS=1: reusing existing euser-census objects")
     else:
-        r = run_script("tools/phorepoc-x86/port/euser_census_x32.sh", "LINK=1")
+        r = run_script("toolchain/x32/euser_census_x32.sh", "LINK=1")
         line = [l for l in r.stdout.splitlines() if l.startswith("=== euser census")]
         print(line[0] if line else r.stdout[-400:])
         if not line or ", 0 FAIL" not in line[0]:
@@ -190,9 +190,9 @@ def compile_objects() -> None:
     _docker("mkdir -p /out/euser-x32 && cd /repo && "
             "F=\"$(cat /out/euser-census/flags.txt)\" && "
             "$F -fcf-protection=none -c "
-            "tools/phorepoc-x86/port/x64user/xu_dll.cpp -o /out/euser-x32/xu_dll.o && "
-            "$F -c tools/phorepoc-x86/port/x64user/xu_image.cpp -o /out/euser-x32/xu_image.o"
-            + (" && $F -c tools/phorepoc-x86/port/x64user/xu_leavetrace.cpp"
+            "toolchain/x32/x64user/xu_dll.cpp -o /out/euser-x32/xu_dll.o && "
+            "$F -c toolchain/x32/x64user/xu_image.cpp -o /out/euser-x32/xu_image.o"
+            + (" && $F -c toolchain/x32/x64user/xu_leavetrace.cpp"
                " -o /out/euser-x32/xu_leavetrace.o" if LEAVE_TRACE else "")
             # SCHED_TRACE=1 (diagnostic): the active scheduler with a dispatch log for BrowserNG's
             # main thread (toolchain/shims/euser_diag/ub_act.cpp), over the census's own object

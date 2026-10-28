@@ -31,7 +31,7 @@ def mmp_path(mmp: str) -> str:
 
 def main() -> int:
     # x32-only settings name the x86-64 port's files: checked when that port is among the layers
-    x32 = os.path.isdir(os.path.join(paths.OS_ROOT, "tools", "phorepoc-x86", "port"))
+    x32 = os.path.isdir(os.path.join(paths.OS_ROOT, "toolchain", "x32"))
     missing = []
     for key, comp in sorted(C.COMPONENTS.items()):
         if not isinstance(comp, dict):

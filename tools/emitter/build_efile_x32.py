@@ -76,7 +76,7 @@ DLL_ORDER = (EUSER_DLL, EFSRV_DLL, HAL_DLL)
 #   xu_cxxrt.cpp  sized delete / __cxa_pure_virtual, which no 2010 TU provides
 #   gcchelp.cpp   REAL operator new/delete over User::Alloc -- euseru.def exports none of
 #                 them, because on the real platform every image links scppnwdl.lib for its own
-EXE_STUB = "tools/phorepoc-x86/port/x64user/xu_exe.cpp"
+EXE_STUB = "toolchain/x32/x64user/xu_exe.cpp"
 
 
 def ordinal_maps() -> dict[str, tuple[str, int]]:
@@ -104,7 +104,7 @@ def compile_objects() -> None:
         # EFILE_EXTRA_DEFS: extra -D's for the census, e.g. -DTRACE_CHECK_FAILURES = the loader
         # prints the file:line of every check that rejects an image (sf_ldr.h)
         extra = os.environ.get("EFILE_EXTRA_DEFS", "")
-        r = EU.run_script("tools/phorepoc-x86/port/efile_census_x32.sh", f"EXTRA_DEFS='{extra}' LINK=1")
+        r = EU.run_script("toolchain/x32/efile_census_x32.sh", f"EXTRA_DEFS='{extra}' LINK=1")
         line = [l for l in r.stdout.splitlines() if l.startswith("=== efile census")]
         print(line[0] if line else r.stdout[-400:])
         if not line or ", 0 FAIL" not in line[0]:

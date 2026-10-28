@@ -47,7 +47,7 @@ for f in "${FL[@]}"; do
   fi
   if [ "$prev" = -I ]; then prev=""; p="$f"; else p="${f#-I}"; [ "$p" = "$f" ] && { OUTA+=("$f"); continue; }; fi
   case "$p" in
-    */toolchain/*|*/kernel/eka/*|*/halservices/*|*/tools/phorepoc-x86/port) continue;;
+    */toolchain/*|*/kernel/eka/*|*/halservices/*|*/toolchain/x32) continue;;
     # Open C's stdapis LAST (-idirafter), and epoc32/include (zlib.h too): they bundle OpenSSL 0.9.8, an old sqlite3.h
     # and zlib, and a ported library's own come in as -isystem dirs, which GCC searches after every -I (a -I naming an
     # -isystem dir is ignored). Open C still answers everything nobody else provides (libstdc++'s #include_next too).

@@ -48,8 +48,8 @@ import elf                                      # noqa: E402
 from euser_def import parse_def                 # noqa: E402
 
 GCCHELP = "baseline/kernelhwsrv/kernel/eka/common/gcchelp.cpp"
-CXXRT = "tools/phorepoc-x86/port/x64user/xu_cxxrt.cpp"
-IMAGE = "tools/phorepoc-x86/port/x64user/xu_image.cpp"
+CXXRT = "toolchain/x32/x64user/xu_cxxrt.cpp"
+IMAGE = "toolchain/x32/x64user/xu_image.cpp"
 EUSER_DLL = "euser.dll"
 
 
@@ -90,7 +90,7 @@ def compile_objects(cfg: Cfg) -> None:
     if os.environ.get("SKIP_CENSUS") == "1" and os.path.isdir(os.path.join(cfg.census_dir, "obj")):
         print(f"SKIP_CENSUS=1: reusing existing {cfg.name}-census objects")
     else:
-        r = EU.run_script(f"tools/phorepoc-x86/port/{cfg.name}_census_x32.sh", "LINK=1")
+        r = EU.run_script(f"toolchain/x32/{cfg.name}_census_x32.sh", "LINK=1")
         line = [l for l in r.stdout.splitlines() if l.startswith(cfg.census_marker)]
         print(line[0] if line else r.stdout[-400:])
         if not line or ", 0 FAIL" not in line[0]:
@@ -100,7 +100,7 @@ def compile_objects(cfg: Cfg) -> None:
     EU._docker(
         f"mkdir -p /out/{cfg.work} && cd /repo && F=\"$(cat /out/{cfg.name}-census/flags.txt)\" && "
         f"$F -fcf-protection=none -DDLL_UID3={cfg.uid3:#x} -c "
-        f"tools/phorepoc-x86/port/x64user/xu_dll.cpp -o /out/{cfg.work}/xu_dll.o && "
+        f"toolchain/x32/x64user/xu_dll.cpp -o /out/{cfg.work}/xu_dll.o && "
         f"$F -c {IMAGE} -o /out/{cfg.work}/xu_image.o && "
         f"$F -c {CXXRT} -o /out/{cfg.work}/xu_cxxrt.o && "
         f"$F -c {GCCHELP} -o /out/{cfg.work}/gcchelp.o")

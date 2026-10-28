@@ -52,7 +52,7 @@ def compile_objects() -> None:
     if os.environ.get("SKIP_CENSUS") == "1" and os.path.isdir(os.path.join(CENSUS, "obj")):
         print("SKIP_CENSUS=1: reusing existing estart-census objects")
     else:
-        r = EU.run_script("tools/phorepoc-x86/port/estart_census_x32.sh", "LINK=1")
+        r = EU.run_script("toolchain/x32/estart_census_x32.sh", "LINK=1")
         line = [l for l in r.stdout.splitlines() if l.startswith("=== estart census")]
         print(line[0] if line else r.stdout[-400:])
         if not line or ", 0 FAIL" not in line[0]:
