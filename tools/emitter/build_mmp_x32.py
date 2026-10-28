@@ -823,6 +823,9 @@ def build(key: str) -> int:
     # the LIBRARYs whose imports became stubs (no provider yet) -- an image linked BEFORE its provider
     with open(out + ".stubs", "w", newline="\n") as fh:
         fh.write("\n".join(globals().get("STUBBED_LIBS", [])) + "\n")
+    # sidecar for tools/stub_audit.py: every name this image calls that no provider exports (one per line)
+    with open(out + ".linkstubs", "w", newline="\n") as fh:
+        fh.write("".join(n + "\n" for n in sorted(stub_names)))
     if comp.get("sis"):
         # a SIS image is LOADED FROM RAM: the real F32 loader's checks must pass, or it answers KErrCorrupt
         from loadercheck import check_loader

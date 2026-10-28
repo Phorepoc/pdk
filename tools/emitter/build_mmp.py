@@ -993,6 +993,9 @@ def build(key: str, rsc_only: bool = False) -> int:
     # sidecar for tools/romgate.py: where this image's unimpl stub lives
     with open(out_path + ".meta", "w") as fh:
         fh.write(f"stub=0x{ext.symbols[STUB]:X}")
+    # sidecar for tools/stub_audit.py: every name this image calls that no provider exports (one per line)
+    with open(out_path + ".linkstubs", "w", newline="\n") as fh:
+        fh.write("".join(n + "\n" for n in sorted(stub_names)))
     compile_registration(key, m, rom)
     if device or sis:
         # for a stock loader: its F32 loader's checks, and the exception descriptor its unwinder needs
