@@ -96,11 +96,12 @@ VIEW = os.path.join(BUILD, "x32view")
 
 
 def make_view() -> str:
-    """The tree the port scripts expect, as symlinks: VIEW/{baseline,toolchain,tools,emitter}.
+    """The tree the port scripts expect, as symlinks: VIEW/{baseline,toolchain,tools,board,emitter}.
     baseline -> SYMBIAN (kernelhwsrv/, symbian-2010/ ...), the rest from OS_ROOT / this directory."""
     os.makedirs(VIEW, exist_ok=True)
     for name, target in (("baseline", SYMBIAN), ("toolchain", os.path.join(OS_ROOT, "toolchain")),
-                         ("tools", os.path.join(OS_ROOT, "tools")), ("emitter", HERE)):
+                         ("tools", os.path.join(OS_ROOT, "tools")), ("board", os.path.join(OS_ROOT, "board")),
+                         ("emitter", HERE)):
         link = os.path.join(VIEW, name)
         if os.path.islink(link) and os.readlink(link) == target:
             continue
