@@ -384,8 +384,11 @@ def main() -> None:
     stubs = os.path.join(SYMBIAN, "symbian-2010", "oss.FCL.sf.adapt.stubs", "systemswstubs", "hwrmstubplugins", "data")
     for f in ("HWRMLightsPolicy.ini", "HWRMVibraPolicy.ini"):
         if os.path.isfile(os.path.join(stubs, f)):
-            ours = os.path.join(OS_ROOT, "src", "hwrm", "data", f)   # ours where the stub's is empty (the vibra feedback client)
-            out += ["--data", "private\\101f7a02\\" + f + "=" + rel(ours if os.path.isfile(ours) else os.path.join(stubs, f))]
+            out += ["--data", "private\\101f7a02\\" + f + "=" + rel(os.path.join(stubs, f))]
+    # ours: the product policies (ProductHWRMVibraPolicy.ini = WSERV may pulse the vibra: touch feedback)
+    hwrmdata = os.path.join(OS_ROOT, "src", "hwrm", "data")
+    for f in sorted(os.listdir(hwrmdata)) if os.path.isdir(hwrmdata) else []:
+        out += ["--data", "private\\101f7a02\\" + f + "=" + rel(os.path.join(hwrmdata, f))]
     # x86: the drive map (C: = FAT32 via efat32.fsy; the board file explains). ARM boards stage their own (make_phorepoc_rom.sh).
     if not ARM:
         out += ["--data", "sys\\data\\estart.txt=" + rel(os.path.join(BOARD, "estart.txt"))]
