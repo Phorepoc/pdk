@@ -7,9 +7,9 @@ this work:
 > on top of it.
 
 ```
-board          adaptation-pinephone, adaptation-pc, ...   one device: picks everything below, makes its images
-SoC            adaptation-a64, adaptation-x86-64, ...     one chip family: kernel port, drivers
-layers         tls, mesa-symbian, codecpack, webengine     optional libraries and apps on top of the OS
+board          one device: picks everything below, makes its images
+SoC            one chip family: kernel port, drivers
+layers         optional libraries and apps on top of the OS
 core           the operating system, architecture-neutral
 pdk            the tools: ph, the build scripts, the CI pipeline, PhoneLab
 toolchain      the compilers, as container images
@@ -26,7 +26,7 @@ change core or the pdk.
 | toolchain | compilers and host tools, one image per architecture family | anything about Phorepoc's sources |
 | pdk | `ph`, the emitter and ROM tools, the generic CI workflows, PhoneLab and its protocols | board names, chip names, image recipes for a device |
 | core | the OS components, the default settings every device starts from (`os/config/`), the interfaces drivers implement (HAL functions, plug-in APIs), null drivers | drivers for real hardware, device settings, mentions of the repositories above |
-| layers | one feature each, buildable for any architecture core supports | device names. A layer that only fits some hardware (Mesa's lima for Mali GPUs) names the *hardware*, not a device |
+| layers | one feature each, buildable for any architecture core supports | device names. A layer that only fits some hardware (Mesa's backend for one GPU family) names the *hardware*, not a device |
 | SoC | the kernel port and drivers for a chip, implementing core's interfaces | board names, a device's settings or images |
 | board | the board manifest, the pinned commits, settings, data and image recipes for one device | |
 
@@ -35,10 +35,10 @@ change core or the pdk.
 A board repository has a `board.conf` at its root. The pdk reads it, both locally (`ph ... -b <name>`) and in CI:
 
 ```sh
-NAME=pinephone
-SUMMARY="the PINE64 PinePhone"
+NAME=myboard
+SUMMARY="my phone"
 ARCH=arm                                          # the architecture core is built for: x32 or arm
-REPOS="adaptation-a64 adaptation-pinephone mesa-symbian tls"   # the repositories it is made of, besides pdk and core
+REPOS="mysoc myboard mesa-symbian tls"            # the repositories it is made of, besides pdk and core
 RELEASE=recipes/release.sh                        # makes the release files into $OUT (CI and `ph image release`)
 ```
 
