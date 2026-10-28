@@ -59,7 +59,8 @@ export SHELLS
 SHELL_S4SET=""
 if [ "$SHELLS" != s3 ]; then export PHOREPOC_S4=1 PHOREPOC_QT48=1; SHELL_S4SET=1; fi
 ALF_FROM_UIR=""
-if [ "$UI_RENDERER" != classic ] && [ -z "${ALF:-}" ]; then ALF=s2; ALF_FROM_UIR=1; fi
+# s3 = the whole real alf set (transition effects, hint/CRP plug-ins, the app-framework proxy), as a device ships it
+if [ "$UI_RENDERER" != classic ] && [ -z "${ALF:-}" ]; then ALF=s3; ALF_FROM_UIR=1; fi
 export UI_RENDERER ALF_FROM_UIR
 [ -z "${ALF:-}" ] || export ALF
 
@@ -238,6 +239,9 @@ if [ -n "${BOOT:-}" ]; then
   # (mce: HideOrExit at EMsvServerReady -> KLeaveExit) -- the S60 device default lists them
   python3 "$TOOLS/cenrep_set.py" "${CENREP[102858f2]}" "$BUILD/rom/102858f2.txt" 0x1=$((0x100058C5)) 0x2=$((0x101F4CCE)) 0x3=$((0x101F4CD5)) \
     0x4=$((0x10005903)) 0x5=$((0x10005901)) && CENREP[102858f2]="$BUILD/rom/102858f2.txt"
+  # transition effects ON with alf (themes KThemesTransitionEffects 0x9: the release default KMaxTInt = off; 0 = all
+  # effect groups on): the skin server then registers our z:esource\effects set (core os/data/effects)
+  [ -z "${ALF:-}" ] || { python3 "$TOOLS/cenrep_set.py" "${CENREP[102818e8]}" "$BUILD/rom/102818e8.txt" 0x9=0 && CENREP[102818e8]="$BUILD/rom/102818e8.txt"; }
   # ALF test images (ALF=...): keep the display on while we work on speed (frames take seconds): SysAp's display lights timeout
   # (hwrmlightdomaincrkeys.h KDisplayLightsTimeout, repository 10200C8C key 6, 15 s) and the screen saver period
   # (SettingsInternalCRKeys.h KSettingsScreenSaverPeriod, 101F877C key 8, 15 s) -> 3600 s (SysAp clamps the first to its maximum)
@@ -369,6 +373,9 @@ elif [ "${GUI:-0}" = 1 ]; then
     # LeaveAppsInMemory: see the BOOT= block
     python3 "$TOOLS/cenrep_set.py" "${CENREP[102858f2]}" "$BUILD/rom/102858f2.txt" 0x1=$((0x100058C5)) 0x2=$((0x101F4CCE)) 0x3=$((0x101F4CD5)) \
       0x4=$((0x10005903)) 0x5=$((0x10005901)) && CENREP[102858f2]="$BUILD/rom/102858f2.txt"
+  # transition effects ON with alf (themes KThemesTransitionEffects 0x9: the release default KMaxTInt = off; 0 = all
+  # effect groups on): the skin server then registers our z:esource\effects set (core os/data/effects)
+  [ -z "${ALF:-}" ] || { python3 "$TOOLS/cenrep_set.py" "${CENREP[102818e8]}" "$BUILD/rom/102818e8.txt" 0x9=0 && CENREP[102818e8]="$BUILD/rom/102818e8.txt"; }
     # ALF test images (ALF=...): keep the display on (see the BOOT= block)
     if [ -n "${ALF:-}" ] && [ -z "${ALF_FROM_UIR:-}" ] && [ "${ALF_KEEP_DISPLAY:-1}" = 1 ]; then
       python3 "$TOOLS/cenrep_set.py" "${CENREP[10200c8c]}" "$BUILD/rom/10200c8c.txt" 0x6=3600 && CENREP[10200c8c]="$BUILD/rom/10200c8c.txt"
