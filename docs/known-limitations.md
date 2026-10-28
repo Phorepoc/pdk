@@ -5,9 +5,9 @@ What a user of the first Phorepoc images should know. The device releases link h
 ## Both boards
 
 - **The first boot is slow** (about 50 s to the home screen on a fresh C:); later boots are faster.
-- **Video in third-party apps and games needs the codec pack** (`pheffmpeg`, installed as a SIS from the Catalogue). Without
+- **Video in third-party apps and games needs the codec pack** (`pheffmpeg`, installed as a SIS from Catalogue). Without
   it, MP4 video plays without sound.
-- **Qt apps need Qt 4.8.7**, installed as a SIS from the Catalogue (it is not part of the image). Example: 10tons' King
+- **Qt apps need Qt 4.8.7**, installed as a SIS from Catalogue (it is not part of the image). Example: 10tons' King
   Oddball and Sparkle.
 - **No web browser in the image yet**: the stock BrowserNG is not included; a browser comes later as its own package.
 - **No camera support.**
