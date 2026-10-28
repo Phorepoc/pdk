@@ -213,7 +213,7 @@ func commands(app *cli.App) []*cli.Command {
 				boardFlag(fs)
 			},
 			Examples: []cli.Example{
-				{What: "Every component a PC build knows:", Cmd: "component list -b pc"},
+				{What: "Every component a board's build knows:", Cmd: "component list -b myboard"},
 				{What: "Only the names, for a script:", Cmd: "component list -H -o name"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {
@@ -258,9 +258,9 @@ func commands(app *cli.App) []*cli.Command {
 				boardFlag(fs)
 			},
 			Examples: []cli.Example{
-				{What: "Build two components for the PC:", Cmd: "component build -b pc estor bafl"},
+				{What: "Build two components for a board:", Cmd: "component build -b myboard estor bafl"},
 				{What: "A component and everything below it:", Cmd: "component build -r avkon"},
-				{What: "Everything (a clean build):", Cmd: "component build -A -b pc"},
+				{What: "Everything (a clean build):", Cmd: "component build -A -b myboard"},
 				{What: "An ARM image for a phone:", Cmd: "component build -b myboard -arch arm phetty"},
 			},
 			Aliases: []string{"build", "closure=-r", "all=-A", "arm=-arch arm"},
@@ -351,7 +351,7 @@ func commands(app *cli.App) []*cli.Command {
 				"source. Lists the ones that do not; exits non-zero when there are any.",
 			Flags: boardFlag,
 			Examples: []cli.Example{
-				{What: "Check the PC board's registry:", Cmd: "component check -b pc"},
+				{What: "Check a board's registry:", Cmd: "component check -b myboard"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {
 				if err := noArgs(args); err != nil {
@@ -376,9 +376,9 @@ func commands(app *cli.App) []*cli.Command {
 				boardFlag(fs)
 			},
 			Examples: []cli.Example{
-				{What: "The PC image, as the phone boots:", Cmd: "image rom -b pc"},
-				{What: "With networking, keeping the core images of the last build:", Cmd: "image rom -b pc -O net=1 -O fast=1"},
-				{What: "Booting straight into Notes for a test:", Cmd: "image rom -b pc -s notes"},
+				{What: "A board's image, as the device boots:", Cmd: "image rom -b myboard"},
+				{What: "With networking, keeping the core images of the last build:", Cmd: "image rom -b myboard -O net=1 -O fast=1"},
+				{What: "Booting straight into Notes for a test:", Cmd: "image rom -b myboard -s notes"},
 			},
 			Aliases: []string{"rom"},
 			Run: func(fs *flag.FlagSet, args []string) error {

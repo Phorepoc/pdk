@@ -24,22 +24,22 @@ Settings of the recipe are given with -O name=value ("ph help image-options" lis
 
 ## Examples
 
-The PC image, as the phone boots:
+A board's image, as the device boots:
 
 ```sh
-ph image rom -b pc
+ph image rom -b myboard
 ```
 
 With networking, keeping the core images of the last build:
 
 ```sh
-ph image rom -b pc -O net=1 -O fast=1
+ph image rom -b myboard -O net=1 -O fast=1
 ```
 
 Booting straight into Notes for a test:
 
 ```sh
-ph image rom -b pc -s notes
+ph image rom -b myboard -s notes
 ```
 
 ## Formerly

@@ -18,9 +18,9 @@ Every .mmp, added source file and include path or forced include each registered
 
 ## Examples
 
-Check the PC board's registry:
+Check a board's registry:
 
 ```sh
-ph component check -b pc
+ph component check -b myboard
 ```
 

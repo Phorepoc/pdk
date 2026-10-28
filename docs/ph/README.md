@@ -118,7 +118,7 @@ ph finds its pieces through these variables ("ph source status" shows what they 
 
 ## Image-options
 
-Given as -O name=value, as many as needed (ph image rom -b pc -O net=1 -O fonts=dejavu):
+Given as -O name=value, as many as needed (ph image rom -b myboard -O net=1 -O fonts=dejavu):
 
   net=0|1
       The networking stack: ESOCK, TCP/IP, DNS, DHCP, the e1000 driver and SNTP.

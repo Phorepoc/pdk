@@ -20,10 +20,10 @@ One line per component of the registry (core's plus the adaptations'), or of the
 
 ## Examples
 
-Every component a PC build knows:
+Every component a board's build knows:
 
 ```sh
-ph component list -b pc
+ph component list -b myboard
 ```
 
 Only the names, for a script:

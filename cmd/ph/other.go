@@ -98,7 +98,7 @@ func topics() []cli.Topic {
 		{
 			Name:    "image-options",
 			Summary: "The recipe settings of \"ph image rom -O name=value\"",
-			Text: "Given as -O name=value, as many as needed (ph image rom -b pc -O net=1 -O fonts=dejavu):\n\n" +
+			Text: "Given as -O name=value, as many as needed (ph image rom -b myboard -O net=1 -O fonts=dejavu):\n\n" +
 				strings.TrimRight(opts.String(), "\n") + "\n",
 		},
 	}

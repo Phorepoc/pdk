@@ -25,10 +25,10 @@ Compiles each component from its real .mmp with the modern toolchain and writes 
 
 ## Examples
 
-Build two components for the PC:
+Build two components for a board:
 
 ```sh
-ph component build -b pc estor bafl
+ph component build -b myboard estor bafl
 ```
 
 A component and everything below it:
@@ -40,7 +40,7 @@ ph component build -r avkon
 Everything (a clean build):
 
 ```sh
-ph component build -A -b pc
+ph component build -A -b myboard
 ```
 
 An ARM image for a phone:

@@ -46,6 +46,19 @@ RELEASE=recipes/release.sh                        # makes the release files into
 anywhere else. `board.lock`, next to it, pins the commit of each repository a release is built from
 (`tools/board_lock.sh <board repository>` in the pdk).
 
+## Settings: `config/` and `board/`
+
+Every repository's `os/` folder is merged into one OS tree for the build. Two folders in it hold settings:
+
+- **`config/`** is core's: the defaults every device starts from (central repository files and their list,
+  `cenrep_files.txt`, start-up command lists, the installer policy).
+- **`board/`** is the board's own: `cenrep/` (overrides core's repositories), `hal/` (the HAL values and its
+  additions), `estart.txt`, `variant.mmh`, and `zdata.txt`, the extra files its Z: drive carries (one
+  `rom path = OS tree path` per line).
+
+The architecture's user-side runtime (for x32: `toolchain/x32/`, the startup code, the C++ runtime glue, the
+`setjmp`) is core's too, so core builds for an architecture with no SoC repository present.
+
 ## Recipes
 
 Any repository can have a `recipes/` folder of shell scripts. The pdk knows three kinds of them:
