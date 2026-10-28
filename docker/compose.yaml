@@ -5,7 +5,7 @@
 # The phone re-enumerates on every reboot, so instead of passing one /dev/ttyACMn (which goes stale) the
 # container gets the whole USB-serial major (166 = ttyACM) through a cgroup rule plus a live /dev bind:
 # the service then finds the phone by VID/PID each time it comes back. Install 99-phonelab.rules on the host
-# for a stable /dev/phorepoc-pinephone name too. A Nokia Symbian phone (driver "nokia") rides the same rule: its
+# for a stable /dev/phorepoc-phlink name too. A Nokia Symbian phone (driver "nokia") rides the same rule: its
 # ACM ports are ttyACM* as well (major 166), named /dev/nokia-acm-<ifnum> by 99-phonelab.rules (docs/nokia.md).
 services:
   phonelab:

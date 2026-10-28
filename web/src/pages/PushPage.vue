@@ -21,7 +21,7 @@
             </div>
             <div v-else class="q-mt-md">
               <q-input v-model="path" label="Path on the server (relative to repo root)" outlined dense :disable="busy"
-                       placeholder=".pinephone-build/symbian.img" />
+                       placeholder=".phone-build/symbian.img" />
             </div>
             <q-checkbox v-model="reboot" class="q-mt-sm" label="Reboot into the new image after a good upload" :disable="busy" />
             <q-input v-if="reboot" v-model="waitFor" dense outlined class="q-mt-xs" :disable="busy" label="Then wait for a log line (regular expression; empty = the first line of the new boot)"

@@ -1,7 +1,7 @@
 // Copyright The Phorepoc Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package mock is a fake PinePhone speaking phlink (phlink.cpp in adaptation-a64 (usbcc/)), for unit tests and
+// Package mock is a fake phone speaking phlink (the device side of phlink), for unit tests and
 // for running the service + web UI without hardware. It replays a recorded boot transcript (testdata/) on every
 // "boot", answers U/R/B/P/W the way the phone does, and drops off the bus on reboot like the real CDC device.
 package mock
@@ -56,7 +56,7 @@ func New(boot []string) *Phone {
 }
 
 // Composite fakes phlink's which=2: a dark top bar (40 rows), the 360x640 OS picture, the soft key bar (40 rows)
-// with green | menu | red blocks where a64_display.cpp draws them.
+// with green | menu | red blocks where the device's display code draws them.
 func Composite(os []uint32) []uint32 {
 	fb := make([]uint32, 360*720)
 	for y := 0; y < 720; y++ {

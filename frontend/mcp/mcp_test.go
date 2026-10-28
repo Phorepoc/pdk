@@ -21,7 +21,7 @@ import (
 	"github.com/Phorepoc/pdk/frontend/mcp"
 	"github.com/Phorepoc/pdk/frontend/rest"
 	"github.com/Phorepoc/pdk/lib/core"
-	"github.com/Phorepoc/pdk/lib/device/pinephone"
+	"github.com/Phorepoc/pdk/lib/device/phlink"
 	"github.com/Phorepoc/pdk/lib/mock"
 	"github.com/Phorepoc/pdk/lib/store"
 )
@@ -39,7 +39,7 @@ func server(t *testing.T, token string) (*httptest.Server, *mock.Phone) {
 	}
 	ph := mock.New(lines)
 	m := core.NewManager(st)
-	s := core.NewSession("pinephone", &pinephone.Driver{}, ph.Opener(), st, m.Bus)
+	s := core.NewSession("phone", &phlink.Driver{}, ph.Opener(), st, m.Bus)
 	m.Add(s)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -88,14 +88,14 @@ func TestRESTSurface(t *testing.T) {
 		t.Fatalf("devices %+v", devs)
 	}
 	var res struct {
-		Result []pinephone.Word `json:"result"`
+		Result []phlink.Word `json:"result"`
 		Error  string           `json:"error"`
 	}
-	if c := do(t, "POST", ts.URL+"/api/devices/pinephone/ops/peek", `{"addr":"0x100","count":2}`, &res); c != 200 || res.Result[0].Value != "0x00000abc" {
+	if c := do(t, "POST", ts.URL+"/api/devices/phone/ops/peek", `{"addr":"0x100","count":2}`, &res); c != 200 || res.Result[0].Value != "0x00000abc" {
 		t.Fatalf("peek %d %+v", c, res)
 	}
 	var e map[string]any
-	if c := do(t, "POST", ts.URL+"/api/devices/pinephone/ops/peek", `{}`, &e); c != 422 {
+	if c := do(t, "POST", ts.URL+"/api/devices/phone/ops/peek", `{}`, &e); c != 422 {
 		t.Fatalf("missing arg: %d %v", c, e)
 	}
 	if c := do(t, "POST", ts.URL+"/api/devices/nope/ops/peek", `{}`, &e); c != 404 {
@@ -104,12 +104,12 @@ func TestRESTSurface(t *testing.T) {
 
 	time.Sleep(400 * time.Millisecond)
 	var lines []store.Line
-	do(t, "GET", ts.URL+"/api/devices/pinephone/lines?grep=phlink:+P&limit=10", "", &lines)
+	do(t, "GET", ts.URL+"/api/devices/phone/lines?grep=phlink:+P&limit=10", "", &lines)
 	if len(lines) != 2 {
 		t.Fatalf("grep lines %+v", lines)
 	}
 	var ops []store.Op
-	do(t, "GET", ts.URL+"/api/devices/pinephone/history", "", &ops)
+	do(t, "GET", ts.URL+"/api/devices/phone/history", "", &ops)
 	if len(ops) != 1 || ops[0].Op != "peek" { // rejected calls (missing args) are not device ops
 		t.Fatalf("history %+v", ops)
 	}
@@ -131,16 +131,16 @@ func TestRESTSurface(t *testing.T) {
 		t.Fatalf("blob %+v", b)
 	}
 	var pr struct {
-		Result pinephone.PushResult `json:"result"`
+		Result phlink.PushResult `json:"result"`
 	}
-	if c := do(t, "POST", ts.URL+"/api/devices/pinephone/ops/push", `{"blob":"`+b.SHA+`","reboot":false}`, &pr); c != 200 || pr.Result.Bytes != 20000 || pr.Result.Rebooted {
+	if c := do(t, "POST", ts.URL+"/api/devices/phone/ops/push", `{"blob":"`+b.SHA+`","reboot":false}`, &pr); c != 200 || pr.Result.Bytes != 20000 || pr.Result.Rebooted {
 		t.Fatalf("push %d %+v", c, pr)
 	}
 }
 
 func TestLiveFrame(t *testing.T) {
 	ts, _ := server(t, "")
-	resp, err := http.Get(ts.URL + "/api/devices/pinephone/frame?which=2")
+	resp, err := http.Get(ts.URL + "/api/devices/phone/frame?which=2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestLiveFrame(t *testing.T) {
 		t.Fatalf("frame %d %v %d bytes", resp.StatusCode, resp.Header, len(b))
 	}
 	var ops []store.Op
-	do(t, "GET", ts.URL+"/api/devices/pinephone/history", "", &ops)
+	do(t, "GET", ts.URL+"/api/devices/phone/history", "", &ops)
 	if len(ops) != 0 {
 		t.Fatalf("live frames must not fill the op history: %+v", ops)
 	}
@@ -159,7 +159,7 @@ func TestLiveFrame(t *testing.T) {
 	if len(blobs) != 0 {
 		t.Fatalf("live frames must not be stored: %+v", blobs)
 	}
-	resp, _ = http.Get(ts.URL + "/api/devices/pinephone/frame?which=0&store=1")
+	resp, _ = http.Get(ts.URL + "/api/devices/phone/frame?which=0&store=1")
 	resp.Body.Close()
 	if resp.Header.Get("X-Blob") == "" || resp.Header.Get("X-Frame-Height") != "640" {
 		t.Fatalf("store=1 frame not stored: %v", resp.Header)
@@ -180,7 +180,7 @@ func TestStream(t *testing.T) {
 	ts, ph := server(t, "")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	c, _, err := websocket.Dial(ctx, "ws"+ts.URL[4:]+"/api/devices/pinephone/stream?types=line,event", nil)
+	c, _, err := websocket.Dial(ctx, "ws"+ts.URL[4:]+"/api/devices/phone/stream?types=line,event", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,7 +14,7 @@ import (
 
 	"github.com/Phorepoc/pdk/lib/core"
 	"github.com/Phorepoc/pdk/lib/device"
-	"github.com/Phorepoc/pdk/lib/device/pinephone"
+	"github.com/Phorepoc/pdk/lib/device/phlink"
 	"github.com/Phorepoc/pdk/lib/mock"
 	"github.com/Phorepoc/pdk/lib/store"
 )
@@ -40,7 +40,7 @@ func newRig(t *testing.T, maxLines int) *rig {
 	}
 	ph := mock.New(lines)
 	m := core.NewManager(st)
-	s := core.NewSession("pp", &pinephone.Driver{}, ph.Opener(), st, m.Bus)
+	s := core.NewSession("pp", &phlink.Driver{}, ph.Opener(), st, m.Bus)
 	m.Add(s)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -94,17 +94,17 @@ func TestPeekPokeDump(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w := res.([]pinephone.Word)
+	w := res.([]phlink.Word)
 	if len(w) != 4 || w[1].Value != "0xdeadbeef" || w[3].Addr != "0x01ca000c" {
 		t.Fatalf("peek %+v", w)
 	}
 	res, err = r.s.Exec(ctx(t, 5*time.Second), "test", "poke", device.Args{"addr": "0x01f00010", "value": "0x12345678"})
-	if err != nil || res.(pinephone.Word).Value != "0x12345678" || r.ph.Mem[0x01f00010] != 0x12345678 {
+	if err != nil || res.(phlink.Word).Value != "0x12345678" || r.ph.Mem[0x01f00010] != 0x12345678 {
 		t.Fatalf("poke %v %v", res, err)
 	}
 	res, err = r.s.Exec(ctx(t, 5*time.Second), "test", "dump", device.Args{"ranges": "0x1000:70, 0x2000"})
-	if err != nil || len(res.([]pinephone.Word)) != 71 {
-		t.Fatalf("dump %d %v", len(res.([]pinephone.Word)), err)
+	if err != nil || len(res.([]phlink.Word)) != 71 {
+		t.Fatalf("dump %d %v", len(res.([]phlink.Word)), err)
 	}
 	ops, _ := r.st.Ops("pp", 0, 10)
 	if len(ops) < 3 || ops[0].Op != "dump" || ops[0].Caller != "test" {
@@ -127,7 +127,7 @@ func TestPushRebootsIntoSlotB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pr := res.(pinephone.PushResult)
+	pr := res.(phlink.PushResult)
 	if !pr.Rebooted || pr.Sum != pr.PhoneSum {
 		t.Fatalf("push %+v", pr)
 	}

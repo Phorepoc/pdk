@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-// testdata/cases.bin is written by testgen/gen.c (the phone's real encoder, phlz4.h in adaptation-a64 (usbcc/),
+// testdata/cases.bin is written by testgen/gen.c (the device's LZ4 encoder,
 // compiled for the host): repeated {raw len u32, comp len u32, raw, comp}.
 func TestCEncoderToGoDecoder(t *testing.T) {
 	b, err := os.ReadFile("testdata/cases.bin")

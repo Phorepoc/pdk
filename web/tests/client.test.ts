@@ -15,10 +15,10 @@ describe('api client', () => {
 
   it('POSTs op args as JSON with the caller header and unwraps result', async () => {
     fetchMock.mockResolvedValue(reply(200, { result: [{ addr: '0x1', value: '0x2' }] }));
-    const r = await api.op('pinephone', 'peek', { addr: '0x01c20000', count: 4 });
+    const r = await api.op('phone', 'peek', { addr: '0x01c20000', count: 4 });
     expect(r).toEqual([{ addr: '0x1', value: '0x2' }]);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/api/devices/pinephone/ops/peek');
+    expect(url).toBe('/api/devices/phone/ops/peek');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body as string)).toEqual({ addr: '0x01c20000', count: 4 });
     const h = init.headers as Record<string, string>;

@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/Phorepoc/pdk/lib/device"
-	"github.com/Phorepoc/pdk/lib/device/pinephone"
+	"github.com/Phorepoc/pdk/lib/device/phlink"
 )
 
-func sh(s pinephone.Shot) string {
+func sh(s phlink.Shot) string {
 	s.Data = nil
 	return fmt.Sprintf("%+v", s)
 }
@@ -27,15 +27,15 @@ func liveArgs(which float64) device.Args {
 func TestLiveView(t *testing.T) {
 	r := newRig(t, 10)
 	c := ctx(t, 20*time.Second)
-	shot := func(which float64) pinephone.Shot {
+	shot := func(which float64) phlink.Shot {
 		t.Helper()
 		res, err := r.s.Exec(c, "test", "screenshot", liveArgs(which))
 		if err != nil {
 			t.Fatal(err)
 		}
-		return res.(pinephone.Shot)
+		return res.(phlink.Shot)
 	}
-	check := func(s pinephone.Shot, w, h int) {
+	check := func(s phlink.Shot, w, h int) {
 		t.Helper()
 		img, err := png.Decode(bytes.NewReader(s.Data))
 		if err != nil {
@@ -87,7 +87,7 @@ func TestLiveViewOldImage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := res.(pinephone.Shot)
+	s := res.(phlink.Shot)
 	if s.Key || s.Tiles != 0 || len(s.Data) == 0 || s.Width != 360 {
 		t.Fatalf("fallback: %s", sh(s))
 	}

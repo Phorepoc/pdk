@@ -22,7 +22,7 @@ import (
 	"github.com/Phorepoc/pdk/lib/core"
 	"github.com/Phorepoc/pdk/lib/device"
 	_ "github.com/Phorepoc/pdk/lib/device/nokia"
-	_ "github.com/Phorepoc/pdk/lib/device/pinephone"
+	_ "github.com/Phorepoc/pdk/lib/device/phlink"
 	"github.com/Phorepoc/pdk/lib/mock"
 	"github.com/Phorepoc/pdk/lib/store"
 	"github.com/Phorepoc/pdk/lib/transport"

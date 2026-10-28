@@ -9,9 +9,9 @@ retention_days = 0       # 0 = keep every boot forever; pinned boots/blobs are a
 # workspace = ""         # where relative "file" paths (push) resolve; default: the working directory
 
 [[device]]
-id = "pinephone"
-driver = "pinephone"
-vid = "0E22"             # phlink's USB IDs (adaptation-a64, usbcc/)
+id = "phone"
+driver = "phlink"
+vid = "0E22"             # phlink's USB IDs
 pid = "0666"
 # port = "COM5"          # pin a port instead of matching VID/PID
 # mock = "../testdata/boot-slotb-rearm.log"   # run against the fake phone

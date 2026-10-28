@@ -1,10 +1,10 @@
 /* Copyright The Phorepoc Authors
  * SPDX-License-Identifier: Apache-2.0 */
 
-// gen.c -- host test generator for the phone's LZ4 encoder (phlz4.h, unmodified: the PinePhone debug link in
-// adaptation-a64, usbcc/). Writes ../testdata/cases.bin for lz4_test.go, and with a raw RGB file argument also reports
+// gen.c -- host test generator for the phone's LZ4 encoder (the device's encoder, unmodified, from the device side of the phlink
+// debug link). Writes ../testdata/cases.bin for lz4_test.go, and with a raw RGB file argument also reports
 // live-view numbers.
-//   gcc -O2 gen.c -I<adaptation-a64>/usbcc -o gen && ./gen ../testdata/cases.bin
+//   gcc -O2 gen.c -I<dir with the device encoder header> -o gen && ./gen ../testdata/cases.bin
 // Cases: sizes 0..40 and then up to 3072 over random / runs / repeated phrases / gradients / screen-like tiles, and the
 // table is deliberately reused across cases (stale entries).
 #include <stdio.h>

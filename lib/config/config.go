@@ -36,7 +36,7 @@ func Default() Config {
 	return Config{
 		Listen:  "0.0.0.0:8737",
 		DataDir: DefaultDataDir(),
-		Devices: []Device{{ID: "pinephone", Driver: "pinephone", VID: "0E22", PID: "0666"}},
+		Devices: []Device{{ID: "phone", Driver: "phlink", VID: "0E22", PID: "0666"}},
 	}
 }
 

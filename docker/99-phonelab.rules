@@ -1,7 +1,7 @@
-# /etc/udev/rules.d/99-phonelab.rules -- the PinePhone's phlink debug port (CDC ACM, VID 0E22 PID 0666):
+# /etc/udev/rules.d/99-phonelab.rules -- the phone's phlink debug port (CDC ACM, VID 0E22 PID 0666):
 # a stable name, access for the "dialout" group, and ModemManager told to leave it alone (it probes new ttyACMs
 # with AT commands, which the phone would echo into its log or take as phlink commands).
-SUBSYSTEM=="tty", ATTRS{idVendor}=="0e22", ATTRS{idProduct}=="0666", SYMLINK+="phorepoc-pinephone", GROUP="dialout", MODE="0660", ENV{ID_MM_DEVICE_IGNORE}="1"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0e22", ATTRS{idProduct}=="0666", SYMLINK+="phorepoc-phlink", GROUP="dialout", MODE="0660", ENV{ID_MM_DEVICE_IGNORE}="1"
 
 # Nokia Symbian^3-family phones in "PC Suite"/"Nokia Suite" USB mode (vendor 0421): the phone exposes several
 # CDC ACM functions. One is the phone's own modem/AT port (dial-up), another is free for applications (phedbg opens it

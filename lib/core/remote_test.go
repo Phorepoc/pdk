@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/Phorepoc/pdk/lib/device"
-	"github.com/Phorepoc/pdk/lib/device/pinephone"
+	"github.com/Phorepoc/pdk/lib/device/phlink"
 )
 
 func TestScreenshotRoundTrip(t *testing.T) {
@@ -21,7 +21,7 @@ func TestScreenshotRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sh := res.(pinephone.Shot)
+	sh := res.(phlink.Shot)
 	if sh.Width != 360 || sh.Height != 640 || len(sh.Blob) != 64 {
 		t.Fatalf("shot %+v", sh)
 	}
@@ -79,7 +79,7 @@ func TestInputOps(t *testing.T) {
 		}
 	}
 	v, err := r.s.Exec(c, "test", "version", nil)
-	if err != nil || v.(pinephone.Version).Proto != 3 {
+	if err != nil || v.(phlink.Version).Proto != 3 {
 		t.Fatalf("version %+v %v", v, err)
 	}
 }
@@ -89,7 +89,7 @@ func TestOldImageSaysSo(t *testing.T) {
 	r.ph.Proto1 = true
 	c := ctx(t, 10*time.Second)
 	v, err := r.s.Exec(c, "test", "version", nil)
-	if err != nil || v.(pinephone.Version).Proto != 1 {
+	if err != nil || v.(phlink.Version).Proto != 1 {
 		t.Fatalf("version %+v %v", v, err)
 	}
 	_, err = r.s.Exec(c, "test", "screenshot", nil)
@@ -107,7 +107,7 @@ func TestHotspots(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := res.(pinephone.Hotspots)
+	h := res.(phlink.Hotspots)
 	if h.Samples != 100 || len(h.Functions) != 3 {
 		t.Fatalf("hotspots %+v", h)
 	}
@@ -130,7 +130,7 @@ func TestProfile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := res.(pinephone.Profile)
+	p := res.(phlink.Profile)
 	if p.Cores != 4 || p.CoreBusy[0] != 50 || p.CoreBusy[1] != 0 || p.WindowS != 1 {
 		t.Fatalf("cores %+v", p)
 	}

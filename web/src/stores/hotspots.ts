@@ -14,7 +14,7 @@ export interface HotResult {
 
 export const hot = {
   secs: ref(10),
-  symbols: ref('.pinephone-build/symbian.syms'),
+  symbols: ref('.phone-build/symbian.syms'),
   running: ref(false),
   busy: ref(false),
   since: ref(''),

@@ -17,7 +17,7 @@ phone (debug link, USB CDC ACM) ── Session (one per device: owns the port, r
 |---|---|
 | `lib/core` | `Manager` (all devices, `Exec` = run an op for any front end, `Health`), `Session` (the port, reconnects, the op queue, log + event store, `wait_for`), the frame deframer, the message bus |
 | `lib/device` | the driver interface: op specs (data) + `Exec` + a log classifier. The API, the MCP tools and the UI's forms are generated from the op specs, so a new phone is a new driver package |
-| `lib/device/pinephone` | the PinePhone driver: push (full and delta), slots, memory, screen (screenshot, live view), input, files, terminals, profile, hotspots, threads |
+| `lib/device/phlink` | the phlink driver (a phone over USB): push (full and delta), slots, memory, screen (screenshot, live view), input, files, terminals, profile, hotspots, threads |
 | `lib/store` | SQLite (pure Go, WAL) + blob files |
 | `lib/transport` | serial ports found by USB VID/PID (COMn, /dev/ttyACMn, /dev/cu.usbmodem* alike) |
 | `lib/mock` | a fake phone speaking the protocol, for tests and `-mock` runs |
@@ -30,7 +30,7 @@ Windows runs the service natively (Docker Desktop cannot see COM ports, and the 
 Linux runs it in Docker: `docker/compose.yaml` passes the ttyACM device major through a cgroup rule and a live `/dev`,
 so the port is found again after each reboot; `docker/99-phonelab.rules` gives it a stable name.
 
-## Operations (PinePhone)
+## Operations (phlink)
 
 | Op | What |
 |---|---|
