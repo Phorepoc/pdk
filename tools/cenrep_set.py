@@ -21,7 +21,7 @@ def main():
         k = int(key, 0)
         out, n = [], 0
         for line in text.split("\n"):
-            m = re.match(r"^\s*0x([0-9A-Fa-f]+)\s+int\s+(-?\d+)(.*)$", line.rstrip("\r"))
+            m = re.match(r"^\s*0x([0-9A-Fa-f]+)\s+int\s+(-?(?:0x[0-9A-Fa-f]+|\d+))(.*)$", line.rstrip("\r"))
             if m and int(m.group(1), 16) == k:
                 line = "0x%08X int %s%s" % (k, val, m.group(3)) + ("\r" if line.endswith("\r") else "")
                 n += 1
