@@ -125,8 +125,8 @@ def main():
             t = l['text']
             if 'WHITE frame' in t:
                 fails.append('white frame: %s' % t.strip())
-            mm = re.search(r'screen-on shows .* white=(\d+)%', t)
-            if mm and int(mm.group(1)) >= 85:
+            mm = re.search(r'screen-on shows .* white%=(0x[0-9a-fA-F]+)', t)
+            if mm and int(mm.group(1), 16) >= 85:
                 fails.append('the screen came on showing a white frame: %s' % t.strip())
         print('  scenario: %d frame-log lines' % len(frame))
 
