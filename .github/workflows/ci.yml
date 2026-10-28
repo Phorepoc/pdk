@@ -36,3 +36,6 @@ jobs:
       - run: npx vue-tsc --noEmit
       - run: npm test
       - run: npm run build
+
+  layering:
+    uses: ./.github/workflows/layering.yml
