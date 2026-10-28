@@ -91,6 +91,7 @@ def main():
 
     # 2. markers of this boot
     need = {
+        'the pushed image (slot B)': 'running slot B',
         'home screen': 'homescreen=1',
         'GPU composition': 'wfc gpu: GPU composition up',
         'transition effects (real gfxtransadapter)': 'CGfxTransAdapterTfx',
@@ -100,6 +101,19 @@ def main():
     for what, s in need.items():
         if not any(s in l['text'] for l in got):
             fails.append('marker missing: %s ("%s")' % (what, s))
+
+    # panics: the kernel's thread-death report (thread=..., exit type 2 = panic). A dead window-server thread left the
+    # screen black on 2026-10-28 while every marker above was present.
+    deaths = lab.lines(any_=["thread='", 'exit type=', 'category='], limit=5000)
+    thread = None
+    for l in deaths:
+        t = l['text']
+        mm = re.search(r"thread='([^']*)'", t)
+        if mm:
+            thread = mm.group(1)
+        elif 'exit type=0x00000002' in t and thread:
+            fails.append('panic: %s' % thread)
+            thread = None
 
     # 3. the scenario, watched by the frame log
     if not a.quick:
@@ -120,17 +134,27 @@ def main():
                 if r.get('error'):
                     fails.append('scenario: %s %s failed: %s' % (kind, arg, r['error']))
         time.sleep(6)                                               # the next [mon] line
-        frame = lab.lines(after=m, any_=['[EKERN][frame]', 'frames='], limit=500)
-        counts, woke = [], 0
+        # (the kernel prints every hex value on a line of its own: a record = its header line + the value lines after it)
+        frame = lab.lines(after=m, any_=['[EKERN][frame]', 'frames=', ' white%=', ' black%='], limit=1000)
+        counts, woke, rec = [], 0, None
         for l in frame:
             t = l['text']
             if 'WHITE frame' in t:
                 fails.append('white frame: %s' % t.strip())
-            mm = re.search(r'first frame after screen-on .* white%=(0x[0-9a-fA-F]+)', t)
-            if mm:
+            if 'first frame after screen-on' in t:
                 woke += 1
-                if int(mm.group(1), 16) >= 85:
-                    fails.append('the screen came on showing a white frame: %s' % t.strip())
+                rec = {}
+                continue
+            mm = re.search(r' (white|black)%=(0x[0-9a-fA-F]+)', t)
+            if mm and rec is not None:
+                rec[mm.group(1)] = int(mm.group(2), 16)
+                if len(rec) == 2:
+                    if rec['white'] >= 85:
+                        fails.append('the screen came on showing a white frame (white %d%%)' % rec['white'])
+                    if rec['black'] >= 98:
+                        fails.append('the screen came on BLACK (black %d%%): the UI is not drawing' % rec['black'])
+                    rec = None
+                continue
             mm = re.search(r'frames=(0x[0-9a-fA-F]+)', t)
             if mm:
                 counts.append(int(mm.group(1), 16))
