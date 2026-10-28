@@ -233,7 +233,8 @@ if [ -n "${BOOT:-}" ]; then
     for d in "$(cd "${PHOREPOC_PDK:-$TOOLS/..}/.." && pwd)"/*/; do
       git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
       [ "$(git -C "$d" rev-parse --show-toplevel)" = "${d%/}" ] || continue
-      dirty=$([ -n "$(git -C "$d" status --porcelain --untracked-files=no 2>/dev/null)" ] && echo "+dirty")
+      dirty=
+      [ -z "$(git -C "$d" status --porcelain --untracked-files=no 2>/dev/null)" ] || dirty=+dirty
       echo "repo $(basename "$d") $(git -C "$d" rev-parse HEAD)$dirty"
     done
     echo "END"
