@@ -4,6 +4,8 @@
 package build
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -58,27 +60,36 @@ func TestImageOptions(t *testing.T) {
 	}
 }
 
+// Boards come from the board.conf files of the checkouts next to core; the pdk has no list of its own.
 func TestFindBoard(t *testing.T) {
-	if b, err := FindBoard("pc"); err != nil || b.Arch != "x32" {
-		t.Errorf("pc: %v %v", b, err)
+	root := t.TempDir()
+	os.MkdirAll(filepath.Join(root, "core"), 0o755)
+	os.MkdirAll(filepath.Join(root, "myboard"), 0o755)
+	os.WriteFile(filepath.Join(root, "myboard", "board.conf"), []byte(
+		"# a board\nNAME=myboard\nSUMMARY=\"a test board\"   # comment\nARCH=arm\nREPOS=\"mysoc myboard tls\"\nRELEASE=recipes/release.sh\n"), 0o644)
+	e := &Env{Core: filepath.Join(root, "core")}
+	b, err := e.FindBoard("myboard")
+	if err != nil || b.Arch != "arm" || b.Summary != "a test board" || strings.Join(b.Adaptations, " ") != "mysoc myboard tls" ||
+		b.Release != "recipes/release.sh" {
+		t.Fatalf("myboard: %+v %v", b, err)
 	}
-	if _, err := FindBoard("nope"); err == nil {
+	if _, err := e.FindBoard("nope"); err == nil {
 		t.Error("an unknown board must fail")
 	}
 }
 
-// The kernel settings of "ph image kernel -O trace=..." reach the container.
+// The recipe settings of "ph image recipe kernel -O trace=..." reach the container.
 func TestKernelOptionsPassed(t *testing.T) {
 	t.Setenv("TRACE", "") // restored when the test ends
 	if err := SetImageOption("trace=0x80000002"); err != nil {
 		t.Fatal(err)
 	}
 	e := &Env{PDK: "/p", Core: "/c", OSRoot: "/nonexistent-os", Symbian: "/nonexistent-sym", Build: "vol", Image: "img:1"}
-	a, err := e.dockerArgs(false, []string{"bash", "tools/make_phorepoc_kernel.sh"})
+	a, err := e.dockerArgs(false, []string{"bash", "recipes/kernel.sh"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s := strings.Join(a, " "); !strings.Contains(s, "-e TRACE=0x80000002") || !strings.HasSuffix(s, "img:1 bash tools/make_phorepoc_kernel.sh") {
+	if s := strings.Join(a, " "); !strings.Contains(s, "-e TRACE=0x80000002") || !strings.HasSuffix(s, "img:1 bash recipes/kernel.sh") {
 		t.Errorf("TRACE not handed over: %s", s)
 	}
 }

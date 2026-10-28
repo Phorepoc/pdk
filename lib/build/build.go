@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 )
 
@@ -23,7 +24,7 @@ const DefaultImage = "ghcr.io/phorepoc/base:latest"
 // passThrough lists the recipe options that are handed to the container when set.
 var passThrough = []string{
 	"NET", "NET_TEST", "NTP_SERVER", "FONTS", "UI_RENDERER", "SHELLS", "ALF", "NGA", "NGA_KEEP", "FAST",
-	"LEAVE_TRACE", "SCHED_TRACE", "MIF_ALL", "IBY_DATA", "ROM_ARCH", "ROM_TAIL", "ROM_EXCLUDE", "SSM_TEST",
+	"PHOREPOC_ARCH", "LEAVE_TRACE", "SCHED_TRACE", "MIF_ALL", "IBY_DATA", "ROM_ARCH", "ROM_TAIL", "ROM_EXCLUDE", "SSM_TEST",
 	"SECONDARY_IMAGE", "PHOREPOC_S4", "PHOREPOC_QT48", "PHETTY", "CENREP_EXTRA", "ROM_DATA_EXTRA", "UTC_OFFSET",
 	"WEBFONTS", "THEMES", "X32_LD", "X32_DEFS", "X32_LIBS", "X32_INCLUDE", "X32_FULLERR", "PRUNE_UNRESOLVED", "ROM_HEAP_LIMITS",
 	"TRACE", "SCREEN", "SCALE", "DBG", "KCLEAN", "ARM_VFP", "ARM_CPU_FLAGS", "ALF_TRACE", "ALF_TIMING", "ALF_LOG", "ALF_RC",
@@ -40,6 +41,7 @@ type Env struct {
 	// Adaptations: the adaptation checkouts built with core (PHOREPOC_ADAPTATIONS, the host's path-list separator):
 	// each has an os/ tree merged over core's and a registry/ of its own components (tools/emitter/paths.py).
 	Adaptations []string
+	Arch        string // the board's architecture (UseBoard), "" without a board
 }
 
 // FromEnv reads the PHOREPOC_* variables. The pdk is PHOREPOC_PDK, else found from the executable or the current
@@ -223,14 +225,16 @@ func (e *Env) Rom(boot string) error {
 	return e.InContainer("bash", "-c", romScript, "_", boot)
 }
 
-// Kernel builds the x86-64 kernel and the GRUB ISO that carries the ROM of "ph image rom" (<build>/x86/ekern).
-func (e *Env) Kernel() error {
-	return e.InContainer("bash", "tools/make_phorepoc_kernel.sh")
-}
+// recipeScript runs recipes/<name>.sh of the first of the build's repositories that has one, searched from the top
+// (the board first: PHOREPOC_ADAPTATIONS lists the SoC first, the board after it, then the layers).
+const recipeScript = `name="$1"; shift; IFS=: read -r -a repos <<< "$PHOREPOC_ADAPTATIONS"
+for ((i=${#repos[@]}-1; i>=0; i--)); do r="${repos[i]}"; [ -f "$r/recipes/$name.sh" ] || continue
+  cd "$r" && exec bash "recipes/$name.sh" "$@"; done
+echo "no recipe $name: none of the board's repositories has recipes/$name.sh (${PHOREPOC_ADAPTATIONS:-no board: give -b})" >&2; exit 1`
 
-// Vbox packages the kernel ISO and a blank C: disk as a VirtualBox appliance; args are make_ova.py's options.
-func (e *Env) Vbox(args ...string) error {
-	return e.Python("tools/make_ova.py", args...)
+// Recipe runs a board repository's recipes/<name>.sh in the container (docs/layering.md).
+func (e *Env) Recipe(name string, args ...string) error {
+	return e.InContainer(append([]string{"bash", "-c", recipeScript, "_", name}, args...)...)
 }
 
 // Shell opens an interactive shell in the toolchain container with the mounts.
@@ -241,29 +245,73 @@ func (e *Env) Shell() error {
 	return e.InContainer("bash")
 }
 
-// Board is a device the pdk builds for: the adaptation checkouts that make it, and its architecture.
+// Board is a device the pdk builds for, described by the board.conf at the root of its repository
+// (docs/layering.md): the repositories it is made of and the architecture core is built for. The pdk keeps no list
+// of boards: every checkout next to core with a board.conf is one.
 type Board struct {
 	Name, Summary string
-	Adaptations   []string // checkout folder names, next to core: the board's adaptations + the layers it ships (tls: modern TLS)
-	Arch          string   // "x32" or "arm"
+	Adaptations   []string // checkout folder names, next to core (REPOS): the SoC, the board itself, the layers it ships
+	Arch          string   // ARCH: "x32" or "arm"
+	Release       string   // RELEASE: the recipe that makes the release files (relative to Dir)
+	Dir           string   // the board repository's checkout
 }
 
-// Boards are the boards ph knows by name (-b).
-var Boards = []Board{
-	{"pc", "QEMU, VirtualBox and real PCs: x86-64 with the x32 ABI", []string{"adaptation-x86-64", "adaptation-pc", "tls"}, "x32"},
-	{"pinephone", "the PINE64 PinePhone: ARM, Allwinner A64", []string{"adaptation-a64", "adaptation-pinephone", "tls"}, "arm"},
+// ParseBoardConf reads a board.conf: KEY=value lines, values optionally in double quotes, # comments.
+func ParseBoardConf(path string) (*Board, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	kv := map[string]string{}
+	for _, line := range strings.Split(string(data), "\n") {
+		if i := strings.Index(line, " #"); i >= 0 {
+			line = line[:i]
+		}
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			return nil, fmt.Errorf("%s: not KEY=value: %q", path, line)
+		}
+		kv[strings.TrimSpace(k)] = strings.Trim(strings.TrimSpace(v), `"`)
+	}
+	b := &Board{Name: kv["NAME"], Summary: kv["SUMMARY"], Arch: kv["ARCH"], Release: kv["RELEASE"],
+		Adaptations: strings.Fields(kv["REPOS"]), Dir: filepath.Dir(path)}
+	if b.Name == "" || b.Arch == "" {
+		return nil, fmt.Errorf("%s: NAME and ARCH are required", path)
+	}
+	return b, nil
+}
+
+// Boards finds the boards checked out next to core (each folder with a board.conf), sorted by name.
+func (e *Env) Boards() []Board {
+	var out []Board
+	paths, _ := filepath.Glob(filepath.Join(filepath.Dir(e.Core), "*", "board.conf"))
+	sort.Strings(paths)
+	for _, p := range paths {
+		if b, err := ParseBoardConf(p); err == nil {
+			out = append(out, *b)
+		} else {
+			fmt.Fprintln(os.Stderr, "ph:", err)
+		}
+	}
+	return out
 }
 
 // FindBoard returns the named board.
-func FindBoard(name string) (*Board, error) {
+func (e *Env) FindBoard(name string) (*Board, error) {
 	var names []string
-	for i := range Boards {
-		if Boards[i].Name == name {
-			return &Boards[i], nil
+	bs := e.Boards()
+	for i := range bs {
+		if bs[i].Name == name {
+			return &bs[i], nil
 		}
-		names = append(names, Boards[i].Name)
+		names = append(names, bs[i].Name)
 	}
-	return nil, fmt.Errorf("no board %q (boards: %s)", name, strings.Join(names, ", "))
+	return nil, fmt.Errorf("no board %q next to core (boards found: %s; a board is a checkout with a board.conf)",
+		name, strings.Join(names, ", "))
 }
 
 // AdaptationDirs: where the board's adaptation checkouts are expected (next to core).
@@ -277,7 +325,7 @@ func (e *Env) AdaptationDirs(b *Board) []string {
 
 // UseBoard builds for the board: its adaptations replace PHOREPOC_ADAPTATIONS, and an ARM board's ROM is ARM.
 func (e *Env) UseBoard(name string) error {
-	b, err := FindBoard(name)
+	b, err := e.FindBoard(name)
 	if err != nil {
 		return err
 	}
@@ -288,6 +336,8 @@ func (e *Env) UseBoard(name string) error {
 		}
 	}
 	e.Adaptations = dirs
+	e.Arch = b.Arch
+	os.Setenv("PHOREPOC_ARCH", b.Arch)
 	if b.Arch == "arm" {
 		os.Setenv("ROM_ARCH", "arm")
 	}
@@ -330,11 +380,11 @@ var ImageOptions = []ImageOption{
 	{"prune", "PRUNE_UNRESOLVED", "0|1", "drop images whose imports are not in the ROM instead of failing"},
 	{"leave-trace", "LEAVE_TRACE", "0|1", "log each User::Leave with its caller (diagnostic)"},
 	{"sched-trace", "SCHED_TRACE", "0|1", "the active scheduler with a dispatch log (diagnostic)"},
-	{"trace", "TRACE", "<hex>", "ph image kernel: the kernel's trace mask (default 0x80000000: panics only)"},
-	{"screen", "SCREEN", "<w>x<h>", "ph image kernel: the screen the display HAL reports (default 360x640)"},
-	{"scale", "SCALE", "n", "ph image kernel: show each screen pixel as an n x n block (default 2)"},
-	{"dbg", "DBG", "0|1", "ph image kernel: a debug kernel (default 1)"},
-	{"kclean", "KCLEAN", "0|1", "ph image kernel: rebuild the kernel objects even when nothing changed"},
+	{"trace", "TRACE", "<hex>", "kernel recipes: the kernel's trace mask (default 0x80000000: panics only)"},
+	{"screen", "SCREEN", "<w>x<h>", "kernel recipes: the screen the display HAL reports (default 360x640)"},
+	{"scale", "SCALE", "n", "kernel recipes: show each screen pixel as an n x n block (default 2)"},
+	{"dbg", "DBG", "0|1", "kernel recipes: a debug kernel (default 1)"},
+	{"kclean", "KCLEAN", "0|1", "kernel recipes: rebuild the kernel objects even when nothing changed"},
 	{"x32-ld", "X32_LD", "bfd", "force GNU ld for the x32 links"},
 	{"x32-defs", "X32_DEFS", "<component>:<MACRO>,...", "extra defines for some components (diagnostic)"},
 	{"x32-include", "X32_INCLUDE", "<component>:<header>,...", "force-include a header in some components (diagnostic)"},
@@ -353,4 +403,28 @@ func SetImageOption(nv string) error {
 		}
 	}
 	return fmt.Errorf("-O %s: no image option %q (\"ph help image-options\" lists them)", nv, name)
+}
+
+// Release runs the board's RELEASE recipe on this machine (board.conf, docs/layering.md) with the PHOREPOC_*
+// variables of this build and OUT, the folder for the release files (default <build>/release).
+func (e *Env) Release(board, out string) error {
+	b, err := e.FindBoard(board)
+	if err != nil {
+		return err
+	}
+	if b.Release == "" {
+		return fmt.Errorf("board %s has no RELEASE recipe in its board.conf", b.Name)
+	}
+	if out == "" {
+		out = filepath.Join(e.Build, "release")
+	}
+	if abs, err := filepath.Abs(out); err == nil {
+		out = abs
+	}
+	c := exec.Command(bashPath(), b.Release)
+	c.Dir = b.Dir
+	c.Env = append(os.Environ(), "PHOREPOC_PDK="+e.PDK, "PHOREPOC_CORE="+e.Core, "PHOREPOC_SYMBIAN="+e.Symbian,
+		"PHOREPOC_BUILD="+e.Build, "PHOREPOC_ARCH="+b.Arch, "PHOREPOC_BOARD="+b.Name, "OUT="+out,
+		"PHOREPOC_ADAPTATIONS="+strings.Join(e.Adaptations, string(os.PathListSeparator)))
+	return stdio(c).Run()
 }

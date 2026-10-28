@@ -13,40 +13,31 @@ container, and `ph` starts that container for you.
 
 ## Building Phorepoc with ph
 
-You need Go 1.27 and Docker. Clone `core` and the adaptation repositories for your device into the same folder as this
-one, then build `ph`:
+You need Go 1.27 and Docker. Clone `core`, and the repositories of the board you're building for, into the same folder
+as this one, then build `ph`:
 
 ```sh
 go build -o ph ./cmd/ph
 ```
 
-This builds the PC image, from nothing to a VirtualBox appliance:
+A board is a repository with a `board.conf` that names everything it's made of. `ph board list` shows the boards it
+finds next to core, and `ph board info <board>` what each needs and which image recipes it brings. The pdk itself
+knows no boards: [docs/layering.md](docs/layering.md) explains how the repositories fit together, and how to make
+your own.
+
+Any board builds the same way:
 
 ```sh
-ph source fetch                        # download the Symbian source
-ph source export -a                    # put together the include tree
-ph source mbg -a                       # generate the icon headers
-ph component resources -A -b pc        # compile the resource files
-ph component build -A -b pc            # build every component
-ph image rom -b pc                     # make the ROM
-ph image kernel -b pc                  # the kernel and a bootable ISO
-ph image vbox -b pc                    # and a VirtualBox appliance, build/x86/Phorepoc.ova
+ph source fetch                                  # download the Symbian source
+ph source export -a                              # put together the include tree
+ph source mbg -a                                 # generate the icon headers
+ph component resources -A -b <board>             # compile the resource files
+ph component build -A -arch <arch> -b <board>    # build every component
+ph image release -b <board>                      # the board's release files, in build/release
 ```
 
-The PinePhone uses the same first three steps, then:
-
-```sh
-ph component resources -A -b pinephone
-ph component build -A -arch arm -b pinephone
-ph image zdata -b pinephone
-ph image pinephone -b pinephone
-```
-
-and, from `adaptation-pinephone/os`, the SD card image you write with balenaEtcher:
-
-```sh
-O=../../build/pinephone RELEASE=1 bash tools/phorepoc-arm/make_pinephone_sd.sh
-```
+`ph image release` runs the board's own recipe. The board's README describes the steps it takes, and the
+`ph image recipe` commands that run them one at a time.
 
 `ph help` lists every command and `ph help <command>` explains one. The same pages are in [docs/ph](docs/ph/README.md).
 

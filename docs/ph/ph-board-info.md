@@ -14,9 +14,9 @@ Lists the adaptation repositories the board is made of, where ph expects their c
 
 ## Examples
 
-What the PinePhone build needs:
+What a board is made of:
 
 ```sh
-ph board info pinephone
+ph board info <board>
 ```
 

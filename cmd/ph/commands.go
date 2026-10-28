@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
@@ -405,26 +406,22 @@ func commands(app *cli.App) []*cli.Command {
 			},
 		},
 		{
-			Group: "image", Name: "kernel",
-			Summary: "Build the x86-64 kernel and its bootable ISO",
-			Description: "Builds the kernel for the PC board from the Symbian source (nkernSMP, ekern and the flexible " +
-				"memory model, with the x86-64 adaptation's backend and boot stub), links it with the ROM that " +
-				"\"ph image rom -b pc\" made (<build>/rom/romsect.bin), and wraps both in a GRUB ISO: " +
-				"<build>/x86/ekern/phorepoc-ekern.iso. Boots in QEMU, VirtualBox or on a PC; the kernel image " +
-				"is about the size of the ROM, so give the machine at least 512 MB.\n\n" +
-				"Settings of the kernel (trace, screen, scale, dbg, kclean) are given with -O name=value " +
-				"(\"ph help image-options\" lists them).",
+			Group: "image", Name: "recipe", Operands: "<name> [<arg>...]",
+			Summary: "Run an image recipe of the board's repositories",
+			Description: "Runs recipes/<name>.sh from the board's repositories, in the toolchain container: the board " +
+				"first, then its SoC and layers (docs/layering.md). Boards and SoC adaptations bring their own image " +
+				"steps this way -- a kernel, a disk image, an appliance -- and \"ph board info\" lists them.\n\n" +
+				"Settings of the recipes are given with -O name=value (\"ph help image-options\" lists them).",
 			Flags: func(fs *flag.FlagSet) {
 				fs.Var(&multi{}, "O", "set an image `option`, name=value (repeatable)")
 				boardFlag(fs)
 			},
 			Examples: []cli.Example{
-				{What: "The kernel and ISO for the ROM just built:", Cmd: "image kernel -b pc"},
-				{What: "A kernel that traces its boot:", Cmd: "image kernel -b pc -O trace=0x80000002"},
+				{What: "The board's kernel and boot image, after \"ph image rom\":", Cmd: "image recipe kernel -b <board>"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {
-				if err := noArgs(args); err != nil {
-					return err
+				if len(args) == 0 {
+					return cli.Usagef("a recipe name")
 				}
 				for _, o := range vals(fs, "O") {
 					if err := build.SetImageOption(o); err != nil {
@@ -435,59 +432,21 @@ func commands(app *cli.App) []*cli.Command {
 				if err != nil {
 					return err
 				}
-				return e.Kernel()
+				return e.Recipe(args[0], args[1:]...)
 			},
 		},
 		{
-			Group: "image", Name: "vbox",
-			Summary: "Package the ISO as a VirtualBox appliance",
-			Description: "Writes <build>/x86/<name>.ova from the ISO \"ph image kernel\" made: a PC with the ISO in its " +
-				"DVD drive and a blank, formatted C: disk (a streamOptimized VMDK on the IDE primary master), " +
-				"an Intel PRO/1000 network adapter on NAT and AC'97 audio. It needs neither VirtualBox nor root: the " +
-				"disk is converted with qemu-img and the archive is a tar, the OVF descriptor first.\n\n" +
-				"Import it with VirtualBox (File, Import Appliance) and start it: the ISO comes in its DVD drive, which " +
-				"boots first (the descriptor carries VirtualBox's own machine section: VMSVGA display, NAT, AC'97, " +
-				"the clock in UTC). The kernel's SVGA driver sets the phone-shaped 720x1280 screen by itself.",
+			Group: "image", Name: "release",
+			Summary: "Make the board's release files",
+			Description: "Runs the board's RELEASE recipe (board.conf) on this machine, after every component is built: " +
+				"it makes the images to publish into <out> (default <build>/release). The recipe may start " +
+				"containers and call ph itself; CI runs the same command.",
 			Flags: func(fs *flag.FlagSet) {
-				fs.String("n", "Phorepoc", "the virtual machine's `name`, and the file's")
-				fs.String("m", "1024", "`MB` of RAM (the ROM lives in RAM)")
-				fs.String("c", "2", "number of virtual `CPUs`")
-				fs.String("d", "1024", "size of the C: disk in `MB` (1 GiB, as the PinePhone's C:)")
-				fs.String("o", "", "write the appliance to this `file` (in the container: under /build)")
+				fs.String("o", "", "the `folder` for the release files (default <build>/release)")
 				boardFlag(fs)
 			},
 			Examples: []cli.Example{
-				{What: "The appliance for the last kernel:", Cmd: "image vbox -b pc"},
-				{What: "A 2 GB RAM machine with a 1 GB C: disk:", Cmd: "image vbox -b pc -m 2048 -d 1024"},
-			},
-			Run: func(fs *flag.FlagSet, args []string) error {
-				if err := noArgs(args); err != nil {
-					return err
-				}
-				a := []string{"-n", str(fs, "n"), "-m", str(fs, "m"), "-c", str(fs, "c"), "-d", str(fs, "d")}
-				if o := str(fs, "o"); o != "" {
-					a = append(a, "-o", o)
-				}
-				e, err := env(str(fs, "b"))
-				if err != nil {
-					return err
-				}
-				return e.Vbox(a...)
-			},
-		},
-		{
-			Group: "image", Name: "pinephone",
-			Summary: "Build the PinePhone image (kernel + ROM, for U-Boot)",
-			Description: "Builds the PinePhone image from the ARM components (\"ph component build -A -arch arm -b pinephone\" " +
-				"first): the core images the kernel boots, the kernel with the A64 drivers linked in, the bootstrap and " +
-				"the ROM from the shared recipe, packaged for U-Boot: <build>/pinephone/symbian.img and boot.scr.\n\n" +
-				"The SD card to write with balenaEtcher is made from them on the host (it needs docker): " +
-				"O=<build>/pinephone RELEASE=1 bash tools/phorepoc-arm/make_pinephone_sd.sh, run in adaptation-pinephone's os/.",
-			Flags: func(fs *flag.FlagSet) {
-				boardFlag(fs)
-			},
-			Examples: []cli.Example{
-				{What: "The image for the ARM components just built:", Cmd: "image pinephone -b pinephone"},
+				{What: "Everything a release of the board publishes:", Cmd: "image release -b <board>"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {
 				if err := noArgs(args); err != nil {
@@ -497,7 +456,7 @@ func commands(app *cli.App) []*cli.Command {
 				if err != nil {
 					return err
 				}
-				return e.InContainer("bash", "tools/make_arm_image.sh")
+				return e.Release(str(fs, "b"), str(fs, "o"))
 			},
 		},
 		{
@@ -633,9 +592,9 @@ func commands(app *cli.App) []*cli.Command {
 					return err
 				}
 				table(on(fs, "H"), []string{"BOARD", "ARCH", "STATE", "DESCRIPTION"}, func(add func(...string)) {
-					for i := range build.Boards {
-						b := &build.Boards[i]
-						add(b.Name, b.Arch, boardState(e, b), b.Summary)
+					bs := e.Boards()
+					for i := range bs {
+						add(bs[i].Name, bs[i].Arch, boardState(e, &bs[i]), bs[i].Summary)
 					}
 				})
 				return nil
@@ -647,17 +606,17 @@ func commands(app *cli.App) []*cli.Command {
 			Description: "Lists the adaptation repositories the board is made of, where ph expects their " +
 				"checkouts (next to core), and whether they are there.",
 			Examples: []cli.Example{
-				{What: "What the PinePhone build needs:", Cmd: "board info pinephone"},
+				{What: "What a board is made of:", Cmd: "board info <board>"},
 			},
 			Run: func(fs *flag.FlagSet, args []string) error {
 				if len(args) != 1 {
 					return cli.Usagef("one board")
 				}
-				b, err := build.FindBoard(args[0])
+				e, err := build.FromEnv()
 				if err != nil {
 					return err
 				}
-				e, err := build.FromEnv()
+				b, err := e.FindBoard(args[0])
 				if err != nil {
 					return err
 				}
@@ -671,6 +630,18 @@ func commands(app *cli.App) []*cli.Command {
 						add(d[strings.LastIndexAny(d, `/\`)+1:], d, state)
 					}
 				})
+				fmt.Println()
+				table(false, []string{"RECIPE", "FROM"}, func(add func(...string)) {
+					for _, d := range e.AdaptationDirs(b) {
+						rs, _ := filepath.Glob(filepath.Join(d, "recipes", "*.sh"))
+						for _, r := range rs {
+							add(strings.TrimSuffix(filepath.Base(r), ".sh"), filepath.Base(d))
+						}
+					}
+				})
+				if b.Release != "" {
+					fmt.Printf("\nrelease: %s (ph image release -b %s)\n", b.Release, b.Name)
+				}
 				return nil
 			},
 		},
