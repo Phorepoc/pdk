@@ -97,6 +97,11 @@ def main():
         'transition effects (real gfxtransadapter)': 'CGfxTransAdapterTfx',
         'display frame log': 'white-flashes=',
     }
+    # (right after a push the boot is still settling: the frame log's first [mon] line comes ~30 s after the home screen)
+    for _ in range(12):
+        if lab.lines(any_=['white-flashes='], limit=1):
+            break
+        time.sleep(5)
     got = lab.lines(any_=list(need.values()), limit=5000)
     for what, s in need.items():
         if not any(s in l['text'] for l in got):
