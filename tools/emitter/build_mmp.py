@@ -803,7 +803,10 @@ def build(key: str, rsc_only: bool = False) -> int:
                 print(f"  ! STATICLIBRARY {sl}: {_rel_build(a)} not built")
         if arm_ar:
             archives = ["-Wl,--start-group", *arm_ar, "-Wl,--end-group", *archives]
-        args = [BE.GCC, "-nostdlib", "-Wl,-q", "-Wl,--gc-sections", "-Wl,--no-demangle",
+        # `link_wrap`: ld --wrap=<name> for each (references go to __wrap_<name>, the image's own replacement; its
+        # __real_<name> reaches the original) -- phgl's allocators on one process-wide heap
+        wrap = [f"-Wl,--wrap={n}" for n in comp.get("link_wrap", [])]
+        args = [BE.GCC, "-nostdlib", "-Wl,-q", "-Wl,--gc-sections", "-Wl,--no-demangle", *wrap,
                 f"-Wl,-T,{ld}", "-march=armv5te", "-marm", f"@{rsp}", *archives, "-o", out]
         if device or ehdll:
             args.insert(1, f"-Wl,-Map={out}.map")   # which archive member came in, and for whom
