@@ -158,9 +158,13 @@ def main():
             mm = re.search(r'frames=(0x[0-9a-fA-F]+)', t)
             if mm:
                 counts.append(int(mm.group(1), 16))
-        # the frame log must have SEEN the scenario, or the checks above prove nothing
+        # the frame log must have SEEN the scenario, or the checks above prove nothing. Classic has no transition effects:
+        # menu in, menu out, screen off and on change the picture a handful of times (8 on boot 1925); Alfred animates them
+        rend = lab.lines(any_=['UI renderer key 4'], limit=5)
+        classic = any('CLASSIC render stages' in l['text'] for l in rend)
+        print('  renderer: %s' % ('Classic' if classic else 'Alfred'))
         seen = counts[-1] - counts[0] if len(counts) >= 2 else 0
-        if seen < 10:
+        if seen < (5 if classic else 10):
             fails.append('frame log saw only %d frames during the scenario (not sampling what the panel shows?)' % seen)
         if not woke:
             fails.append('no "first frame after screen-on" line: the wake was not observed')
