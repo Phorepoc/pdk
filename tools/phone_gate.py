@@ -5,7 +5,8 @@
 and the UI behaves (no white frames, GPU composition up, real transition effects). Run it after every push, before
 reporting a phone result; it drives the phone through PhoneLab's REST API.
 
-    python3 tools/phone_gate.py [--api http://127.0.0.1:8737] [--device pinephone] [--quick]
+    python3 tools/phone_gate.py --device <PhoneLab device id> [--api http://127.0.0.1:8737] [--quick]
+    (or PHONE_GATE_DEVICE=<id> in the environment)
 
 Checks:
   1. provenance  the last push into this boot carried a clean build record (PhoneLab's push result)
@@ -18,6 +19,7 @@ Exit 0 = PASS, 1 = FAIL (each failed check printed), 2 = PhoneLab unreachable.
 """
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -61,9 +63,12 @@ class Lab:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--api', default='http://127.0.0.1:8737')
-    ap.add_argument('--device', default='pinephone')
+    ap.add_argument('--device', default=os.environ.get('PHONE_GATE_DEVICE'),
+                    help='the PhoneLab device id (default: $PHONE_GATE_DEVICE)')
     ap.add_argument('--quick', action='store_true', help='markers + provenance only, no scenario')
     a = ap.parse_args()
+    if not a.device:
+        ap.error('which phone? --device <PhoneLab device id> or PHONE_GATE_DEVICE')
     lab = Lab(a.api, a.device)
     fails = []
 

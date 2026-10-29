@@ -133,7 +133,8 @@ func TestRESTSurface(t *testing.T) {
 	var pr struct {
 		Result phlink.PushResult `json:"result"`
 	}
-	if c := do(t, "POST", ts.URL+"/api/devices/phone/ops/push", `{"blob":"`+b.SHA+`","reboot":false}`, &pr); c != 200 || pr.Result.Bytes != 20000 || pr.Result.Rebooted {
+	// (a test blob has no build record: the push gate refuses it unless unverified -- provenance has its own tests)
+	if c := do(t, "POST", ts.URL+"/api/devices/phone/ops/push", `{"blob":"`+b.SHA+`","reboot":false,"unverified":true}`, &pr); c != 200 || pr.Result.Bytes != 20000 || pr.Result.Rebooted {
 		t.Fatalf("push %d %+v", c, pr)
 	}
 }

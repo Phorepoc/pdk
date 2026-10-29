@@ -10,9 +10,9 @@ func img(record string) []byte {
 }
 
 func TestProvenance(t *testing.T) {
-	clean := "PHOREPOC-BUILD v1\nboard pinephone\ndate 2026-10-28T23:00:00Z\nrepo core 7c9ac28\nrepo pdk daeaec7\nEND\n"
+	clean := "PHOREPOC-BUILD v1\nboard exampleboard\ndate 2026-10-28T23:00:00Z\nrepo core 7c9ac28\nrepo pdk daeaec7\nEND\n"
 	p, err := checkProvenance(img(clean), false)
-	if err != nil || p.Board != "pinephone" || p.Repos["core"] != "7c9ac28" || len(p.Repos) != 2 {
+	if err != nil || p.Board != "exampleboard" || p.Repos["core"] != "7c9ac28" || len(p.Repos) != 2 {
 		t.Fatalf("clean record: %+v %v", p, err)
 	}
 	if _, err := checkProvenance(img("no record here"), false); err == nil {
