@@ -93,7 +93,8 @@ def main():
     need = {
         'the pushed image (slot B)': 'running slot B',
         'home screen': 'homescreen=1',
-        'GPU composition': 'wfc gpu: GPU composition up',
+        # (either line: the start-up line or the composer's per-frame report -- a serial line can arrive garbled)
+        'GPU composition': ('wfc gpu: GPU composition up', 'wfc gpu: composition '),
         'transition effects (real gfxtransadapter)': 'CGfxTransAdapterTfx',
         'display frame log': 'white-flashes=',
     }
@@ -102,10 +103,11 @@ def main():
         if lab.lines(any_=['white-flashes='], limit=1):
             break
         time.sleep(5)
-    got = lab.lines(any_=list(need.values()), limit=5000)
-    for what, s in need.items():
-        if not any(s in l['text'] for l in got):
-            fails.append('marker missing: %s ("%s")' % (what, s))
+    alts = {what: (v if isinstance(v, tuple) else (v,)) for what, v in need.items()}
+    got = lab.lines(any_=[a for v in alts.values() for a in v], limit=5000)
+    for what, v in alts.items():
+        if not any(a in l['text'] for l in got for a in v):
+            fails.append('marker missing: %s ("%s")' % (what, '" or "'.join(v)))
 
     # panics: the kernel's thread-death report (thread=..., exit type 2 = panic). A dead window-server thread left the
     # screen black on 2026-10-28 while every marker above was present.
