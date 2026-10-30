@@ -43,6 +43,8 @@ def main() -> int:
     ap.add_argument("--arm", action="store_true", help="ARM images from BUILD/arm/img (build_mmp.py)")
     ap.add_argument("--version", default="1.0.0", help="package version major.minor.build (default 1.0.0)")
     ap.add_argument("--vendor", default="Phorepoc", help="vendor name shown by the installer")
+    ap.add_argument("--depends", action="append", default=[], metavar="UID,MAJ.MIN.BUILD,NAME",
+                    help="the package needs an installed package of this uid, version >= x (e.g. 0x2001E61C,4.7.3,Qt)")
     ap.add_argument("--file", action="append", default=[], metavar="HOST=TARGET",
                     help="an extra data file (licence text, notices): host path = target path on the device (!:/resource/Qt/LICENSE.LGPL; / becomes a backslash)")
     ap.add_argument("--type", choices=["sa", "sp", "pu"], default="sa", help="SIS install type: sa (full), sp (patch), pu (partial upgrade of an installed package)")
@@ -76,6 +78,8 @@ def main() -> int:
     # ARM: Symbian^3's product UID, else the installer warns "not compatible"
     pkg = SIS.build_package(files, app_uid=uid, vendor=a.vendor, app_name=a.name or a.keys[0], signer=signer, version=tuple(int(x) for x in a.version.split(".")),
                             platform_uid=0x20022E6D if a.arm else None,
+                            dependencies=[(int(d.split(",")[0], 0), tuple(int(x) for x in d.split(",")[1].split(".")), d.split(",", 2)[2])
+                                          for d in a.depends],
                             install_type={"sa": 0, "sp": 1, "pu": 2}[a.type])
     out = a.out or os.path.join(BUILD, "sis", a.keys[0] + ".sis")
     os.makedirs(os.path.dirname(out), exist_ok=True)

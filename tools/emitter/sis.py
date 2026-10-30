@@ -127,7 +127,7 @@ def _file_des(target: str, data: bytes, deflated: bytes, caps, index: int) -> by
 
 
 def build_package(files, *, app_uid: int, vendor: str, app_name: str,
-                  version=(1, 0, 0), signer=None, platform_uid=None, install_type=None) -> bytes:
+                  version=(1, 0, 0), signer=None, platform_uid=None, install_type=None, dependencies=()) -> bytes:
     """A SISX package. `files` = [(data bytes, target path, caps or None)]; `signer` = (private key,
     certificate DER) from the `cryptography` package -> one SISSignatureCertificateChain.
 
@@ -163,7 +163,12 @@ def build_package(files, *, app_uid: int, vendor: str, app_name: str,
                       + _field(SISVersionRange, _field(SISVersion, struct.pack("<iii", 0, 0, 0)))
                       + _array(SISString, [_field(SISString, _u16str("Symbian^3"), typed=False)]), typed=False)
                ] if platform_uid else []
-    prerequisites = _field(SISPrerequisites, _array(SISDependency, devices) + _array(SISDependency, []))
+    # package dependencies: (uid, (major, minor, build), name) = "package uid, version >= x, installed"
+    deps = [_field(SISDependency, _field(SISUid, struct.pack("<I", duid))
+                   + _field(SISVersionRange, _field(SISVersion, struct.pack("<iii", *dver)))
+                   + _array(SISString, [_field(SISString, _u16str(dname), typed=False)]), typed=False)
+            for duid, dver, dname in dependencies]
+    prerequisites = _field(SISPrerequisites, _array(SISDependency, devices) + _array(SISDependency, deps))
     properties = _field(SISProperties, _array(SISProperty, []))
 
     deflated = [zlib.compress(d, 9) for d, _, _ in files]
