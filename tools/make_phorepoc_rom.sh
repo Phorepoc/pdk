@@ -348,6 +348,13 @@ if [ -n "${BOOT:-}" ]; then
     # exit with that. 5.4 = the S60 platform version this ROM identifies as.
     python3 -c "import sys; sys.path.insert(0, sys.argv[2]); from sis import build_rom_stub; open(sys.argv[1],'wb').write(build_rom_stub(pkg_uid=0x101F7961, vendor='Symbian', name='Symbian', version=(5,4,0)))" "$BUILD/rom/Symbianv5.4.sis" "$TOOLS/emitter" || exit 1
     printf -- '--data\nsystem\\install\\Symbianv5.4.sis=%s\n' "$BUILD/rom/Symbianv5.4.sis"
+    # S60 product IDs: a SIS names its target platforms as dependencies ("[0x20022E6D], 0, 0, 0, {"S60ProductID"}") and SWI
+    # refuses it (-30476) unless one of them is registered. A 5.4 platform runs 5.0-5.5 software, so all six are, each a ROM
+    # stub named Series60v<ver>.sis (version 0.0.0, as makesis -s builds them).
+    for pv in 5.0=0x1028315F 5.1=0x10283160 5.2=0x20022E6D 5.3=0x2003A678 5.4=0x2003E066 5.5=0x2003E28C; do
+      python3 -c "import sys; sys.path.insert(0, sys.argv[2]); from sis import build_rom_stub; open(sys.argv[1],'wb').write(build_rom_stub(pkg_uid=int(sys.argv[3], 16), vendor='Phorepoc', name='Series60ProductID', version=(0,0,0)))" "$BUILD/rom/Series60v${pv%%=*}.sis" "$TOOLS/emitter" "${pv#*=}" || exit 1
+      printf -- '--data\nsystem\\install\\Series60v%s.sis=%s\n' "${pv%%=*}" "$BUILD/rom/Series60v${pv%%=*}.sis"
+    done
     # PHOREPOC_QT48=1: Qt's ROM stub (qt.iby: System\Install\qt_stub.sis) -- registers package 0x2001E61C at 4.8.7 so
     # Qt apps' SIS dependency "Qt >= 4.7.x" is met
     if [ "${PHOREPOC_QT48:-}" = 1 ]; then
