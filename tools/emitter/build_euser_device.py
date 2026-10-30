@@ -160,6 +160,8 @@ def _extra_flags_tu(basename: str) -> list[str]:
         return ["-D__GEN_USER_EXEC_CODE__", f"-I{KINC}"]
     if basename == "heap_hybrid.cpp":	# the overlay copy keeps finding its "..." headers
         return ["-iquote", os.path.join(BE.B, "common")]
+    if basename == "dev_markcleanup.cpp" and LEAVE_TRACE:	# its per-thread leave trace (off by default)
+        return ["-DPH_LEAVE_TRACE"]
     flags = ["-fno-function-sections", "-fno-data-sections"] if basename in _SINGLE_SECTION else []
     # EVERY .cia, not just atomics.cia -- the ARMv5 bodies of the fast locks (RFastLock /
     # RCriticalSection Wait/Signal) use SWP with a transient "1 = mid-update" marker and a 1 ms sleep-retry;
