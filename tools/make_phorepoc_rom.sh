@@ -355,6 +355,9 @@ if [ -n "${BOOT:-}" ]; then
       python3 -c "import sys; sys.path.insert(0, sys.argv[2]); from sis import build_rom_stub; open(sys.argv[1],'wb').write(build_rom_stub(pkg_uid=int(sys.argv[3], 16), vendor='Phorepoc', name='Series60ProductID', version=(0,0,0)))" "$BUILD/rom/Series60v${pv%%=*}.sis" "$TOOLS/emitter" "${pv#*=}" || exit 1
       printf -- '--data\nsystem\\install\\Series60v%s.sis=%s\n' "${pv%%=*}" "$BUILD/rom/Series60v${pv%%=*}.sis"
     done
+    # Smart Installer: a wrapped application's bootstrap starts ADM.exe (OURS, pheadm) once package 0x2002CCCE is registered
+    python3 -c "import sys; sys.path.insert(0, sys.argv[2]); from sis import build_rom_stub; open(sys.argv[1],'wb').write(build_rom_stub(pkg_uid=0x2002CCCE, vendor='Phorepoc', name='Application installer', version=(1,0,0)))" "$BUILD/rom/adm_stub.sis" "$TOOLS/emitter" || exit 1
+    printf -- '--data\nsystem\\install\\adm_stub.sis=%s\n' "$BUILD/rom/adm_stub.sis"
     # PHOREPOC_QT48=1: Qt's ROM stub (qt.iby: System\Install\qt_stub.sis) -- registers package 0x2001E61C at 4.8.7 so
     # Qt apps' SIS dependency "Qt >= 4.7.x" is met
     if [ "${PHOREPOC_QT48:-}" = 1 ]; then
