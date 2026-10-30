@@ -696,7 +696,7 @@ def build(key: str, rsc_only: bool = False) -> int:
     if failed:
         seen = {}
         for src, out in failed:
-            errs = [l for l in out.splitlines() if "error" in l or "fatal" in l or (os.environ.get("MMP_INCCHAIN") and "included from" in l)][:int(os.environ.get("MMP_ERRLINES", "4"))]
+            errs = [l for l in out.splitlines() if "error" in l.lower() or "fatal" in l or (os.environ.get("MMP_INCCHAIN") and "included from" in l)][:int(os.environ.get("MMP_ERRLINES", "4"))]
             sig = "|".join(e.split(": ", 1)[-1] for e in errs[:1])
             seen.setdefault(sig, []).append((src, errs))
         for sig, group in seen.items():           # one report per distinct first error
