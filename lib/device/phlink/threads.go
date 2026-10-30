@@ -5,8 +5,9 @@ package phlink
 
 // The threads op: phlink 'D' prints the kernel's thread dump into the log (the device side of phlink): per thread
 // "[dump] <process>::<thread> ms=<iMState>" then, as continuation fragments (ekseam_puthex ends each value with a
-// newline), " waits on <object>" and " pc=<hex>" " lr=<hex>" for a user thread blocked in an exec call. The op
-// collects the block, parses it and names pc/lr with the symbol file.
+// newline), " waits on <object>" and " pc=<hex>" " lr=<hex>" " sp=<hex>" + " s=<hex>" per word of the top of its user
+// stack for a user thread blocked in an exec call. The op collects the block, parses it and names pc/lr (and the
+// stack words that are code addresses) with the symbol file.
 
 import (
 	"context"
@@ -25,6 +26,8 @@ var (
 	reDumpWait = regexp.MustCompile(`waits on (\S+)`)
 	reDumpPC   = regexp.MustCompile(`pc=(0x[0-9a-fA-F]+)`)
 	reDumpLR   = regexp.MustCompile(`lr=(0x[0-9a-fA-F]+)`)
+	reDumpSP   = regexp.MustCompile(`sp=(0x[0-9a-fA-F]+)`)
+	reDumpStk  = regexp.MustCompile(` s=(0x[0-9a-fA-F]+)`)
 )
 
 // DThread::iMState (kern_priv.h)
@@ -32,11 +35,13 @@ var mStates = []string{"created", "dead", "ready (or blocked in the nanokernel)"
 	"waitmutex-suspended", "holdmutex-pending", "waitcondvar", "waitcondvar-suspended"}
 
 type ThreadInfo struct {
-	Thread  string `json:"thread"` // process::thread
-	State   string `json:"state"`
-	WaitsOn string `json:"waits_on,omitempty"`
-	PC      string `json:"pc,omitempty"` // user pc of the exec call it is blocked in, "function [image]"
-	LR      string `json:"lr,omitempty"` // its caller
+	Thread  string   `json:"thread"` // process::thread
+	State   string   `json:"state"`
+	WaitsOn string   `json:"waits_on,omitempty"`
+	PC      string   `json:"pc,omitempty"`    // user pc of the exec call it is blocked in, "function [image]"
+	LR      string   `json:"lr,omitempty"`    // its caller
+	SP      string   `json:"sp,omitempty"`    // its user stack pointer
+	Stack   []string `json:"stack,omitempty"` // the top words of its user stack; the ones in code are named (callers)
 }
 
 type Threads struct {
@@ -74,6 +79,12 @@ func parseDump(lines []string, tab *symTab) []ThreadInfo {
 		}
 		if m := reDumpLR.FindStringSubmatch(s); m != nil {
 			cur.LR = name(m[1])
+		}
+		if m := reDumpSP.FindStringSubmatch(s); m != nil {
+			cur.SP = m[1]
+		}
+		for _, m := range reDumpStk.FindAllStringSubmatch(s, -1) {
+			cur.Stack = append(cur.Stack, name(m[1]))
 		}
 		out = append(out, *cur)
 		cur = nil

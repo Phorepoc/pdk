@@ -15,6 +15,9 @@ func TestParseDump(t *testing.T) {
 		"[dump] sysstatemgr.exe::!SysStateMgr ms=0x00000003",
 		" waits on ssmsem pc=0x80001004",
 		" lr=0x80001108",
+		" sp=0x00403f00",
+		" s=0x00000007",
+		" s=0x80001104",
 		"",
 		"[EKERN][tick] interleaved line",
 		"[dump] efile.exe::Main ms=0x00000005",
@@ -29,6 +32,10 @@ func TestParseDump(t *testing.T) {
 	if s.Thread != "sysstatemgr.exe::!SysStateMgr" || s.State != "waitsem" || s.WaitsOn != "ssmsem" ||
 		s.PC != "Exec::WaitForAnyRequest() [euser.dll] (0x80001004)" || s.LR != "CActiveScheduler::Start() [euser.dll] (0x80001108)" {
 		t.Fatalf("%+v", s)
+	}
+	if s.SP != "0x00403f00" || len(s.Stack) != 2 || s.Stack[0] != "0x00000007" ||
+		s.Stack[1] != "CActiveScheduler::Start() [euser.dll] (0x80001104)" {
+		t.Fatalf("stack %+v", s)
 	}
 	if ts[0].State != "ready (or blocked in the nanokernel)" || ts[2].State != "waitmutex" || ts[2].PC != "" {
 		t.Fatalf("%+v %+v", ts[0], ts[2])
