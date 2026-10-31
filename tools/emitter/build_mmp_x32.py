@@ -673,9 +673,21 @@ def build(key: str) -> int:
         libs = libs + ["euser.lib"]
     resolve, dll_order, data_names, sidecars = provider_maps(libs)
     imports = {n: resolve[n] for n in missing if n in resolve and resolve[n][0] != rom}
-    ti_names = [n for n in missing if n.startswith("_ZTI")]
+    # A typeinfo a provider really exports (euser's 44 _ZTI*: CBase, CActive ... compiled -frtti, base chains intact) is
+    # IMPORTED like any other data symbol, so a throw / catch / dynamic_cast in this image meets the one real object.
+    # Only a typeinfo nobody exports gets the synthesized leaf below. _ZTS (the name string) is never imported.
+    def _provider_stubs_it(n):          # its provider's export table serves this ordinal with the unimpl stub (or lacks it)
+        side = sidecars.get(imports[n][0])
+        if not side or not os.path.exists(side):
+            return True
+        sm = json.load(open(side))
+        ent = sm["ordinals"].get(str(imports[n][1]))
+        return ent is None or ent[1] == sm["stub_offset"]
+    for n in [n for n in missing if n.startswith("_ZTI") and n in imports and _provider_stubs_it(n)]:
+        del imports[n]
+    ti_names = [n for n in missing if n.startswith("_ZTI") and n not in imports]
     for n in missing:
-        if n.startswith(("_ZTI", "_ZTS")):
+        if n.startswith("_ZTS"):
             imports.pop(n, None)
     stub_names = [n for n in missing if n not in imports and not n.startswith(("_ZTI", "_ZTS"))]
     data_imps = {n: imports.pop(n) for n in list(imports)

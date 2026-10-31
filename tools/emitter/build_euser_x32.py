@@ -93,6 +93,7 @@ X86_ALIAS = ("St9__va_list", "P13__va_list_tag")
 
 
 VIEW = os.path.join(BUILD, "x32view")
+SUPCXX = "/usr/lib/gcc/x86_64-linux-gnu/13/x32/libsupc++.a"   # the x32 multilib (GCC 13), as build_mmp_x32.py
 
 
 def make_view() -> str:
@@ -180,7 +181,9 @@ def compile_objects() -> None:
     if os.environ.get("SKIP_CENSUS") == "1" and os.path.isdir(os.path.join(CENSUS, "obj")):
         print("SKIP_CENSUS=1: reusing existing euser-census objects")
     else:
-        r = run_script("toolchain/x32/euser_census_x32.sh", "LINK=1")
+        # EXTRA_DEFS=-frtti: the census compile line says -fno-rtti and EXTRA_DEFS comes after it, so this turns RTTI back on
+        # -- GCC then emits each class's typeinfo (_ZTI*, the 44 euseru.def exports) where its key function is defined
+        r = run_script("toolchain/x32/euser_census_x32.sh", "LINK=1 EXTRA_DEFS=-frtti")
         line = [l for l in r.stdout.splitlines() if l.startswith("=== euser census")]
         print(line[0] if line else r.stdout[-400:])
         if not line or ", 0 FAIL" not in line[0]:
@@ -193,12 +196,31 @@ def compile_objects() -> None:
             "$F -fcf-protection=none -c "
             "toolchain/x32/x64user/xu_dll.cpp -o /out/euser-x32/xu_dll.o && "
             "$F -c toolchain/x32/x64user/xu_image.cpp -o /out/euser-x32/xu_image.o"
+            # the strcmp libsupc++'s type_info::operator== needs (euser has no libc)
+            # + sized operator delete and __stack_chk_fail (the distro libsupc++ is
+            # stack-protected) for the same members' deleting destructors
+            + " && $F -c emitter/euser_rtti_rt.cpp -o /out/euser-x32/euser_rtti_rt.o"
+            + " && $F -c emitter/euser_x32_rt.cpp -o /out/euser-x32/euser_x32_rt.o"
             + (" && $F -c toolchain/x32/x64user/xu_leavetrace.cpp"
                " -o /out/euser-x32/xu_leavetrace.o" if LEAVE_TRACE else "")
             # SCHED_TRACE=1 (diagnostic): the active scheduler with a dispatch log for BrowserNG's
             # main thread (toolchain/shims/euser_diag/ub_act.cpp), over the census's own object
             + (" && $F -I baseline/kernelhwsrv/kernel/eka/euser/cbase -c toolchain/shims/euser_diag/ub_act.cpp"
                " -o /out/euser-census/obj/cbase_ub_act_cpp.o" if os.environ.get("SCHED_TRACE") == "1" else ""))
+
+
+# libsupc++ members euser's typeinfos reach: the three typeinfo class hierarchies' vtables + the std::type_info methods.
+CXXABI_MEMBERS = ("class_type_info.o", "si_class_type_info.o", "vmi_class_type_info.o", "tinfo.o")
+CXXABI_OBJS = ("/out/euser-x32/cxxabi/*.o /out/euser-x32/euser_rtti_rt.o "
+              "/out/euser-x32/euser_x32_rt.o")
+
+
+def extract_cxxabi_runtime() -> None:
+    """The C++ ABI runtime the typeinfos need, linked statically (euser is the base DLL and cannot import one). The x32
+    libsupc++.a supplies the __class_type_info / __si_class_type_info / __vmi_class_type_info vtables and the
+    std::type_info methods. Their .eh_frame is discarded by x32_dll.ld, so no unwinder is pulled in."""
+    _docker("rm -rf /out/euser-x32/cxxabi && mkdir -p /out/euser-x32/cxxabi && cd /out/euser-x32/cxxabi && "
+            f"ar x {SUPCXX} " + " ".join(CXXABI_MEMBERS))
 
 
 # The three helpers below take the build directory and object set as parameters so a SECOND
@@ -307,6 +329,7 @@ def main() -> int:
     out_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(CORE_OUT, "euser_x32.dll")
     os.makedirs(OUT, exist_ok=True)
     compile_objects()
+    extract_cxxabi_runtime()
 
     defmap = parse_def(DEF_PATH)
     entry_objs = ENTRY_OBJS + (" xu_leavetrace.o" if LEAVE_TRACE else "")
@@ -325,10 +348,11 @@ def main() -> int:
 
     roots = sorted(set(served.values()) | set(EXTRA_EXPORTS) | {STUB_NAME, ENTRY_NAME}
                    | (set(LEAVE_WRAPPERS.values()) if LEAVE_TRACE else set()))
-    link(roots, None, "euser.pass1.elf", entry_objs=entry_objs)
+    objs = "/out/euser-census/obj/*.o " + CXXABI_OBJS
+    link(roots, None, "euser.pass1.elf", entry_objs=entry_objs, objs=objs)
     missing = undefined_symbols("euser.pass1.elf")
     stub_obj = build_stubs(missing)
-    link(roots, stub_obj, "euser.elf", entry_objs=entry_objs)
+    link(roots, stub_obj, "euser.elf", entry_objs=entry_objs, objs=objs)
 
     with open(os.path.join(OUT, "euser.elf"), "rb") as fh:
         ext = elf.extract(fh.read())
