@@ -8,7 +8,7 @@ product-variant .hrh feature flags, #include'd .mmh files, #ifdef WINS/EPOC32
 arms), then the keyword statements are read. Only what our emitter needs:
 
     TARGET TARGETTYPE UID SOURCEPATH SOURCE USERINCLUDE SYSTEMINCLUDE LIBRARY
-    STATICLIBRARY DEFFILE NOSTRICTDEF MACRO EPOCSTACKSIZE EPOCHEAPSIZE
+    STATICLIBRARY DEFFILE NOSTRICTDEF MACRO EPOCSTACKSIZE EPOCHEAPSIZE STDCPP NOSTDCPP
 
 START ... END blocks (RESOURCE / BITMAP / WINS / ARMCC) are skipped.
 /epoc32/include paths map to BUILD/epoc32/include (tools/epoc32_export.py).
@@ -64,6 +64,8 @@ class Mmp:
     linkas: str = ""
     nostrictdef: bool = False
     allowdlldata: bool = False                              # EPOCALLOWDLLDATA: the DLL may have writable statics
+    stdcpp: bool = False                                    # STDCPP: built for Standard C++ (see the end of parse)
+    nostdcpp: bool = False                                  # NOSTDCPP
     stack: int = 0
     heap: tuple[int, int] = (0, 0)
     resources: list[str] = field(default_factory=list)      # absolute .rss paths
@@ -534,6 +536,10 @@ def parse(path: str, extra_defs=()) -> Mmp:
             m.nostrictdef = True
         elif kw == "epocallowdlldata":
             m.allowdlldata = True
+        elif kw == "stdcpp":
+            m.stdcpp = True
+        elif kw == "nostdcpp":
+            m.nostdcpp = True
         elif kw == "epocstacksize" and args:
             m.stack = _num(args[0])
         elif kw == "epocheapsize" and len(args) >= 2:
@@ -552,6 +558,17 @@ def parse(path: str, extra_defs=()) -> Mmp:
                 m.version = (int(major) << 16) | int(minor or 0)
             except ValueError:
                 pass
+    # STDCPP (and the STDDLL/STDEXE/STDLIB target types) build for Standard C++ as Raptor's e32abiv2*.flm do:
+    # __SYMBIAN_STDCPP_SUPPORT__ defined and epoc32/include/stdapis appended to the system includes. STDCPP with
+    # NOSTDCPP is contradictory and Raptor then defines nothing. (Ignoring the keyword compiled stdnew's
+    # operator_new.cpp, operator_delete.cpp and set_new_handler.cpp to empty objects: std::bad_alloc, nothrow new
+    # and set_new_handler sat on the unimplemented-export stub.)
+    if (m.stdcpp and not m.nostdcpp) or m.targettype.lower() in ("stddll", "stdexe", "stdlib"):
+        if "__SYMBIAN_STDCPP_SUPPORT__" not in m.macros:
+            m.macros.append("__SYMBIAN_STDCPP_SUPPORT__")
+        d = os.path.join(EPOC32, "include", "stdapis")
+        if d not in m.sysinc:
+            m.sysinc.append(d)
     # mw/app layer: the S60 platform_paths MW_LAYER_SYSTEMINCLUDE also reaches the
     # OS-layer xml platform headers (our pinned Symbian platform_paths.hrh does not)
     if variant_for(path) == S60_VARIANT_HRH:

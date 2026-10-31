@@ -227,7 +227,8 @@ DATA_EXPORTS: set[str] = set()      # every DATA-flagged export seen in a provid
 # build_mmp_x32.py). aknlayout.lib: its users' only import is CdlEngine::GetFunction (cdlengine.dll).
 LIB_ALIASES = {"aknlayout": "cdlengine", "mpm": "mpmclient"}
 if os.environ.get("PHOREPOC_QT48") == "1":      # Qt 4.8.7: qtcore.lib -> the qt48_core component ...
-    LIB_ALIASES.update({m: "qt48_" + m[2:] for m in ("qtcore", "qtgui", "qtnetwork", "qtsvg", "qtsql", "qtxml", "qtscript", "qtdeclarative", "qtmultimediakit")})
+    LIB_ALIASES.update({m: "qt48_" + m[2:] for m in ("qtcore", "qtgui", "qtnetwork", "qtsvg", "qtsql", "qtxml", "qtscript", "qtdeclarative", "qtmultimediakit", "qtxmlpatterns")})
+    LIB_ALIASES["phonon"] = "qt48_phonon"   # (the MMF backend plug-in links phonon.dll)
     LIB_ALIASES["qtmain"] = "qt48_main"     # the STATICLIBRARY every Qt program links (E32Main -> main())
 
 
@@ -557,7 +558,9 @@ def build(key: str, rsc_only: bool = False) -> int:
                 if ":" in d and d.split(":", 1)[0] == key]
              + incs + ["-idirafter", CASEFIX, "-idirafter", SYMBIAN]   # case-insensitive #include fallback (tools/casefix.py)
              + comp.get("flags", []) + comp.get("arm_flags", [])     # (arm_flags: the ARM side of x32_flags)
-             + (C.STLPORT_X32_FLAGS if stl else [])
+             # symcpp.h: gcce.h includes it only `#ifndef __SYMBIAN_STDCPP_SUPPORT__` -- a STDCPP component gets the
+             # STLport/stdnew <new> (std::nothrow_t, bad_alloc) instead, and would redefine nothrow_t
+             + (C.STLPORT_X32_FLAGS if stl and "__SYMBIAN_STDCPP_SUPPORT__" not in m.macros else [])
              # 2010-era C++ (`nullptr` as an identifier: etelmm, cntmodel), as build_mmp_x32.py compiles everything
              + ["-std=gnu++03"]
              # RVCT-only __declspec(notshared/...) under __EABI__ (cntmodel/cntsrv NONSHARED): no meaning to GCC,
