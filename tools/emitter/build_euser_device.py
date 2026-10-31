@@ -22,6 +22,7 @@ Run:  python3 build_euser_device.py [out.dll]      (default out: BUILD/arm/devic
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 
 import build_euser_dll as BE
@@ -101,6 +102,8 @@ DEVICE_EXTRA_SOURCES = [
     # cxx_rt_dev.cpp — sized operator delete + __cxa_pure_virtual (ours; modern
     # g++ runtime leaves). As link stubs every deleting dtor dies EUSRNIMP.
     os.path.join(BE.ED, "cxx_rt_dev.cpp"),
+    # euser_rtti_rt.cpp -- strcmp for libsupc++'s type_info::operator== (typeinfo names are compared by string on ARM EABI).
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "euser_rtti_rt.cpp"),
     # The graphical stack's euser gaps (see tools/romgate.py): CPolicyServer
     # (fbserv + wserv are policy servers), RMsgQueueBase (ws32/wserv event
     # queues), Power (wserv's power-event handling).
@@ -148,7 +151,11 @@ def _device_sources() -> list[str]:
 def _extra_flags(basename: str) -> list[str]:
     # SYMBIAN_DISTINCT_LOCALE_MODEL: variant-wide on S^3 -- without it LoadLocale
     # is the old single-DLL model (a KErrNotSupported stub against the 3-DLL elocl_*)
-    return _extra_flags_tu(basename) + ["-DSYMBIAN_DISTINCT_LOCALE_MODEL"]
+    # -frtti: symcc defaults to -fno-rtti, which leaves every vtable's typeinfo slot 0 and gives the 44 `_ZTI*` euseru.def
+    # exports (CBase, CActive, CActiveScheduler, CServer2 ...) no object, so they sat on the unimplemented-export stub. A
+    # third-party (RVCT) image's exception type-match walks the base-class typeinfo chain into CBase's typeinfo: stub code
+    # bytes there => USER-EXEC 3 in User::RaiseException. RTTI on, GCC emits each typeinfo where its key function is defined.
+    return _extra_flags_tu(basename) + ["-DSYMBIAN_DISTINCT_LOCALE_MODEL", "-frtti"]
 
 
 def _extra_flags_tu(basename: str) -> list[str]:
@@ -234,8 +241,31 @@ if LEAVE_TRACE:
     DEVICE_FILLIN = DEVICE_FILLIN + [os.path.basename(_lt)]
 
 
+# libsupc++ members euser's typeinfos reach: the three typeinfo class hierarchies' vtables + the std::type_info methods.
+_CXXABI_MEMBERS = ("class_type_info.o", "si_class_type_info.o", "vmi_class_type_info.o", "tinfo.o")
+
+
+def _link_cxxabi_runtime(work: str) -> None:
+    """The C++ ABI runtime the typeinfos need, linked statically (RVCT's euser links its own copy the same way; euser is
+    the base DLL and cannot import drtaeabi). The toolchain's libsupc++.a supplies the `__class_type_info` /
+    `__si_class_type_info` / `__vmi_class_type_info` vtables and the `std::type_info` methods. The members are extracted
+    and their unwind tables dropped (euser has no exception unwinding: the tables would drag libgcc's unwinder and its
+    abort / __cxa_* leaves into the image). Leaves left: operator delete (cxx_rt_dev.cpp) and strcmp (euser_rtti_rt.cpp)."""
+    lib = subprocess.run([BE.GCC, "-marm", "-march=armv5te", "-print-file-name=libsupc++.a"],
+                         check=True, capture_output=True, text=True).stdout.strip()
+    if not os.path.isfile(lib):
+        sys.exit(f"build_euser_device: libsupc++.a not found ({lib!r})")
+    d = os.path.join(work, "cxxabi")
+    os.makedirs(d, exist_ok=True)
+    subprocess.run(["arm-none-eabi-ar", "x", lib, *_CXXABI_MEMBERS], check=True, cwd=d)
+    for m in _CXXABI_MEMBERS:
+        subprocess.run([BE.OBJCOPY, "-R", ".ARM.exidx*", "-R", ".ARM.extab*", os.path.join(d, m)], check=True)
+        BE.EXTRA_LIBS.append(os.path.join(d, m))
+
+
 def main() -> int:
     _set_ld_wraps()
+    _link_cxxabi_runtime(BE.workdir("euser_device"))
     out_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(BUILD, "arm", "device", "euser.dll")
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     work = BE.workdir("euser_device")

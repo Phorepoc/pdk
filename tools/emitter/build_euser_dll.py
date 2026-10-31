@@ -347,7 +347,10 @@ def _localize_fillin_collisions(objs: list[str], fillin: list[str] = None) -> No
     claimed = _nm("--defined-only", *other_objs) if other_objs else set()
     for obj in fillin_objs:
         defined = _nm("--defined-only", obj)
-        collisions = sorted(defined & claimed)
+        # _ZT*: typeinfo / typeinfo name / vtable / VTT. With -frtti they are COMDAT (weak) wherever the class has no key
+        # function; a duplicate must stay global so the linker merges the groups. Localizing it would leave this object's
+        # references bound to its own copy, whose section the linker then discards ("defined in discarded section").
+        collisions = sorted(c for c in (defined & claimed) if not c.startswith("_ZT"))
         if collisions:
             subprocess.run([OBJCOPY,
                             *sum(([f"--localize-symbol={s}"] for s in collisions), []),
@@ -378,6 +381,10 @@ def _nm(mode: str, *files: str) -> set[str]:
     return names
 
 
+# Extra objects linked after the sources and before libgcc (the device euser: the C++ ABI runtime members).
+EXTRA_LIBS: list[str] = []
+
+
 def _libgcc() -> str:
     return subprocess.run([GCC, "-marm", "-march=armv5te", "-print-libgcc-file-name"],
                           check=True, capture_output=True, text=True).stdout.strip()
@@ -391,7 +398,7 @@ def _link(objs: list[str], roots: list[str], out_elf: str, workdir: str,
     with open(rsp, "w") as fh:
         fh.write("\n".join(f"-Wl,-u,{n}" for n in roots))
     args = [GCC, "-nostdlib", "-Wl,-q", "-Wl,--gc-sections", "-Wl,--no-demangle",
-            f"@{rsp}", f"-Wl,-T,{ld}", "-march=armv5te", "-marm", *objs, _libgcc(),
+            f"@{rsp}", f"-Wl,-T,{ld}", "-march=armv5te", "-marm", *objs, *EXTRA_LIBS, _libgcc(),
             "-o", out_elf]
     # opt-in extra linker args (LEAVE_TRACE: --wrap User::Leave, see build_euser_device)
     args[1:1] = os.environ.get("EUSER_LD_EXTRA", "").split()
