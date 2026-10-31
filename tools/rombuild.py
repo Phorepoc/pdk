@@ -315,9 +315,11 @@ class RomBuilder:
                          module_version,  # @112 iModuleVersion: the E32 header's (major<<16|minor). The loader matches
                                     #      versioned imports (name{000a0000}.dll = 10.0 or later, every SDK app) against it;
                                     #      0 made each such import "not found" and the process was killed at load
-                         # @116 iExceptionDescriptor: the E32 header's (code offset | 1) as an address -- the C++ unwinder
-                         # (drtaeabi, UserSvr::ExceptionDescriptor) finds a ROM image's .ARM.exidx through it
-                         (code_addr + exc_desc) if exc_desc else 0)
+                         # @116 iExceptionDescriptor: the E32 header's (code offset | 1) as the descriptor's ADDRESS, the
+                         # present bit cleared, as rombuild does (r_build.cpp: (xd & ~1) + iCodeAddress). The C++ unwinder
+                         # reads it through the ROM EST without masking (symbian_support.cpp SearchEST); bit 0 left set made
+                         # it read the descriptor one byte off and abort
+                         (code_addr + (exc_desc & ~1)) if exc_desc and exc_desc != 0xFFFFFFFF else 0)
         if slotted:
             self.put(addr - self.rom_base, bytes(hdr) + bytes(payload))
         else:
@@ -1392,6 +1394,9 @@ def selftest_est():
     ent = list(struct.unpack_from("<%dI" % (n + 1), rom, o + 4))
     assert n == 2 and ent[:2] == [c1, c2] and ent[:2] == sorted(ent[:2]), ent
     assert ent[2] == max(lims.values()), "fencepost != greatest iROSegmentLimit"
+    for ca, off in ((c1, 0x10), (c2, 0x20)):       # what the unwinder reads: rih[-1].iExceptionDescriptor, unmasked
+        xd = struct.unpack_from("<I", rom, ca - base - XIP_HDR_SIZE + 116)[0]
+        assert xd == ca + off, "iExceptionDescriptor %08x != aligned descriptor address %08x" % (xd, ca + off)
     s = sum(struct.unpack_from("<%dI" % (len(rom) // 4), rom, 0)) & 0xFFFFFFFF
     assert s == 0, "checksum"
     none = RomBuilder(bytes(boot), base).finalize(0)
