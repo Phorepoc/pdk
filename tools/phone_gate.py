@@ -81,9 +81,18 @@ def main():
     print('phone_gate: %s boot %s' % (a.device, boot))
 
     # 1. provenance: the newest push, and whether this boot came after it
-    hist = lab.get('history', limit=400)
-    hist = hist.get('items', hist) if isinstance(hist, dict) else hist
-    pushes = [h for h in hist if h.get('op') == 'push' and isinstance(h.get('result'), dict)]
+    # (page back through the op history: a long test session -- taps, keys, file transfers -- puts the push itself far
+    # behind the newest page; bounded at 50 pages)
+    pushes, before = [], None
+    for _ in range(50):
+        page = lab.get('history', limit=2000, **({'before': before} if before else {}))
+        page = page.get('items', page) if isinstance(page, dict) else page
+        if not page:
+            break
+        pushes = [h for h in page if h.get('op') == 'push' and isinstance(h.get('result'), dict)]
+        if pushes:
+            break
+        before = min(h['id'] for h in page)
     if not pushes:
         fails.append('provenance: no push in the recent history')
     else:
