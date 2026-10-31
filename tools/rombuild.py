@@ -41,6 +41,7 @@ H_iPrimaryFile = 160
 H_iSecondaryFile = 164
                             # exstart.cpp SecondaryInfo reads it via Epoc::RomHeader().iSecondaryFile
 H_iCheckSum = 168
+H_iRomExceptionSearchTable = 188  # -> TRomExceptionSearchTable (e32rom.h; drtaeabi SearchEST)
 H_iUncompressedSize = 244   # bootstrap's "Running from RAM" path reads ROM size from here
 H_iPageableRomStart = 328   # 0 = not a pageable ROM (fall back to iUncompressedSize)
 H_iKernDataAddress = 152    # RAM VMA the kernel .data/.bss are linked at + copied to
@@ -140,6 +141,16 @@ def uid_checksum(uid1, uid2, uid3):
     return (crc(even) | (crc(odd) << 16)) & 0xFFFFFFFF
 
 
+def est_table(images, ro_limit):
+    """TRomExceptionSearchTable bytes for images = [(code base, exception descriptor address)];
+    ro_limit(descriptor address) = that descriptor's iROSegmentLimit (TExceptionDescriptor word 3)."""
+    if not images:
+        return b""
+    entries = sorted(c for c, _ in images)
+    fence = max(ro_limit(d) for _, d in images) or 0xFFFFFFFF
+    return struct.pack("<%dI" % (len(entries) + 2), len(entries), *entries, fence)
+
+
 def align4(ba):
     while len(ba) % 4:
         ba.append(0)
@@ -237,6 +248,7 @@ class RomBuilder:
         self.primary_entry_addr = 0  # primary's TRomEntry linear address (-> iPrimaryFile)
         self.secondary_addr = 0      # secondary (first user EXE) TRomImageHeader linear address
         self.secondary_entry_addr = 0  # secondary's TRomEntry linear address (-> iSecondaryFile)
+        self.est_images = []         # (code base, exception descriptor address) of each exception-aware image
 
     def lin(self, off):
         return self.rom_base + off
@@ -313,7 +325,17 @@ class RomBuilder:
             self.rom += payload
         if is_primary:
             self.primary_addr = addr
+        # rombuild (r_rom.cpp ReserveRomExceptionSearchTable): an image is an EST entry when its exception descriptor
+        # is set (bit 0 = ELFTRAN's mark) and not 0xffffffff; the entry is the image's code base (iCodeBase)
+        if exc_desc and (exc_desc & 1) and exc_desc != 0xFFFFFFFF:
+            self.est_images.append((code_addr, code_addr + (exc_desc & ~1)))
         return addr, total
+
+    def build_est(self):
+        """The TRomExceptionSearchTable bytes (r_rom.cpp ConstructRomExceptionSearchTable): iNumEntries, the code
+        bases sorted ascending, then a fencepost = the greatest iROSegmentLimit of any entry's TExceptionDescriptor
+        (0xffffffff when there is none). b'' when no image is exception-aware."""
+        return est_table(self.est_images, lambda a: struct.unpack_from("<I", self.rom, a - self.rom_base + 12)[0])
 
     # kernel-data ROM header fields (set for a real ekern primary)
     total_user_data = 0      # ROM DLL .data+.bss, page-rounded per DLL (prelink_e32)
@@ -489,6 +511,11 @@ class RomBuilder:
 
     def finalize(self, root_dir_list_addr):
         align4(self.rom)
+        est = self.build_est()
+        if est:                          # rombuild reserves it after the files; here after the directory tree
+            struct.pack_into("<I", self.rom, H_iRomExceptionSearchTable, self.lin(len(self.rom)))
+            self.rom += est
+            align4(self.rom)
         # iTime is a TTimeK: microseconds since midnight 1 Jan year 0 AD (Symbian epoch),
         # NOT the Unix epoch. P::InitSystemTime falls back to this ROM timestamp when the RTC
         # read fails and passes it to K::SecondsFrom2000, which range-checks (result/1e6 -
@@ -1339,6 +1366,39 @@ def selftest_tree():
           "loses %d of them)" % (len(files), len(broken)))
 
 
+def selftest_est():
+    """The exception search table: sorted code bases, the fencepost, the header field -- no toolchain needed."""
+    base = 0x80000000
+    boot = bytearray(ROM_HEADER_SIZE + 64)
+    b = RomBuilder(bytes(boot), base)
+    lims = {}
+    # descriptor payload: iExIdxBase, iExIdxLimit, iROSegmentBase, iROSegmentLimit, then code
+    def img(code_len, exc_off, limit_delta):
+        payload = bytearray(code_len)
+        a, _ = b.add_xip_file(bytes(payload), exc_desc=exc_off | 1)
+        ca = a + XIP_HDR_SIZE
+        struct.pack_into("<4I", b.rom, ca + exc_off - base, 0, 0, ca, ca + limit_delta)
+        lims[ca] = ca + limit_delta
+        return ca
+    c1 = img(0x40, 0x10, 0x30)
+    c2 = img(0x80, 0x20, 0x70)
+    b.add_xip_file(bytes(0x20))                      # no exception descriptor: not an entry
+    b.est_images.reverse()                            # builder order must not matter
+    rom = b.finalize(0)
+    est = struct.unpack_from("<I", rom, H_iRomExceptionSearchTable)[0]
+    assert est and est % 4 == 0, "EST header field not set"
+    o = est - base
+    n = struct.unpack_from("<I", rom, o)[0]
+    ent = list(struct.unpack_from("<%dI" % (n + 1), rom, o + 4))
+    assert n == 2 and ent[:2] == [c1, c2] and ent[:2] == sorted(ent[:2]), ent
+    assert ent[2] == max(lims.values()), "fencepost != greatest iROSegmentLimit"
+    s = sum(struct.unpack_from("<%dI" % (len(rom) // 4), rom, 0)) & 0xFFFFFFFF
+    assert s == 0, "checksum"
+    none = RomBuilder(bytes(boot), base).finalize(0)
+    assert struct.unpack_from("<I", none, H_iRomExceptionSearchTable)[0] == 0
+    print("rombuild selftest: PASS (exception search table: 2 entries sorted, fencepost, header field)")
+
+
 def selftest():
     """Round-trip the writer: a synthetic bootstrap, the ROM checksum, the directory tree."""
     boot = bytearray(ROM_HEADER_SIZE + 64)
@@ -1350,6 +1410,7 @@ def selftest():
     assert s == 0, "word-sum != 0"
     print("rombuild selftest: PASS (header fields, checksum word-sum=0)")
     selftest_tree()
+    selftest_est()
 
 
 def main(argv=None):
