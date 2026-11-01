@@ -843,7 +843,12 @@ def build(key: str, rsc_only: bool = False) -> int:
     # `libs`: extra providers the mmp does not name (e.g. estlib standing in for P.I.P.S. libc/libm)
     # cxx_eh: the linked-in libsupc++ (eh_alloc's pool, the verbose terminate handler) calls malloc, getenv, fputs ...
     # -- from libc, which an mmp written for RVCT's runtime need not list (glxdataprovider: EUSRNIMP on malloc)
-    resolve, dll_order = provider_maps(comp.get("libs", []) + m.libs + (DEVICE_RUNTIME_LIBS if device else [])
+    # STDCPP: Raptor's e32abiv2.flm sets NEWLIB = DEFAULT_STDCPP_NEWLIB (stdnew.dso) and links it -- std::exception's
+    # constructors, bad_alloc, the Standard C++ new/delete. Without it libstdcppv5's std::__Named_exception (every
+    # runtime_error / overflow_error ...) called std::exception::exception() on the unimplemented-export stub:
+    # Stellarium Mobile died EUSRNIMP on its first STL exception.
+    newlib = (["stdnew.lib"] if m.stdcpp and not m.nostdcpp and os.path.basename(m.target).lower() != "stdnew.dll" else [])
+    resolve, dll_order = provider_maps(comp.get("libs", []) + m.libs + newlib + (DEVICE_RUNTIME_LIBS if device else [])
                                        + (["libc.lib"] if comp.get("cxx_eh") else []),
                                        device)
     imports = {n: resolve[n] for n in missing if n in resolve and resolve[n][0] != rom}
