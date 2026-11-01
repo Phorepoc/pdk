@@ -274,7 +274,11 @@ if __name__ == "__main__":
     # Idle 10275102, MCS 101F8847) had been added by hand with --only -- a full regeneration dropped them
     # + mw.inputmethods: the ROM runs RCL_3's real AknFep, but 101F876D came from the 2010 fepstub's
     # crml -- 26 keys short (no KAknFepLastUsedPortraitInput 0x26 ...): the VKB never opened. Its only repository.
-    RCL3_NEW_MW = {"oss.FCL.sf.mw.remotestorage", "oss.FCL.sf.mw.homescreensrv", "oss.FCL.sf.mw.inputmethods"}
+    # + mw.wirelessacc (the WLAN UI: wlansniffer, wlansettingsui, the GS WLAN plug-in; no 2010 copy): the Internet
+    # Connectivity Test Service settings 10282EC7 -- CWlanSettingsUi opens it at construction, so without it the WLAN
+    # Settings dialog (power saving, scan interval) left KErrNotFound and never opened.
+    RCL3_NEW_MW = {"oss.FCL.sf.mw.remotestorage", "oss.FCL.sf.mw.homescreensrv", "oss.FCL.sf.mw.inputmethods",
+                   "oss.FCL.sf.mw.wirelessacc"}
     default_pkgs = (sorted(d for d in os.listdir(BASE) if re.match(r"oss\.FCL\.sf\.(mw|os)\.", d))
                             + sorted("../symbian-rcl3/" + d for d in os.listdir(rcl3)
                                      if re.match(r"oss\.FCL\.sf\.app\.", d) or d in RCL3_NEW_MW))
