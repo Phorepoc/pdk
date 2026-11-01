@@ -204,7 +204,18 @@ def _heap_overlay() -> None:
     assert text.count(anchor) == 1, "heap_hybrid.cpp: user-side Alloc anchor not found"
     hook = ('\t\t__INCREMENT_COUNTERS(addr);\n\t\t}\n\tUnlock();\n'
             '\tif (!addr) { TName n = RProcess().Name(); RDebug::Printf("[heapfail] %S size=%d heap=%d max=%d", '
-            '&n, aSize, iChunkSize, iMaxLength); }\n\t\n#ifdef ENABLE_BTRACE')
+            '&n, aSize, iChunkSize, iMaxLength); }\n'
+            # HEAP SAMPLE (diagnostic): who allocates in the window server process. Sampled by the fast counter's low
+            # bits (euser has no writable data for a counter): ~1 in 64 paged (>= page threshold) allocations, ~1 in
+            # 32768 small ones. ra = the return address (User::Alloc tail-calls here: the allocating code).
+            '\telse { const TUint fc = User::FastCounter(); const TBool big = (aSize >> iPageThreshold) != 0; '
+            'if ((fc & (big ? 0x3fu : 0x7fffu)) == 0) { TName n = RProcess().Name(); if (n.Left(5) == _L("EWSRV")) '
+            '{ TUint c[4] = {0, 0, 0, 0}; TInt k = 0; const TUint* s = (const TUint*)&n; '
+            'for (TInt w = 0; w < 24 && k < 4; ++w) { const TUint v = s[(sizeof(n) + 3) / 4 + w]; '
+            'if (v >= 0x80000000u && v < 0x90000000u && (v & 1 || !(v & 3))) c[k++] = v; } '
+            'RDebug::Printf("PH: heapsample %S t%d size=%d big=%d ra=%08x stk=%08x %08x %08x %08x", &n, '
+            '(TInt)RThread().Id(), aSize, big, (TUint)__builtin_return_address(0), c[0], c[1], c[2], c[3]); } } }\n'
+            '\t\n#ifdef ENABLE_BTRACE')
     text = text.replace(anchor, hook).replace('#include "heap_hybrid.h"', '#include "heap_hybrid.h"\n#include <e32debug.h>', 1)
     d = os.path.join(BUILD, "arm", "work", "_euser_overlay")
     os.makedirs(d, exist_ok=True)
