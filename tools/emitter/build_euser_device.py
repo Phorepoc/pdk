@@ -213,7 +213,8 @@ def _heap_overlay() -> None:
             '{ TUint c[4] = {0, 0, 0, 0}; TInt k = 0; const TUint* s = (const TUint*)&n; '
             'for (TInt w = 0; w < 24 && k < 4; ++w) { const TUint v = s[(sizeof(n) + 3) / 4 + w]; '
             'if (v >= 0x80000000u && v < 0x90000000u && (v & 1 || !(v & 3))) c[k++] = v; } '
-            'RDebug::Printf("PH: heapsample %S t%d size=%d big=%d ra=%08x stk=%08x %08x %08x %08x", &n, '
+            'TBuf8<32> n8; n8.Copy(n.Left(32)); '
+            'RDebug::Printf("PH: heapsample %S t%d size=%d big=%d ra=%08x stk=%08x %08x %08x %08x", &n8, '
             '(TInt)RThread().Id(), aSize, big, (TUint)__builtin_return_address(0), c[0], c[1], c[2], c[3]); } } }\n'
             '\t\n#ifdef ENABLE_BTRACE')
     text = text.replace(anchor, hook).replace('#include "heap_hybrid.h"', '#include "heap_hybrid.h"\n#include <e32debug.h>', 1)
