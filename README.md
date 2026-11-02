@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/readme/phonelab.png" width="860" alt="PhoneLab in a browser: a PinePhone running Phorepoc on the live screen, its files on the left, the keypad on the right and the phone's log below">
+  <img src=".github/readme/phonelab.png" width="860" alt="PhoneLab in a browser: a phone running Phorepoc on the live screen, its files on the left, the keypad on the right and the phone's log below">
 </p>
 
 <h1 align="center">Phorepoc PDK</h1>
@@ -14,8 +14,7 @@
   <a href="docs/phe/README.md">phe manual</a> ·
   <a href="docs/phonelab.md">PhoneLab</a> ·
   <a href="https://github.com/Phorepoc/core">core</a> ·
-  <a href="https://github.com/Phorepoc/adaptation-pc">PC image</a> ·
-  <a href="https://github.com/Phorepoc/adaptation-pinephone">PinePhone image</a>
+  <a href="https://github.com/Phorepoc">Try Phorepoc</a>
 </p>
 
 <p align="center">
@@ -75,8 +74,8 @@ phonelab -mock testdata/boot-slotb-rearm.log -data /tmp/phonelab-mock
 ## phe
 
 <p align="center">
-  <img src=".github/readme/phone.png" width="760" alt="Phorepoc on a PinePhone: the home screen, the Menu, Applications and Calculator">
-  <br><sub>What phe builds: Phorepoc on a PinePhone, with the built-in Haze theme.</sub>
+  <img src=".github/readme/phone.png" width="760" alt="Phorepoc on a phone: the home screen, the Menu, Applications and Calculator">
+  <br><sub>What phe builds: Phorepoc on a phone, with the built-in Haze theme.</sub>
 </p>
 
 `phe` builds Phorepoc from the Symbian source: the components, the ROM, and the files a board ships. It starts the
