@@ -42,10 +42,11 @@ H_iSecondaryFile = 164
                             # exstart.cpp SecondaryInfo reads it via Epoc::RomHeader().iSecondaryFile
 H_iCheckSum = 168
 H_iKernelConfigFlags = 184  # copied to the super page at boot (memmodel/epoc/putils.cpp:52)
-# EKernelConfigSMPUnsafeCompat (u32std.h, 1 << 12): a process whose code (or any DLL it loads) is not marked SMP safe
-# has its threads in one NThreadGroup -- one CPU at a time. Not enabled (see the header write below); the images are
-# marked SMP safe all the same, so turning it on is one constant.
+# u32std.h: a process whose code (or any DLL it loads) is not marked SMP safe has its threads in one NThreadGroup
+# (EKernelConfigSMPUnsafeCompat, one CPU at a time) or all on CPU 0 (EKernelConfigSMPUnsafeCPU0, the one set below).
+# Our own images are marked SMP safe, so only shipped third-party apps are affected.
 KERNEL_CONFIG_SMP_UNSAFE_COMPAT = 1 << 12
+KERNEL_CONFIG_SMP_UNSAFE_CPU0 = 1 << 13
 KROM_IMAGE_SMP_SAFE = 0x00004000  # KRomImageSMPSafe (e32rom.h) -> ECodeSegAttSMPSafe (putils.cpp / sf_lepoc.cpp)
 H_iRomExceptionSearchTable = 188  # -> TRomExceptionSearchTable (e32rom.h; drtaeabi SearchEST)
 H_iUncompressedSize = 244   # bootstrap's "Running from RAM" path reads ROM size from here
@@ -544,10 +545,13 @@ class RomBuilder:
         struct.pack_into("<I", self.rom, H_iPageableRomStart, 0)
         struct.pack_into("<I", self.rom, H_iRomRootDirectoryList, root_dir_list_addr)
         struct.pack_into("<I", self.rom, H_iPrimaryFile, self.primary_entry_addr)
-        # EKernelConfigSMPUnsafeCompat stays OFF: with it a crashing SDK game (its process's thread group destroyed) was
-        # followed by a silent whole-system hang (boot 2199, 2026-11-02), and it did not cure Fragger's race (its mixer
-        # thread waits on another process's server, which the group does not serialize)
-        struct.pack_into("<I", self.rom, H_iKernelConfigFlags, 0)
+        # EKernelConfigSMPUnsafeCPU0: every thread of a process not marked SMP safe runs on CPU 0, so a newly resumed
+        # higher-priority thread pre-empts its creator as on the single-core phones those apps were written for (SDK
+        # games resume a setup thread and use what it sets up at once: Fragger / Gravity Guy, the mixer thread had not
+        # run one instruction when the main thread read its status pointer). Not EKernelConfigSMPUnsafeCompat (one
+        # NThreadGroup per process, any CPU): with it a crashing game -- its group destroyed -- was followed by a silent
+        # whole-system hang (boot 2199, 2026-11-02).
+        struct.pack_into("<I", self.rom, H_iKernelConfigFlags, KERNEL_CONFIG_SMP_UNSAFE_CPU0)
         if self.kern_data_base:
             struct.pack_into("<I", self.rom, H_iKernDataAddress, self.kern_data_base)
             struct.pack_into("<I", self.rom, H_iKernelLimit, self.kern_data_limit)
