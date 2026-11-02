@@ -41,6 +41,13 @@ H_iPrimaryFile = 160
 H_iSecondaryFile = 164
                             # exstart.cpp SecondaryInfo reads it via Epoc::RomHeader().iSecondaryFile
 H_iCheckSum = 168
+H_iKernelConfigFlags = 184  # copied to the super page at boot (memmodel/epoc/putils.cpp:52)
+# EKernelConfigSMPUnsafeCompat (u32std.h): a process whose code (or any DLL it loads) is not marked SMP safe has its
+# threads in one NThreadGroup -- one CPU at a time, as on the single-core phones such apps were written for (Fragger's
+# Mixer thread: it starts at EPriorityMore and the app assumes it is waiting before the main thread runs again; on four
+# cores the main thread completed a request the mixer had not issued yet -> null read, 2026-11-02)
+KERNEL_CONFIG_SMP_UNSAFE_COMPAT = 1 << 12
+KROM_IMAGE_SMP_SAFE = 0x00004000  # KRomImageSMPSafe (e32rom.h) -> ECodeSegAttSMPSafe (putils.cpp / sf_lepoc.cpp)
 H_iRomExceptionSearchTable = 188  # -> TRomExceptionSearchTable (e32rom.h; drtaeabi SearchEST)
 H_iUncompressedSize = 244   # bootstrap's "Running from RAM" path reads ROM size from here
 H_iPageableRomStart = 328   # 0 = not a pageable ROM (fall back to iUncompressedSize)
@@ -538,6 +545,7 @@ class RomBuilder:
         struct.pack_into("<I", self.rom, H_iPageableRomStart, 0)
         struct.pack_into("<I", self.rom, H_iRomRootDirectoryList, root_dir_list_addr)
         struct.pack_into("<I", self.rom, H_iPrimaryFile, self.primary_entry_addr)
+        struct.pack_into("<I", self.rom, H_iKernelConfigFlags, KERNEL_CONFIG_SMP_UNSAFE_COMPAT)
         if self.kern_data_base:
             struct.pack_into("<I", self.rom, H_iKernDataAddress, self.kern_data_base)
             struct.pack_into("<I", self.rom, H_iKernelLimit, self.kern_data_limit)
@@ -604,6 +612,9 @@ class E32Xip:
         # DLL whose ABI differs from the process (sf_lepoc.cpp ABIFAIL) -- with 0 here every ROM DLL was 'GCC98r2' and an SDK
         # (EABI) app's RLibrary::Load("z:euser") got KErrNotSupported
         self.abi_flags = g(44) & 0x18
+        # SMP safe: KImageSMPSafe in the E32 header, or tools version 0.0.0 = our own emitter (images it wrote before it
+        # set the flag); an SDK-built image says 2.x and keeps the compatibility mode
+        self.smp_safe = bool(g(44) & 0x4000) or d[32:36] == b"\0\0\0\0"
         self.exc_desc = g(144)       # E32ImageHeaderV iExceptionDescriptor (code offset | 1; 0 = no unwind tables)
         self.code = bytearray(d[code_off:code_off + self.code_size])
         self.data = bytearray(d[data_off:data_off + self.data_size] if data_off else b"")
@@ -1029,7 +1040,7 @@ def build_xip_section(imgs, base, secondary_name, exe_data_run_base=0, data_file
             dll_ref_table=img.ref_table_addr,
             # KImageDll: the loader's ONLY "is a DLL" test for a ROM image (E32Image::Construct)
             extra_flags=(0 if img.is_exe else 0x00000001)
-                        | img.abi_flags
+                        | img.abi_flags | (KROM_IMAGE_SMP_SAFE if img.smp_safe else 0)
                         | (0x04000000 if img.own_wsd else 0)
                         | (0x00800000 if getattr(img, 'exe_in_tree', False) else 0)
                         | (0x03000000 if img.data_present else 0),
@@ -1273,6 +1284,7 @@ def build_kernel_rom(bootstrap, rom_base, kernel_bin, k, variant=None, secondary
                 # -- without it a dependency is code-seg-created as an EXE and the load fails
                 extra_flags=(0 if is_exe else 0x00000001)
                             | img.abi_flags                              # KRomImageABIMask (E32 iFlags bits 3-4)
+                            | (KROM_IMAGE_SMP_SAFE if img.smp_safe else 0)
                             | (0x04000000 if img.own_wsd else 0)        # KRomImageFlagData
                             | (0x00800000 if getattr(img, 'exe_in_tree', False) else 0)   # KRomImageFlagExeInTree
                             | (0x03000000 if img.data_present else 0),  # ...DataInit|DataPresent

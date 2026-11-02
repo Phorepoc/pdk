@@ -25,6 +25,9 @@ FLAG_EPT_EKA2 = 0x1 << 5       # bits 5-7 entry-point type: >=1 = EKA2
 FLAG_HDRFMT_J = 0x1 << 24      # bits 24-27 header format: 1 = J
 FLAG_HDRFMT_V = 0x2 << 24      # bits 24-27 header format: 2 = V
 FLAG_IMPFMT_ELF = 0x1 << 28    # bits 28-31 import format: 0 = PE, 1 = ELF, 2 = PE2 (f32image.h)
+FLAG_SMP_SAFE = 0x00004000     # KImageSMPSafe (f32image.h; elf2e32 --smpsafe): our code is built for the SMP kernel.
+                               # An image without it (every SDK-built app: made for single-core phones) runs in the
+                               # kernel's SMP-unsafe compatibility mode (rombuild sets EKernelConfigSMPUnsafeCompat)
 
 # Recommended flags for a minimal EABI/EKA2 EXE, V-format, uncompressed.
 FLAGS_DEFAULT_EXE = FLAG_ABI_EABI | FLAG_EPT_EKA2 | FLAG_HDRFMT_V  # 0x02000028
@@ -477,7 +480,7 @@ def build_dll(code: bytes, exports: list[int], *,
     # (ARM images too since 2026-10-21: a SIS-installed (RAM-loaded) ARM image was rejected KErrCorrupt -- no IAT room
     # at iTextSize; the ROM builder never reads the import format)
     imp_fmt = FLAG_IMPFMT_ELF if (True if imp_elf is None else imp_elf) else 0
-    hdr.flags = arm_bits | imp_fmt | FLAG_HDRFMT_V | (0 if exe else FLAG_DLL)
+    hdr.flags = arm_bits | imp_fmt | FLAG_HDRFMT_V | FLAG_SMP_SAFE | (0 if exe else FLAG_DLL)
     if stack_size is not None:
         hdr.stack_size = stack_size
     if heap_min is not None:
