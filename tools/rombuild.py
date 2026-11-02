@@ -42,10 +42,9 @@ H_iSecondaryFile = 164
                             # exstart.cpp SecondaryInfo reads it via Epoc::RomHeader().iSecondaryFile
 H_iCheckSum = 168
 H_iKernelConfigFlags = 184  # copied to the super page at boot (memmodel/epoc/putils.cpp:52)
-# EKernelConfigSMPUnsafeCompat (u32std.h): a process whose code (or any DLL it loads) is not marked SMP safe has its
-# threads in one NThreadGroup -- one CPU at a time, as on the single-core phones such apps were written for (Fragger's
-# Mixer thread: it starts at EPriorityMore and the app assumes it is waiting before the main thread runs again; on four
-# cores the main thread completed a request the mixer had not issued yet -> null read, 2026-11-02)
+# EKernelConfigSMPUnsafeCompat (u32std.h, 1 << 12): a process whose code (or any DLL it loads) is not marked SMP safe
+# has its threads in one NThreadGroup -- one CPU at a time. Not enabled (see the header write below); the images are
+# marked SMP safe all the same, so turning it on is one constant.
 KERNEL_CONFIG_SMP_UNSAFE_COMPAT = 1 << 12
 KROM_IMAGE_SMP_SAFE = 0x00004000  # KRomImageSMPSafe (e32rom.h) -> ECodeSegAttSMPSafe (putils.cpp / sf_lepoc.cpp)
 H_iRomExceptionSearchTable = 188  # -> TRomExceptionSearchTable (e32rom.h; drtaeabi SearchEST)
@@ -545,7 +544,10 @@ class RomBuilder:
         struct.pack_into("<I", self.rom, H_iPageableRomStart, 0)
         struct.pack_into("<I", self.rom, H_iRomRootDirectoryList, root_dir_list_addr)
         struct.pack_into("<I", self.rom, H_iPrimaryFile, self.primary_entry_addr)
-        struct.pack_into("<I", self.rom, H_iKernelConfigFlags, KERNEL_CONFIG_SMP_UNSAFE_COMPAT)
+        # EKernelConfigSMPUnsafeCompat stays OFF: with it a crashing SDK game (its process's thread group destroyed) was
+        # followed by a silent whole-system hang (boot 2199, 2026-11-02), and it did not cure Fragger's race (its mixer
+        # thread waits on another process's server, which the group does not serialize)
+        struct.pack_into("<I", self.rom, H_iKernelConfigFlags, 0)
         if self.kern_data_base:
             struct.pack_into("<I", self.rom, H_iKernDataAddress, self.kern_data_base)
             struct.pack_into("<I", self.rom, H_iKernelLimit, self.kern_data_limit)
