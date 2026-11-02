@@ -545,13 +545,11 @@ class RomBuilder:
         struct.pack_into("<I", self.rom, H_iPageableRomStart, 0)
         struct.pack_into("<I", self.rom, H_iRomRootDirectoryList, root_dir_list_addr)
         struct.pack_into("<I", self.rom, H_iPrimaryFile, self.primary_entry_addr)
-        # EKernelConfigSMPUnsafeCPU0: every thread of a process not marked SMP safe runs on CPU 0, so a newly resumed
-        # higher-priority thread pre-empts its creator as on the single-core phones those apps were written for (SDK
-        # games resume a setup thread and use what it sets up at once: Fragger / Gravity Guy, the mixer thread had not
-        # run one instruction when the main thread read its status pointer). Not EKernelConfigSMPUnsafeCompat (one
-        # NThreadGroup per process, any CPU): with it a crashing game -- its group destroyed -- was followed by a silent
-        # whole-system hang (boot 2199, 2026-11-02).
-        struct.pack_into("<I", self.rom, H_iKernelConfigFlags, KERNEL_CONFIG_SMP_UNSAFE_CPU0)
+        # No SMP compatibility mode: apps not marked SMP safe run on every core. (Fragger / Gravity Guy's "Mixer" crash,
+        # first blamed on that, was a kernel debug hook stalling every new thread on the SD lock -- ekern_seam.cpp
+        # ekseam_dump_thread. EKernelConfigSMPUnsafeCompat was followed by a silent hang after a crashing game, boot 2199;
+        # EKernelConfigSMPUnsafeCPU0 pins those apps to one core.)
+        struct.pack_into("<I", self.rom, H_iKernelConfigFlags, 0)
         if self.kern_data_base:
             struct.pack_into("<I", self.rom, H_iKernDataAddress, self.kern_data_base)
             struct.pack_into("<I", self.rom, H_iKernelLimit, self.kern_data_limit)
