@@ -39,3 +39,13 @@ jobs:
 
   layering:
     uses: ./.github/workflows/layering.yml
+
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Conventional Commit subjects (they make the release version)
+        run: sh tools/ci/commit_lint.sh "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"

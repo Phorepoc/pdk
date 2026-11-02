@@ -1,0 +1,43 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# setup-phe -- put a released phe (and phonelab) on the PATH of a Linux runner, from the pdk's GitHub releases.
+#
+#   - uses: Phorepoc/pdk/.github/actions/setup-phe@<pdk commit>
+#     with:
+#       version: v0.1.0
+#       sha256: <the archive's SHA-256 from the release's SHA256SUMS>   # recommended: pins the exact bytes
+#
+# The archive is always checked against the release's SHA256SUMS. A release tag can be moved, so a workflow that
+# must not change under it also pins `sha256` (and references this action by commit, not by branch).
+name: setup-phe
+description: Install a released phe from Phorepoc/pdk
+inputs:
+  version:
+    description: The pdk release (v1.2.3)
+    required: true
+  sha256:
+    description: The expected SHA-256 of the archive (optional; fails on any other bytes)
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        PIN: ${{ inputs.sha256 }}
+      run: |
+        set -euo pipefail
+        case "$(uname -m)" in x86_64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) echo "::error::unsupported machine $(uname -m)"; exit 1 ;; esac
+        name="pdk-$VERSION-linux-$arch.tar.gz"
+        base="https://github.com/Phorepoc/pdk/releases/download/$VERSION"
+        dir="$RUNNER_TOOL_CACHE/phe/$VERSION/$arch"
+        mkdir -p "$dir" && cd "$dir"
+        curl -fsSL -o "$name" "$base/$name"
+        curl -fsSL -o SHA256SUMS "$base/SHA256SUMS"
+        grep " $name\$" SHA256SUMS | sha256sum -c -
+        if [ -n "$PIN" ]; then echo "$PIN  $name" | sha256sum -c -; fi
+        tar -xzf "$name" phe phonelab
+        echo "$dir" >> "$GITHUB_PATH"
+        ./phe version

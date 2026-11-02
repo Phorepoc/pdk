@@ -66,10 +66,17 @@ runs:
         lock=caller/board.lock
         : > built-from.txt
         for r in ${{ steps.repos.outputs.list }}; do
-          ref=main
-          [ -f "$lock" ] && ref=$(awk -v r="$r" '$1 == r { print $2 }' "$lock") && [ -n "$ref" ] || ref=main
-          # the caller's own repository builds at the commit that triggered the run
-          [ "${{ github.repository }}" = "${{ github.repository_owner }}/$r" ] && ref="${{ github.sha }}"
+          if [ "${{ github.repository }}" = "${{ github.repository_owner }}/$r" ]; then
+            ref="${{ github.sha }}"     # the caller's own repository builds at the commit that triggered the run
+          elif [ -f "$lock" ]; then
+            # a board.lock pins every repository by its full commit hash: a missing or malformed entry fails the
+            # build (never a silent fallback to an unpinned branch). '#' starts a comment, on its own line or after
+            # the hash.
+            ref=$(sed 's/#.*//' "$lock" | awk -v r="$r" '$1 == r { print $2 }')
+            echo "$ref" | grep -q -x -E '[0-9a-f]{40}' || { echo "::error::board.lock: no full commit hash for $r"; exit 1; }
+          else
+            ref=main
+          fi
           echo "$r @ $ref"
           git init -q "$r"
           git -C "$r" fetch -q --depth 1 "https://github.com/${{ github.repository_owner }}/$r.git" "$ref"
