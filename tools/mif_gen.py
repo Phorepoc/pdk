@@ -224,7 +224,7 @@ def run(dirs: list[str]) -> int:
             bad += 1
             continue
         text = MBG.inf_text(os.path.join(d, inf[0]))
-        seen = set()
+        seen = set()   # output stems: mifconv writes <stem>.mif AND <stem>.mbm, whichever the target names
         # icon MAKEFILES in the same dir (the older S60 form, pushmtm/Group/PushMtmIcons.mk). Only the ones the
         # bld.inf runs (an active `gnumakefile` line) come before its mifconv blocks: many dirs keep a stale .mk
         # for the same target with the old list commented out of the bld.inf (calcsoft: icons_calcsoft.mk, 39
@@ -233,15 +233,15 @@ def run(dirs: list[str]) -> int:
         used = mk_referenced(text)
         for mk in [m for m in mks if m.lower() in used]:
             for mif, _hdr, toks in MBG.mk_mifconv(os.path.join(d, mk)):
-                if mif.lower() not in seen:
-                    seen.add(mif.lower())
+                if _stem(mif) not in seen:
+                    seen.add(_stem(mif))
                     bad += 0 if build(mif.lower(), toks, d) else 1
         for blk in MBG.BLOCK.findall(text):
             opts = MBG.block_options(blk)
             target = opts.get("TARGETFILE", "").strip().lower()
-            if not target or target in seen:
+            if not target or _stem(target) in seen:
                 continue
-            seen.add(target)
+            seen.add(_stem(target))
             if "SOURCEFILE" in opts:
                 # relative to the bld.inf's dir, any case (mmsui: ../data/MmsUi_IconList.txt)
                 src = _isfile_nocase(os.path.join(d, opts["SOURCEFILE"].strip().replace("\\", "/")))
@@ -256,10 +256,15 @@ def run(dirs: list[str]) -> int:
         # an unreferenced .mk still builds a target nothing else makes (the icon files shipped so far)
         for mk in [m for m in mks if m.lower() not in used]:
             for mif, _hdr, toks in MBG.mk_mifconv(os.path.join(d, mk)):
-                if mif.lower() not in seen:
-                    seen.add(mif.lower())
+                if _stem(mif) not in seen:
+                    seen.add(_stem(mif))
                     bad += 0 if build(mif.lower(), toks, d) else 1
     return 1 if bad else 0
+
+
+def _stem(target: str) -> str:
+    """logs.mbm and logs.mif are one output (logsui: an unreferenced bitmap makefile overwrote the block's logs.mif)."""
+    return os.path.splitext(os.path.basename(target.replace("\\", "/")))[0].lower()
 
 
 def mk_referenced(inf: str) -> set[str]:
