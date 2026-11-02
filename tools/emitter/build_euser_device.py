@@ -81,6 +81,8 @@ DEVICE_EXTRA_SOURCES = [
     os.path.join(_EU, "epoc", "arm", "uc_trp.cpp"),
     os.path.join(_EU, "epoc", "arm", "uc_exec.cia"),
     os.path.join(_EU, "epoc", "arm", "uc_utl.cia"),
+    # uc_data.cpp -- TLocalThreadData's Dll::Tls table (the user-side thread data, see _DEVICE_CPU)
+    os.path.join(_EU, "epoc", "arm", "uc_data.cpp"),
     # us_graph.cpp — TRect/TPoint/TSize geometry. EDISP's CScreenDriverTemplate
     # ::Init calls TRect::TRect(const TSize&); as an unimpl stub EWSRV
     # dies EUSRNIMP.
@@ -155,7 +157,16 @@ def _extra_flags(basename: str) -> list[str]:
     # exports (CBase, CActive, CActiveScheduler, CServer2 ...) no object, so they sat on the unimplemented-export stub. A
     # third-party (RVCT) image's exception type-match walks the base-class typeinfo chain into CBase's typeinfo: stub code
     # bytes there => USER-EXEC 3 in User::RaiseException. RTTI on, GCC emits each typeinfo where its key function is defined.
-    return _extra_flags_tu(basename) + ["-DSYMBIAN_DISTINCT_LOCALE_MODEL", "-frtti"]
+    return _extra_flags_tu(basename) + _DEVICE_CPU + ["-DSYMBIAN_DISTINCT_LOCALE_MODEL", "-frtti"]
+
+
+# The device CPU config for EVERY euser TU, C++ as well as .cia (2026-11-02). It used to be the .cia files only, the C++
+# ones building with the symcc default (__MARM_ARMV5__): the kernel (ARMv7) then reserved the user-side thread data at
+# the top of each user stack and pointed TPIDRURW at it, but euser's C++ never used it -- cpudefs.h only defines
+# __CPU_HAS_CP15_THREAD_ID_REG -> __USERSIDE_THREAD_DATA__ for ARMv7. So User::Heap() (every User::Alloc / Free),
+# Dll::Tls, CActiveScheduler::Current and RThread().Id() were each an exec; Exec::DllTls alone was 20 % of WSERV's GL
+# worker while scrolling. With it they read TLocalThreadData (us_data.h, uc_data.cpp), as a real Cortex euser build does.
+_DEVICE_CPU = ["-march=armv7-a", "-mno-unaligned-access", "-U__MARM_ARMV5__", "-D__MARM_ARMV7__", "-D__CPU_CORTEX_A8N__"]
 
 
 def _extra_flags_tu(basename: str) -> list[str]:
@@ -183,8 +194,8 @@ def _extra_flags_tu(basename: str) -> list[str]:
         # EFILE bring-up, swi#0x21 = fast 33 FastAtomicTas32 with bit23<<9
         # wrapped out). ARMV7 selects the real LDREX/STREX bodies, as a real
         # Cortex euser build does.
-        return flags + ["-march=armv7-a", "-mno-unaligned-access",
-                "-U__MARM_ARMV5__", "-D__MARM_ARMV7__", "-D__CPU_CORTEX_A8N__"]
+        # (the CPU flags themselves: _DEVICE_CPU, added for every TU by _extra_flags)
+        return flags
     return flags
 
 
