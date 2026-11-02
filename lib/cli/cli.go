@@ -1,11 +1,11 @@
 // Copyright The Phorepoc Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package cli is the command framework of ph: every command is defined once (group, name, operands, summary,
-// description, options, examples), and the overview, `ph help <command>`, the Markdown manual pages (docs/ph/) and the
+// Package cli is the command framework of phe: every command is defined once (group, name, operands, summary,
+// description, options, examples), and the overview, `phe help <command>`, the Markdown manual pages (docs/phe/) and the
 // option parsing all come from that one definition, so the documentation cannot drift from the code.
 //
-// The layout follows zfs(8) / zpool(8): a command is a verb on one kind of object (`ph image rom`), options are the
+// The layout follows zfs(8) / zpool(8): a command is a verb on one kind of object (`phe image rom`), options are the
 // same letters everywhere (-H script mode, -o fields, -n dry run, -v verbose, -b board, -a architecture), and every
 // command has a manual page with NAME, SYNOPSIS, DESCRIPTION, OPTIONS and EXAMPLES.
 package cli
@@ -23,7 +23,7 @@ import (
 // Width is the column the help text is wrapped at.
 const Width = 100
 
-// Command is one ph command.
+// Command is one phe command.
 type Command struct {
 	Group       string              // the object it acts on: "source", "component", "image", "board", "device", "" (top level)
 	Name        string              // the verb: "build"
@@ -33,7 +33,7 @@ type Command struct {
 	Flags       func(*flag.FlagSet) // its options; the usage string of each is its documentation
 	Examples    []Example
 	// Aliases are older spellings that still work for one release, hidden from the overview: "rom", or
-	// "<name>=<arguments>" for one that stands for options too ("all=-A" = ph component build -A)
+	// "<name>=<arguments>" for one that stands for options too ("all=-A" = phe component build -A)
 	Aliases []string
 	Run     func(fs *flag.FlagSet, args []string) error
 }
@@ -41,7 +41,7 @@ type Command struct {
 // Example is one entry of a command's EXAMPLES section.
 type Example struct {
 	What string // a sentence: what it does
-	Cmd  string // the command line, without the leading "ph "
+	Cmd  string // the command line, without the leading "phe "
 }
 
 // Path is the command as typed: "image rom", or "help" for a top-level command.
@@ -54,7 +54,7 @@ func (c *Command) Path() string {
 
 // FlagSet builds the command's options.
 func (c *Command) FlagSet() *flag.FlagSet {
-	fs := flag.NewFlagSet("ph "+c.Path(), flag.ContinueOnError)
+	fs := flag.NewFlagSet("phe "+c.Path(), flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	if c.Flags != nil {
 		c.Flags(fs)
@@ -130,16 +130,16 @@ func (a *App) Run(argv []string) int {
 	c, args, alias := a.Find(argv)
 	if c == nil {
 		if a.isGroup(argv[0]) {
-			fmt.Fprintf(a.Err, "ph: %s: which command?\n\n", argv[0])
+			fmt.Fprintf(a.Err, "phe: %s: which command?\n\n", argv[0])
 			a.groupUsage(a.Err, argv[0])
 			return 2
 		}
-		fmt.Fprintf(a.Err, "ph: unknown command %q\n\nRun \"ph help\" for the list of commands.\n", argv[0])
+		fmt.Fprintf(a.Err, "phe: unknown command %q\n\nRun \"phe help\" for the list of commands.\n", argv[0])
 		return 2
 	}
 	if alias != "" {
 		name, extra, _ := strings.Cut(alias, "=")
-		fmt.Fprintf(a.Err, "ph: \"ph %s\" is now \"ph %s\" (the old name goes in the next release)\n\n",
+		fmt.Fprintf(a.Err, "phe: \"phe %s\" is now \"phe %s\" (the old name goes in the next release)\n\n",
 			name, strings.TrimSpace(c.Path()+" "+extra))
 	}
 	fs := c.FlagSet()
@@ -151,12 +151,12 @@ func (a *App) Run(argv []string) int {
 	}
 	operands, err := parseInterspersed(fs, args)
 	if err != nil {
-		fmt.Fprintf(a.Err, "ph %s: %v\n\n", c.Path(), err)
+		fmt.Fprintf(a.Err, "phe %s: %v\n\n", c.Path(), err)
 		a.synopsisHint(a.Err, c)
 		return 2
 	}
 	if err := c.Run(fs, operands); err != nil {
-		fmt.Fprintf(a.Err, "ph %s: %v\n", c.Path(), strings.TrimPrefix(err.Error(), ErrUsage.Error()+": "))
+		fmt.Fprintf(a.Err, "phe %s: %v\n", c.Path(), strings.TrimPrefix(err.Error(), ErrUsage.Error()+": "))
 		if errors.Is(err, ErrUsage) {
 			fmt.Fprintln(a.Err)
 			a.synopsisHint(a.Err, c)
@@ -167,7 +167,7 @@ func (a *App) Run(argv []string) int {
 	return 0
 }
 
-// parseInterspersed lets options come before or after the operands ("ph device push img.bin -w ready"); "--" ends
+// parseInterspersed lets options come before or after the operands ("phe device push img.bin -w ready"); "--" ends
 // the options.
 func parseInterspersed(fs *flag.FlagSet, args []string) ([]string, error) {
 	var operands []string
@@ -197,12 +197,12 @@ func (a *App) isGroup(name string) bool {
 }
 
 func (a *App) synopsisHint(w io.Writer, c *Command) {
-	fmt.Fprintf(w, "usage:\n    %s\n\nRun \"ph help %s\" for the details.\n", Synopsis(c), c.Path())
+	fmt.Fprintf(w, "usage:\n    %s\n\nRun \"phe help %s\" for the details.\n", Synopsis(c), c.Path())
 }
 
-// Synopsis is the command's one-line usage: "ph image rom [-b <board>] [-s <boot>] [-O <name>=<value>]...".
+// Synopsis is the command's one-line usage: "phe image rom [-b <board>] [-s <boot>] [-O <name>=<value>]...".
 func Synopsis(c *Command) string {
-	parts := []string{"ph", c.Path()}
+	parts := []string{"phe", c.Path()}
 	fs := c.FlagSet()
 	var bools, vals []string
 	fs.VisitAll(func(f *flag.Flag) {
@@ -243,9 +243,9 @@ func isBool(f *flag.Flag) bool {
 	return ok && b.IsBoolFlag()
 }
 
-// Overview writes `ph help`: every command by group, with its summary.
+// Overview writes `phe help`: every command by group, with its summary.
 func (a *App) Overview(w io.Writer) {
-	fmt.Fprintf(w, "usage:\n    ph <command> [<options>] [<operands>]\n\n")
+	fmt.Fprintf(w, "usage:\n    phe <command> [<options>] [<operands>]\n\n")
 	fmt.Fprintln(w, wrap(a.Summary, "", Width))
 	col := 14 // one column for every group (and the topics), so the summaries line up
 	for _, c := range a.Commands {
@@ -269,8 +269,8 @@ func (a *App) Overview(w io.Writer) {
 			fmt.Fprintf(w, "    %-*s   %s\n", col, t.Name, t.Summary)
 		}
 	}
-	fmt.Fprintf(w, "\nRun \"ph help <command>\" for a command's options and examples (\"ph help image rom\"),\n"+
-		"or \"ph help <topic>\" for a topic.\n")
+	fmt.Fprintf(w, "\nRun \"phe help <command>\" for a command's options and examples (\"phe help image rom\"),\n"+
+		"or \"phe help <topic>\" for a topic.\n")
 }
 
 func (a *App) groupUsage(w io.Writer, group string) {
@@ -282,7 +282,7 @@ func (a *App) groupUsage(w io.Writer, group string) {
 	for _, c := range a.inGroup(group) {
 		fmt.Fprintf(w, "    %s\n", Synopsis(c))
 	}
-	fmt.Fprintf(w, "\nRun \"ph help %s <command>\" for the details.\n", group)
+	fmt.Fprintf(w, "\nRun \"phe help %s <command>\" for the details.\n", group)
 }
 
 func (a *App) inGroup(group string) []*Command {
@@ -295,7 +295,7 @@ func (a *App) inGroup(group string) []*Command {
 	return out
 }
 
-// HelpArgs serves `ph help [<group>] [<command>|<topic>]`.
+// HelpArgs serves `phe help [<group>] [<command>|<topic>]`.
 func (a *App) HelpArgs(args []string) error {
 	if len(args) == 0 {
 		a.Overview(a.Out)
@@ -320,7 +320,7 @@ func (a *App) HelpArgs(args []string) error {
 
 // Help writes a command's manual page as text.
 func (a *App) Help(w io.Writer, c *Command) {
-	fmt.Fprintf(w, "NAME\n    ph %s - %s\n\n", c.Path(), c.Summary)
+	fmt.Fprintf(w, "NAME\n    phe %s - %s\n\n", c.Path(), c.Summary)
 	fmt.Fprintf(w, "SYNOPSIS\n%s\n\n", wrap(Synopsis(c), "    ", Width))
 	if c.Description != "" {
 		fmt.Fprintf(w, "DESCRIPTION\n%s\n\n", paragraphs(c.Description, "    "))
@@ -341,14 +341,14 @@ func (a *App) Help(w io.Writer, c *Command) {
 			if i > 0 {
 				fmt.Fprintln(w)
 			}
-			fmt.Fprintf(w, "%s\n\n        ph %s\n", wrap(e.What, "    ", Width), e.Cmd)
+			fmt.Fprintf(w, "%s\n\n        phe %s\n", wrap(e.What, "    ", Width), e.Cmd)
 		}
 		fmt.Fprintln(w)
 	}
 	if len(c.Aliases) > 0 {
 		fmt.Fprintf(w, "FORMERLY\n")
 		for _, al := range c.Aliases {
-			fmt.Fprintf(w, "    ph %s\n", formerly(c, al))
+			fmt.Fprintf(w, "    phe %s\n", formerly(c, al))
 		}
 		fmt.Fprintf(w, "\n    (still accepted for one release)\n\n")
 	}
@@ -372,13 +372,13 @@ func options(c *Command) []option {
 	return out
 }
 
-// formerly: "rom", or "all  (= ph component build -A)" for an alias that stands for options too.
+// formerly: "rom", or "all  (= phe component build -A)" for an alias that stands for options too.
 func formerly(c *Command, alias string) string {
 	name, extra, ok := strings.Cut(alias, "=")
 	if !ok {
 		return name
 	}
-	return name + "  (= ph " + c.Path() + " " + extra + ")"
+	return name + "  (= phe " + c.Path() + " " + extra + ")"
 }
 
 // sentence: a capital first letter and a full stop.
@@ -401,9 +401,9 @@ func repeatNote(f *flag.Flag) string {
 	return ""
 }
 
-// Markdown writes a command's manual page as Markdown (docs/ph/ph-<group>-<name>.md).
+// Markdown writes a command's manual page as Markdown (docs/phe/ph-<group>-<name>.md).
 func Markdown(w io.Writer, c *Command) {
-	fmt.Fprintf(w, "# ph %s\n\n%s.\n\n## Synopsis\n\n```\n%s\n```\n\n", c.Path(), c.Summary, Synopsis(c))
+	fmt.Fprintf(w, "# phe %s\n\n%s.\n\n## Synopsis\n\n```\n%s\n```\n\n", c.Path(), c.Summary, Synopsis(c))
 	if c.Description != "" {
 		fmt.Fprintf(w, "## Description\n\n%s\n\n", strings.TrimSpace(c.Description))
 	}
@@ -417,25 +417,25 @@ func Markdown(w io.Writer, c *Command) {
 	if len(c.Examples) > 0 {
 		fmt.Fprintf(w, "## Examples\n\n")
 		for _, e := range c.Examples {
-			fmt.Fprintf(w, "%s\n\n```sh\nph %s\n```\n\n", e.What, e.Cmd)
+			fmt.Fprintf(w, "%s\n\n```sh\nphe %s\n```\n\n", e.What, e.Cmd)
 		}
 	}
 	if len(c.Aliases) > 0 {
 		fmt.Fprintf(w, "## Formerly\n\nStill accepted for one release:\n\n")
 		for _, al := range c.Aliases {
-			fmt.Fprintf(w, "- `ph %s`\n", formerly(c, al))
+			fmt.Fprintf(w, "- `phe %s`\n", formerly(c, al))
 		}
 	}
 }
 
-// FileName is the command's manual page file: "ph-image-rom.md".
+// FileName is the command's manual page file: "phe-image-rom.md".
 func FileName(c *Command) string {
-	return "ph-" + strings.ReplaceAll(c.Path(), " ", "-") + ".md"
+	return "phe-" + strings.ReplaceAll(c.Path(), " ", "-") + ".md"
 }
 
-// Index writes docs/ph/README.md: the commands by group, linking each page.
+// Index writes docs/phe/README.md: the commands by group, linking each page.
 func (a *App) Index(w io.Writer) {
-	fmt.Fprintf(w, "# ph\n\n%s\n\nGenerated from the command definitions (`ph help -markdown <dir>`); do not edit.\n",
+	fmt.Fprintf(w, "# ph\n\n%s\n\nGenerated from the command definitions (`phe help -markdown <dir>`); do not edit.\n",
 		strings.TrimSpace(a.Summary))
 	for _, g := range a.Groups {
 		cmds := a.inGroup(g.Name)
@@ -444,7 +444,7 @@ func (a *App) Index(w io.Writer) {
 		}
 		fmt.Fprintf(w, "\n## %s\n\n%s\n\n| command | what it does |\n|---|---|\n", g.Title, g.Summary)
 		for _, c := range cmds {
-			fmt.Fprintf(w, "| [`ph %s`](%s) | %s |\n", c.Path(), FileName(c), c.Summary)
+			fmt.Fprintf(w, "| [`phe %s`](%s) | %s |\n", c.Path(), FileName(c), c.Summary)
 		}
 	}
 	for _, t := range a.Topics {

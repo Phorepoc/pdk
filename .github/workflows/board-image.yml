@@ -9,7 +9,7 @@
 #   board   a board repository calls it without `arch`: its board.conf names the repositories and the architecture,
 #           its board.lock pins their commits; the build starts from core-<arch> at the pinned core commit, runs each
 #           repository's recipes/prepare.sh, builds every component and then the board's RELEASE recipe
-#           (`ph image release`), which writes the files to publish; `release: true` attaches them to the caller's
+#           (`phe image release`), which writes the files to publish; `release: true` attaches them to the caller's
 #           release for its tag
 #
 # Split so no job nears the 6-hour limit of a hosted runner:
@@ -85,8 +85,8 @@ jobs:
 
       - name: Exports + header case links
         run: |
-          ph source export -a
-          ph source mbg -a
+          phe source export -a
+          phe source mbg -a
 
       - name: The repositories' prepare recipes (recipes/prepare.sh)
         run: |
@@ -97,9 +97,9 @@ jobs:
 
       - name: Resources (.rsc + the .rsg headers every component includes)
         run: |
-          ph component resources -A > resources-1.log 2>&1 || true
-          ph source casefix -a     # links the .rsg spellings just generated (Linux is case-sensitive)
-          ph component resources -A 2>&1 | tee resources.log | tail -n 5
+          phe component resources -A > resources-1.log 2>&1 || true
+          phe source casefix -a     # links the .rsg spellings just generated (Linux is case-sensitive)
+          phe component resources -A 2>&1 | tee resources.log | tail -n 5
           echo "resources: $(grep -c ': FAILED' resources.log || true) component(s) failed"; grep ': FAILED' resources.log | sort -u | head -20 || true
 
       - name: Hand the tree on (run image)
@@ -134,7 +134,7 @@ jobs:
 
       - name: Compile shard ${{ matrix.shard }}
         run: |
-          ph component build -A -arch "$PHOREPOC_ARCH" -compile-only -shard ${{ matrix.shard }}/$SHARDS \
+          phe component build -A -arch "$PHOREPOC_ARCH" -compile-only -shard ${{ matrix.shard }}/$SHARDS \
             2>&1 | tee compile.log | tail -n 20
 
       - name: The files this shard wrote
@@ -178,7 +178,7 @@ jobs:
 
       - name: Link every component, providers first
         run: |
-          ph component build -A -arch "$PHOREPOC_ARCH" 2>&1 | tee component-build.log | tail -n 20
+          phe component build -A -arch "$PHOREPOC_ARCH" 2>&1 | tee component-build.log | tail -n 20
           # a bulk build goes on past a component that fails (exit 1): the image steps are the verdict, so name them here
           failed=$(awk '/^=== /{c=$2} /FAIL/{print c}' component-build.log | tr -d : | sort -u)
           echo "components failed: $(echo "$failed" | grep -c . || true)"; echo $failed | fold -w 200
@@ -187,12 +187,12 @@ jobs:
         if: steps.setup.outputs.arch == 'x32'
         run: |
           for pass in 1 2 3 4; do
-            keys=$(ph component stale | awk -F: '/: relink/ { print $1 }')
+            keys=$(phe component stale | awk -F: '/: relink/ { print $1 }')
             [ -n "$keys" ] || break
             echo "pass $pass: relink $(echo $keys | wc -w): $(echo $keys | cut -c1-300)"
-            ph component build -arch x32 $keys >> component-relink.log 2>&1 || true
+            phe component build -arch x32 $keys >> component-relink.log 2>&1 || true
           done
-          ph component stale | tail -n 1
+          phe component stale | tail -n 1
 
       - name: Own the build folder (the container wrote it as root)
         if: always()
@@ -214,7 +214,7 @@ jobs:
 
       - name: The board's release files (board.conf RELEASE)
         if: inputs.images && inputs.arch == ''
-        run: ph image release -b "${{ steps.setup.outputs.board }}" -o "$PWD/out"
+        run: phe image release -b "${{ steps.setup.outputs.board }}" -o "$PWD/out"
 
       - name: Checksums + provenance
         if: inputs.images && inputs.arch == ''

@@ -18,11 +18,11 @@ RUN go mod download
 COPY . ./
 COPY --from=web /src/web/embed/dist ./web/embed/dist
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /phonelab ./cmd/phonelab \
- && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /ph ./cmd/ph
+ && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /phe ./cmd/phe
 
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates tzdata
-COPY --from=server /phonelab /ph /usr/local/bin/
+COPY --from=server /phonelab /phe /usr/local/bin/
 COPY phonelab.toml /etc/phonelab/phonelab.toml
 ENV PHONELAB_DATA=/data
 VOLUME /data

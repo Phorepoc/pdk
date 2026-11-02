@@ -6,7 +6,7 @@
 checkout layout (a join of OS_ROOT with "baseline/...", a file the split left behind) shows up here before a build
 fails on it.
 
-    python3 tools/registry_check.py          (`ph component check`; exit 1 when a path is missing)
+    python3 tools/registry_check.py          (`phe component check`; exit 1 when a path is missing)
 """
 from __future__ import annotations
 

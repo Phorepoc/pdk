@@ -24,7 +24,7 @@ change core or the pdk.
 | Layer | Contains | Never contains |
 |---|---|---|
 | toolchain | compilers and host tools, one image per architecture family | anything about Phorepoc's sources |
-| pdk | `ph`, the emitter and ROM tools, the generic CI workflows, PhoneLab and its protocols | board names, chip names, image recipes for a device |
+| pdk | `phe`, the emitter and ROM tools, the generic CI workflows, PhoneLab and its protocols | board names, chip names, image recipes for a device |
 | core | the OS components, the default settings every device starts from (`os/config/`), the interfaces drivers implement (HAL functions, plug-in APIs), null drivers | drivers for real hardware, device settings, mentions of the repositories above |
 | layers | one feature each, buildable for any architecture core supports | device names. A layer that only fits some hardware (Mesa's backend for one GPU family) names the *hardware*, not a device |
 | SoC | the kernel port and drivers for a chip, implementing core's interfaces | board names, a device's settings or images |
@@ -32,17 +32,17 @@ change core or the pdk.
 
 ## The board manifest
 
-A board repository has a `board.conf` at its root. The pdk reads it, both locally (`ph ... -b <name>`) and in CI:
+A board repository has a `board.conf` at its root. The pdk reads it, both locally (`phe ... -b <name>`) and in CI:
 
 ```sh
 NAME=myboard
 SUMMARY="my phone"
 ARCH=arm                                          # the architecture core is built for: x32 or arm
 REPOS="mysoc myboard mesa-symbian tls"            # the repositories it is made of, besides pdk and core
-RELEASE=recipes/release.sh                        # makes the release files into $OUT (CI and `ph image release`)
+RELEASE=recipes/release.sh                        # makes the release files into $OUT (CI and `phe image release`)
 ```
 
-`ph` finds boards by looking for a `board.conf` in each checkout next to core, so a new board needs no change
+`phe` finds boards by looking for a `board.conf` in each checkout next to core, so a new board needs no change
 anywhere else. `board.lock`, next to it, pins the commit of each repository a release is built from
 (`tools/board_lock.sh <board repository>` in the pdk).
 
@@ -66,13 +66,13 @@ Any repository can have a `recipes/` folder of shell scripts. The pdk knows thre
 - **`recipes/prepare.sh`** is run for every repository of the board before the components are built, on the host,
   with the `PHOREPOC_*` variables set and `PHOREPOC_ARCH` set to the architecture. `tls` uses it to fetch mbedTLS,
   for example, and `mesa-symbian` to build Mesa for ARM. It may run containers itself.
-- **`recipes/<name>.sh`** is what `ph image recipe <name> -b <board>` runs: a kernel, a disk image, an appliance, a
+- **`recipes/<name>.sh`** is what `phe image recipe <name> -b <board>` runs: a kernel, a disk image, an appliance, a
   boot test. The board's repositories are searched from the top (the board first), so a board can replace a SoC's
   recipe. These run inside the toolchain container.
-- **The board's `RELEASE` recipe** (`ph image release -b <board>`) runs on the host after every component is built.
-  It writes the files to publish into `$OUT`, and can call `ph` for each step.
+- **The board's `RELEASE` recipe** (`phe image release -b <board>`) runs on the host after every component is built.
+  It writes the files to publish into `$OUT`, and can call `phe` for each step.
 - **`recipes/host/*.sh`** are host-side helpers other recipes call (a SoC's boot shim that needs a cross-compiler,
-  for example). `ph` never runs them by itself.
+  for example). `phe` never runs them by itself.
 
 ## CI
 

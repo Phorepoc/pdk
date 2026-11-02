@@ -78,7 +78,7 @@ func TestFindBoard(t *testing.T) {
 	}
 }
 
-// The recipe settings of "ph image recipe kernel -O trace=..." reach the container.
+// The recipe settings of "phe image recipe kernel -O trace=..." reach the container.
 func TestKernelOptionsPassed(t *testing.T) {
 	t.Setenv("TRACE", "") // restored when the test ends
 	if err := SetImageOption("trace=0x80000002"); err != nil {

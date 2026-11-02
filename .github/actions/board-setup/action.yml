@@ -85,10 +85,10 @@ runs:
         go-version-file: pdk/go.mod
         cache-dependency-path: pdk/go.sum
 
-    - name: Build ph
+    - name: Build phe
       shell: bash
       run: |
-        (cd pdk && go build -o ../bin/ph ./cmd/ph)
+        (cd pdk && go build -o ../bin/phe ./cmd/phe)
         echo "$PWD/bin" >> "$GITHUB_PATH"
 
     - name: Fetch the Symbian source (pinned in core's sources.lock)

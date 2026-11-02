@@ -21,10 +21,10 @@ phone (debug link, USB CDC ACM) ── Session (one per device: owns the port, r
 | `lib/store` | SQLite (pure Go, WAL) + blob files |
 | `lib/transport` | serial ports found by USB VID/PID (COMn, /dev/ttyACMn, /dev/cu.usbmodem* alike) |
 | `lib/mock` | a fake phone speaking the protocol, for tests and `-mock` runs |
-| `lib/client` | a REST client for a running service (used by `ph`) |
+| `lib/client` | a REST client for a running service (used by `phe`) |
 | `frontend/rest`, `frontend/mcp` | the two network front ends over the library |
 | `web/` | the web UI (Vue 3 + Quasar), built into `web/embed/dist` and embedded |
-| `cmd/phonelab`, `cmd/ph` | the service and the command line |
+| `cmd/phonelab`, `cmd/phe` | the service and the command line |
 
 Windows runs the service natively (Docker Desktop cannot see COM ports, and the phone re-enumerates on every reboot).
 Linux runs it in Docker: `docker/compose.yaml` passes the ttyACM device major through a cgroup rule and a live `/dev`,

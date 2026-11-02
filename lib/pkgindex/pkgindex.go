@@ -3,7 +3,7 @@
 
 // Package pkgindex reads Phorepoc software indexes (the index.json the index repository publishes) and fetches the
 // approved release files they point to, checking each file's SHA-256. It is the download app's logic, used by
-// `ph package`; the Symbian app will speak the same format.
+// `phe package`; the Symbian app will speak the same format.
 package pkgindex
 
 import (
@@ -159,7 +159,7 @@ func (c *Client) Load(ctx context.Context, src string) ([]Item, error) {
 		return nil, fmt.Errorf("%s: not an index: %w", src, err)
 	}
 	if doc.Format != 1 {
-		return nil, fmt.Errorf("%s: index format %d, this ph reads 1", src, doc.Format)
+		return nil, fmt.Errorf("%s: index format %d, this phe reads 1", src, doc.Format)
 	}
 	for i := range doc.Items {
 		doc.Items[i].Index = src

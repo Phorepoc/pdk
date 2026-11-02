@@ -294,7 +294,7 @@ func (e *Env) Boards() []Board {
 		if b, err := ParseBoardConf(p); err == nil {
 			out = append(out, *b)
 		} else {
-			fmt.Fprintln(os.Stderr, "ph:", err)
+			fmt.Fprintln(os.Stderr, "phe:", err)
 		}
 	}
 	return out
@@ -344,7 +344,7 @@ func (e *Env) UseBoard(name string) error {
 	return nil
 }
 
-// ImageOption is a setting of the build recipes (`ph image rom -O name=value`), handed to the container as an
+// ImageOption is a setting of the build recipes (`phe image rom -O name=value`), handed to the container as an
 // environment variable.
 type ImageOption struct {
 	Name, Env, Values, Help string
@@ -395,14 +395,14 @@ var ImageOptions = []ImageOption{
 func SetImageOption(nv string) error {
 	name, value, ok := strings.Cut(nv, "=")
 	if !ok {
-		return fmt.Errorf("-O %s: want <name>=<value> (\"ph help image-options\" lists them)", nv)
+		return fmt.Errorf("-O %s: want <name>=<value> (\"phe help image-options\" lists them)", nv)
 	}
 	for _, o := range ImageOptions {
 		if o.Name == name {
 			return os.Setenv(o.Env, value)
 		}
 	}
-	return fmt.Errorf("-O %s: no image option %q (\"ph help image-options\" lists them)", nv, name)
+	return fmt.Errorf("-O %s: no image option %q (\"phe help image-options\" lists them)", nv, name)
 }
 
 // Release runs the board's RELEASE recipe on this machine (board.conf, docs/layering.md) with the PHOREPOC_*

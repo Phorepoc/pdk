@@ -36,7 +36,7 @@ func testApp(got *[]string) *App {
 func TestSynopsis(t *testing.T) {
 	var got []string
 	a := testApp(&got)
-	if s := Synopsis(a.Commands[0]); s != "ph image rom [-Hv] [-b <board>] [<x>...]" {
+	if s := Synopsis(a.Commands[0]); s != "phe image rom [-Hv] [-b <board>] [<x>...]" {
 		t.Errorf("synopsis %q", s)
 	}
 }
@@ -61,7 +61,7 @@ func TestAliasWithArguments(t *testing.T) {
 	if strings.Join(got, " ") != "true x" {
 		t.Errorf("got %q", got)
 	}
-	if !strings.Contains(a.Err.(*bytes.Buffer).String(), `"ph romv" is now "ph image rom -v"`) {
+	if !strings.Contains(a.Err.(*bytes.Buffer).String(), `"phe romv" is now "phe image rom -v"`) {
 		t.Errorf("no move notice: %s", a.Err)
 	}
 }
@@ -88,9 +88,9 @@ func TestHelpLayout(t *testing.T) {
 	a := testApp(&got)
 	var b bytes.Buffer
 	a.Help(&b, a.Commands[0])
-	want := "NAME\n    ph image rom - Build it\n\nSYNOPSIS\n    ph image rom [-Hv] [-b <board>] [<x>...]\n\n" +
+	want := "NAME\n    phe image rom - Build it\n\nSYNOPSIS\n    phe image rom [-Hv] [-b <board>] [<x>...]\n\n" +
 		"DESCRIPTION\n    Builds it.\n\nOPTIONS\n    -H\n        Script mode.\n\n    -b <board>\n        The board.\n\n" +
-		"    -v\n        Verbose.\n\nEXAMPLES\n    Build:\n\n        ph image rom\n\n"
+		"    -v\n        Verbose.\n\nEXAMPLES\n    Build:\n\n        phe image rom\n\n"
 	if !strings.HasPrefix(b.String(), want) {
 		t.Errorf("help:\n%s\nwant prefix:\n%s", b.String(), want)
 	}

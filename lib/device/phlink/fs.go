@@ -108,7 +108,7 @@ func (d *Driver) fsRequest(ctx context.Context, l device.Link, op uint32, payloa
 	defer stop()
 	// the header alone first, as a push does: the phone switches to receiving the request (phlink EUpFs) and holds its
 	// log; a payload arriving in the same write met a log transfer still in flight, and concurrent IN/OUT at high speed
-	// wedges the link with a core spinning (2026-10-20, ph package install: 3 KB writes, every few requests)
+	// wedges the link with a core spinning (2026-10-20, phe package install: 3 KB writes, every few requests)
 	if err := l.Write(ctx, cmd9('F', uint32(len(payload)), op)); err != nil {
 		return nil, err
 	}

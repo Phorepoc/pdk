@@ -2,14 +2,14 @@
 
 PhoneLab drives Phorepoc devices over phlink. The `nokia` driver does the same job for **stock Nokia Symbian^3-family
 phones**: your own phone and your own apps. You can list, read and write files, start your exe, list processes,
-take screenshots and follow a log from `ph`, the REST API, the web UI or MCP. It does not depend on Phorepoc images.
+take screenshots and follow a log from `phe`, the REST API, the web UI or MCP. It does not depend on Phorepoc images.
 
 The phone side is **phedbg**, a small native agent in the spirit of the on-device debug agents that Symbian SDKs used to
 ship. The owner starts it, can always see that it is running, and can stop it at any time. A PyS60 script that speaks
 the same protocol can stand in for it over TCP.
 
 ```
- ph / web / MCP ──► PhoneLab ──► driver "nokia" ──► transport ──► phone agent
+ phe / web / MCP ──► PhoneLab ──► driver "nokia" ──► transport ──► phone agent
                                                     serial (USB CDC ACM)   phedbg: RComm "ACM::n"
                                                     tcp dial / listen      phedbg: RSocket listen | PyS60 script: connects in
 ```
@@ -173,7 +173,7 @@ token = "123456"              # the code on the phone's screen
 # listen = "0.0.0.0:9999"     # a PyS60 agent connecting in
 ```
 
-Then use `ph device op nokia fs_list path=c:\data\phedbg\`, `ph device shot nokia`, and so on. The mock agent
+Then use `phe device op nokia fs_list path=c:\data\phedbg\`, `phe device shot nokia`, and so on. The mock agent
 (`lib/mock/nokia.go`) implements the protocol, so you can test the driver without a phone.
 
 ## 7. Installing phedbg

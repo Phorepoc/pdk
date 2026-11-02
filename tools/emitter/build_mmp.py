@@ -572,7 +572,7 @@ def build(key: str, rsc_only: bool = False) -> int:
              + ([] if "-DPORT_FOFF_DYNAMIC" in comp.get("x32_flags", [])
                 else ["-include", os.path.join(OS_ROOT, "toolchain", "shims", "foff_builtin.h")])
              # vfp=True: hardware floating point, soft-float ABI (links with the rest of the ROM); on unless
-             # ARM_VFP=0 (ph sets ARM_VFP=1 only when it starts the container, so in-container and CI builds
+             # ARM_VFP=0 (phe sets ARM_VFP=1 only when it starts the container, so in-container and CI builds
              # were silently soft-float); the kernel must switch VFP state (__CPU_HAS_VFP: the SMP kernel)
              + (["-mfpu=vfp", "-mfloat-abi=softfp"] if comp.get("vfp") and os.environ.get("ARM_VFP", "1") != "0" else [])
              # ARM_CPU_FLAGS (experiment, 2026-10-26): extra target flags appended last, e.g. a board-only DLL at
