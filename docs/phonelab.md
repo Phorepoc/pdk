@@ -8,7 +8,7 @@ phone (debug link, USB CDC ACM) ── Session (one per device: owns the port, r
                                      │            └── store: SQLite (lines, events, boots, ops) + blobs/<sha256>
                                      ├── REST + WebSocket  /api   ── web UI  /   (embedded in the binary)
                                      ├── MCP (streamable HTTP) /mcp ── AI agents and other MCP clients
-                                     └── (ph, the command line, talks to /api)
+                                     └── (phe, the command line, talks to /api)
 ```
 
 ## Code

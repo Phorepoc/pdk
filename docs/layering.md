@@ -11,7 +11,7 @@ board          one device: picks everything below, makes its images
 SoC            one chip family: kernel port, drivers
 layers         optional libraries and apps on top of the OS
 core           the operating system, architecture-neutral
-pdk            the tools: ph, the build scripts, the CI pipeline, PhoneLab
+pdk            the tools: phe, the build scripts, the CI pipeline, PhoneLab
 toolchain      the compilers, as container images
 ```
 
