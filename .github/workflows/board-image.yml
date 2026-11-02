@@ -22,7 +22,7 @@
 #   jobs:
 #     image:
 #       uses: Phorepoc/pdk/.github/workflows/board-image.yml@main
-#       with: { release: "${{ startsWith(github.ref, 'refs/tags/') }}" }
+#       with: { version: "${{ needs.version.outputs.version }}" }   # + draft: true when a hardware check publishes it
 #       permissions: { contents: write, packages: write }
 
 name: board-image
@@ -36,6 +36,14 @@ on:
         default: ""
       release:
         description: "Attach the release files to the caller's release for this tag"
+        type: boolean
+        default: false
+      version:
+        description: "Tag and release this version (v1.2.3) once the image is built and its boot test passed"
+        type: string
+        default: ""
+      draft:
+        description: "Make the release a draft (published by hand after a hardware check)"
         type: boolean
         default: false
       images:
@@ -230,12 +238,39 @@ jobs:
           path: out/
           if-no-files-found: warn
 
+      # the board's own boot test, when it has one (recipes/first-boot.sh): nothing is released unless it passes
+      - name: Boot test (the board's recipes/first-boot.sh)
+        id: boottest
+        if: inputs.images && inputs.arch == ''
+        run: |
+          r="${{ github.event.repository.name }}"
+          if [ -f "$r/recipes/first-boot.sh" ]; then
+            phe image recipe first-boot -b "${{ steps.setup.outputs.board }}"
+          else
+            echo "the board has no recipes/first-boot.sh: no boot test in CI"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always() && inputs.images && inputs.arch == ''
+        with:
+          name: boot-test-${{ steps.setup.outputs.board }}
+          path: build/x86/regress/first-boot/
+          if-no-files-found: ignore
+
       - name: Release
-        if: inputs.images && inputs.release && inputs.arch == ''
+        if: inputs.images && inputs.arch == '' && (inputs.release || inputs.version != '')
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          DRAFT: ${{ inputs.draft }}
         run: |
-          tag="${GITHUB_REF_NAME}"
-          gh release view "$tag" -R "${{ github.repository }}" >/dev/null 2>&1 \
-            || gh release create "$tag" -R "${{ github.repository }}" --title "$tag" --notes-file /dev/null --draft
+          tag="${VERSION:-$GITHUB_REF_NAME}"
+          draft=; [ "$DRAFT" = true ] && draft=--draft
+          if ! gh release view "$tag" -R "${{ github.repository }}" >/dev/null 2>&1; then
+            {
+              echo "Built from (repository commit):"; echo; echo '```'; cat out/built-from.txt; echo '```'
+            } > notes.md
+            gh release create "$tag" -R "${{ github.repository }}" --target "${{ github.sha }}" --title "$tag" \
+              --notes-file notes.md $draft
+          fi
           gh release upload "$tag" out/* -R "${{ github.repository }}" --clobber
