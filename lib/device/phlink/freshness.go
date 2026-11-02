@@ -10,8 +10,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -93,11 +95,8 @@ func (g *githubBase) get(path, accept string) ([]byte, int, error) {
 	}
 	req.Header.Set("Accept", accept)
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	for _, v := range []string{"GITHUB_TOKEN", "GH_TOKEN"} {
-		if t := os.Getenv(v); t != "" {
-			req.Header.Set("Authorization", "Bearer "+t)
-			break
-		}
+	if t := g.token(); t != "" {
+		req.Header.Set("Authorization", "Bearer "+t)
 	}
 	resp, err := g.hc.Do(req)
 	if err != nil {
@@ -107,6 +106,28 @@ func (g *githubBase) get(path, accept string) ([]byte, int, error) {
 	b, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	return b, resp.StatusCode, err
 }
+
+// token: GITHUB_TOKEN / GH_TOKEN, else the GitHub CLI's login (gh auth token), else none (anonymous: 60 requests an hour)
+func (g *githubBase) token() string {
+	for _, v := range []string{"GITHUB_TOKEN", "GH_TOKEN"} {
+		if t := os.Getenv(v); t != "" {
+			return t
+		}
+	}
+	ghTokenOnce.Do(func() {
+		c := exec.Command("gh", "auth", "token")
+		hideWindow(c) // (PhoneLab runs without a console: no window flash)
+		if out, err := c.Output(); err == nil {
+			ghToken = strings.TrimSpace(string(out))
+		}
+	})
+	return ghToken
+}
+
+var (
+	ghTokenOnce sync.Once
+	ghToken     string
+)
 
 func (g *githubBase) BoardLock(board string) (map[string]string, error) {
 	b, code, err := g.get("adaptation-"+board+"/contents/board.lock?ref=main", "application/vnd.github.raw")
