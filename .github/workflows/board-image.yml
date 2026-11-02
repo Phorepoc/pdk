@@ -257,8 +257,24 @@ jobs:
           path: build/x86/regress/first-boot/
           if-no-files-found: ignore
 
+      # A computed version: the caller's own publish job makes the release from this artifact. GitHub refused
+      # the release from inside this cross-repository workflow (HTTP 403 with contents: write, 2026-11-02),
+      # while the same command works in a repository's own workflow (the pdk's release.yml).
+      - name: Release notes
+        if: inputs.images && inputs.arch == '' && inputs.version != ''
+        run: '{ echo "Built from (repository commit):"; echo; echo "\`\`\`"; cat out/built-from.txt; echo "\`\`\`"; } > notes.md'
+
+      - uses: actions/upload-artifact@v4
+        if: inputs.images && inputs.arch == '' && inputs.version != ''
+        with:
+          name: release-files
+          path: |
+            out/
+            notes.md
+          if-no-files-found: error
+
       - name: Release
-        if: inputs.images && inputs.arch == '' && (inputs.release || inputs.version != '')
+        if: inputs.images && inputs.arch == '' && inputs.release && inputs.version == ''
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
