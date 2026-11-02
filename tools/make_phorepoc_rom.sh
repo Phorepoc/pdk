@@ -244,6 +244,10 @@ if [ -n "${BOOT:-}" ]; then
       case "$seen" in *" $d "*) continue ;; esac
       seen="$seen$d "
       name=$(g remote get-url origin 2>/dev/null | sed 's#\.git$##; s#.*[/:]##')
+      case "$d" in /adapt/[0-9]*)		# a container mount: its host folder's name (PHOREPOC_ADAPTATION_NAMES, same order)
+        n=$(echo "${PHOREPOC_ADAPTATION_NAMES:-}" | cut -d: -f$((${d#/adapt/} + 1)))
+        [ -z "$n" ] || name=$n ;;
+      esac
       dirty=
       [ -z "$(g status --porcelain --untracked-files=no 2>/dev/null)" ] || dirty=+dirty
       echo "repo ${name:-$(basename "$d")} $(g rev-parse HEAD)$dirty"

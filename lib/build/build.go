@@ -135,14 +135,16 @@ func (e *Env) dockerArgs(tty bool, cmd []string) ([]string, error) {
 		}
 	}
 	args = append(args, "-v", e.Build+":/build") // a directory, or a Docker volume name
-	var adapt []string
+	var adapt, names []string
 	for i, a := range e.Adaptations {
 		m := fmt.Sprintf("/adapt/%d", i)
 		args = append(args, "-v", a+":"+m+":ro")
 		adapt = append(adapt, m)
+		names = append(names, filepath.Base(a))
 	}
 	if len(adapt) > 0 {
-		args = append(args, "-e", "PHOREPOC_ADAPTATIONS="+strings.Join(adapt, ":"))
+		// the names of the mounts, in the same order (the ROM's build record names each repository)
+		args = append(args, "-e", "PHOREPOC_ADAPTATIONS="+strings.Join(adapt, ":"), "-e", "PHOREPOC_ADAPTATION_NAMES="+strings.Join(names, ":"))
 	}
 	for _, v := range passThrough {
 		if val, ok := os.LookupEnv(v); ok {
