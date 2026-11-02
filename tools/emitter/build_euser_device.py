@@ -166,7 +166,7 @@ def _extra_flags(basename: str) -> list[str]:
 # __CPU_HAS_CP15_THREAD_ID_REG -> __USERSIDE_THREAD_DATA__ for ARMv7. So User::Heap() (every User::Alloc / Free),
 # Dll::Tls, CActiveScheduler::Current and RThread().Id() were each an exec; Exec::DllTls alone was 20 % of WSERV's GL
 # worker while scrolling. With it they read TLocalThreadData (us_data.h, uc_data.cpp), as a real Cortex euser build does.
-_DEVICE_CPU = ["-march=armv7-a", "-mno-unaligned-access", "-U__MARM_ARMV5__", "-D__MARM_ARMV7__", "-D__CPU_CORTEX_A8N__"]
+_DEVICE_CPU = ["-march=armv7-a", "-mword-relocations", "-mno-unaligned-access", "-U__MARM_ARMV5__", "-D__MARM_ARMV7__", "-D__CPU_CORTEX_A8N__"]
 
 
 def _extra_flags_tu(basename: str) -> list[str]:
