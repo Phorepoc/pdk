@@ -224,21 +224,33 @@ if [ -n "${BOOT:-}" ]; then
   MODEL_NAME=$( { head -1 "$BOARDDIR/model" 2>/dev/null || true; } | tr -d '\r')
   python3 -c 'import sys; open(sys.argv[1], "wb").write(b"\xff\xfe" + sys.argv[2].encode("utf-16-le"))' \
     "$BUILD/rom/model.txt" "${MODEL_NAME:-Phorepoc}"
-  # the build record (plain text in the ROM, so the image carries it): the commit of every repository next to pdk, "+dirty"
-  # when its checkout had uncommitted changes. PhoneLab's push reads it and refuses an image without one.
+  # the build record (plain text in the ROM, so the image carries it): the commit of every repository of the build, "+dirty"
+  # when its checkout had uncommitted changes. PhoneLab's push reads it and refuses an image without one. The repositories:
+  # pdk, core and the board's adaptations (in the container each is its own mount: /pdk, /core, /adapt/N) and the
+  # checkouts next to pdk; each named by its origin remote (else its folder). safe.directory: the container runs as root
+  # over checkouts the host user owns.
   {
     echo "PHOREPOC-BUILD v1"
     echo "board ${PHOREPOC_BOARD:-?}"
     echo "date $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    for d in "$(cd "${PHOREPOC_PDK:-$TOOLS/..}/.." && pwd)"/*/; do
-      git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
-      [ "$(git -C "$d" rev-parse --show-toplevel)" = "${d%/}" ] || continue
+    PDKD="$(cd "${PHOREPOC_PDK:-$TOOLS/..}" && pwd)"
+    seen=" "
+    for d in "$PDKD" ${PHOREPOC_CORE:+"$PHOREPOC_CORE"} $(echo "${PHOREPOC_ADAPTATIONS:-}" | tr : ' ') "$(dirname "$PDKD")"/*/; do
+      [ -d "$d" ] || continue
+      d="$(cd "$d" && pwd -P)"
+      g() { git -c safe.directory='*' -C "$d" "$@"; }
+      g rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
+      [ "$(cd "$(g rev-parse --show-toplevel)" && pwd -P)" = "$d" ] || continue
+      case "$seen" in *" $d "*) continue ;; esac
+      seen="$seen$d "
+      name=$(g remote get-url origin 2>/dev/null | sed 's#\.git$##; s#.*[/:]##')
       dirty=
-      [ -z "$(git -C "$d" status --porcelain --untracked-files=no 2>/dev/null)" ] || dirty=+dirty
-      echo "repo $(basename "$d") $(git -C "$d" rev-parse HEAD)$dirty"
+      [ -z "$(g status --porcelain --untracked-files=no 2>/dev/null)" ] || dirty=+dirty
+      echo "repo ${name:-$(basename "$d")} $(g rev-parse HEAD)$dirty"
     done
     echo "END"
   } > "$BUILD/rom/build.txt"
+  grep -q '^repo ' "$BUILD/rom/build.txt" || echo "warning: the build record lists no repositories (PhoneLab will refuse the image)" >&2
   ARGS="$BUILD/rom/full.args"
   # every registered component's icon files (bld.inf mifconv) before the recipe stages BUILD/icon-gen (MIF_ALL=0 = off):
   # missing .mif files crash apps that load their icons at start
