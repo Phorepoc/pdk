@@ -225,7 +225,8 @@ if [ -n "${BOOT:-}" ]; then
   python3 -c 'import sys; open(sys.argv[1], "wb").write(b"\xff\xfe" + sys.argv[2].encode("utf-16-le"))' \
     "$BUILD/rom/model.txt" "${MODEL_NAME:-Phorepoc}"
   # the build record (plain text in the ROM, so the image carries it): the commit of every repository of the build, "+dirty"
-  # when its checkout had uncommitted changes. PhoneLab's push reads it and refuses an image without one. The repositories:
+  # when its checkout had uncommitted changes (then also a hash of the diff and the changed files). PhoneLab's push reads
+  # it: no record, or a base behind the board's public pins, is refused; local changes are recorded. The repositories:
   # pdk, core and the board's adaptations (in the container each is its own mount: /pdk, /core, /adapt/N) and the
   # checkouts next to pdk; each named by its origin remote (else its folder). safe.directory: the container runs as root
   # over checkouts the host user owns.
@@ -251,6 +252,10 @@ if [ -n "${BOOT:-}" ]; then
       dirty=
       [ -z "$(g status --porcelain --untracked-files=no 2>/dev/null)" ] || dirty=+dirty
       echo "repo ${name:-$(basename "$d")} $(g rev-parse HEAD)$dirty"
+      if [ -n "$dirty" ]; then		# what the local changes were: a hash of the diff and the changed files (first 40)
+        echo "diff ${name:-$(basename "$d")} $(g diff HEAD 2>/dev/null | sha256sum | cut -c1-12)"
+        g diff HEAD --name-only 2>/dev/null | head -40 | sed "s#^#changed ${name:-$(basename "$d")} #"
+      fi
     done
     echo "END"
   } > "$BUILD/rom/build.txt"

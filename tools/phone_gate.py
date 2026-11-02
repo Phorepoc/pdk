@@ -9,7 +9,7 @@ reporting a phone result; it drives the phone through PhoneLab's REST API.
     (or PHONE_GATE_DEVICE=<id> in the environment)
 
 Checks:
-  1. provenance  the last push into this boot carried a clean build record (PhoneLab's push result)
+  1. provenance  the last push into this boot carried a build record without local changes (PhoneLab's push result)
   2. markers     this boot reached the home screen, "wfc gpu: GPU composition up", the real transition effects
                  (CGfxTransAdapterTfx), the display's frame log (the [mon] line's frames= counter)
   3. scenario    menu open + scrolling + back, screen off, a tap on the dark screen, screen on; during it the display
@@ -98,10 +98,17 @@ def main():
     else:
         prov = pushes[0]['result'].get('provenance')
         if not isinstance(prov, dict):
-            fails.append('provenance: the last push carried no build record (unverified or a stale image)')
+            fails.append('provenance: the last push carried no build record (an unverified kernel image)')
         else:
             print('  build: board %s, %s' % (prov.get('board'), ', '.join('%s %s' % (k, v[:9]) for k, v in
                                                                          sorted(prov.get('repos', {}).items()))))
+            # PhoneLab accepts experiments (local changes on a current base); a result needs the pipeline's clean build
+            if prov.get('dirty'):
+                ch = prov.get('changes') or {}
+                fails.append('provenance: built with local changes in %s (an experiment, not a pipeline image)' %
+                             ', '.join('%s (%d files, diff %s)' % (r, len((ch.get(r) or {}).get('files') or []),
+                                                                  (ch.get(r) or {}).get('diff', '?'))
+                                       for r in prov['dirty']))
 
     # 2. markers of this boot
     need = {
