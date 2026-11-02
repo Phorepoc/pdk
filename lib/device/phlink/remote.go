@@ -117,6 +117,7 @@ func remoteOps() []device.OpSpec {
 				{Name: "x1", Type: "int", Required: true}, {Name: "y1", Type: "int", Required: true},
 				{Name: "x2", Type: "int", Required: true}, {Name: "y2", Type: "int", Required: true},
 				{Name: "ms", Type: "int", Description: "duration (default 300)"},
+				{Name: "steps", Type: "int", Description: "move events between down and up (default 12; a finger at 60 Hz = ms*60/1000)"},
 				{Name: "panel", Type: "bool", Description: "coordinates are panel pixels (720x1440), as for touch"},
 			}},
 	}
@@ -574,7 +575,16 @@ func (d *Driver) execRemote(ctx context.Context, l device.Link, op string, a dev
 		if err != nil {
 			return nil, true, err
 		}
-		const steps = 12
+		// steps = the move events between down and up (default 12); a real finger reports at the panel rate (~60 Hz),
+		// so a drag that should look like one passes steps = ms * 60 / 1000
+		steps := 12
+		if v, ok := a["steps"]; ok {
+			n, err := a.Uint("steps", 16)
+			if err != nil || n < 1 || n > 600 {
+				return nil, true, fmt.Errorf("swipe: steps 1..600 (got %v)", v)
+			}
+			steps = int(n)
+		}
 		at := func(i int) uint32 {
 			x := int(p[0]) + (int(p[2])-int(p[0]))*i/steps
 			y := int(p[1]) + (int(p[3])-int(p[1]))*i/steps
@@ -584,7 +594,7 @@ func (d *Driver) execRemote(ctx context.Context, l device.Link, op string, a dev
 			return nil, true, err
 		}
 		for i := 1; i <= steps; i++ {
-			if err := sleep(ctx, dur/steps); err != nil {
+			if err := sleep(ctx, dur/time.Duration(steps)); err != nil {
 				l.Write(context.WithoutCancel(ctx), cmd9('T', at(i), 2|fl))
 				return nil, true, err
 			}
