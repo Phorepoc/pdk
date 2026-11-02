@@ -27,8 +27,8 @@ import (
 
 // baseSource answers the questions the check needs from the public repositories.
 type baseSource interface {
-	// BoardLock returns repository -> pinned commit from the board's public board.lock.
-	BoardLock(board string) (map[string]string, error)
+	// BoardLock returns repository -> pinned commit from the public board.lock of the board repository repo.
+	BoardLock(repo string) (map[string]string, error)
 	// Contains reports whether commit head contains commit pin in repository repo (pin == head, or pin is an ancestor).
 	Contains(repo, pin, head string) (bool, error)
 }
@@ -38,7 +38,17 @@ func checkBase(p *Provenance, src baseSource) error {
 	if p.Board == "" || p.Board == "?" {
 		return fmt.Errorf("the build record names no board, so its base cannot be checked")
 	}
-	lock, err := src.BoardLock(p.Board)
+	// the board's repository: the record's repository named "<something>-<board>"
+	boardRepo := ""
+	for r := range p.Repos {
+		if strings.HasSuffix(r, "-"+p.Board) {
+			boardRepo = r
+		}
+	}
+	if boardRepo == "" {
+		return fmt.Errorf("the build record lists no repository of board %s, so its base cannot be checked", p.Board)
+	}
+	lock, err := src.BoardLock(boardRepo)
 	if err != nil {
 		return fmt.Errorf("cannot read the %s board.lock to check the image's base: %v", p.Board, err)
 	}
@@ -129,8 +139,8 @@ var (
 	ghToken     string
 )
 
-func (g *githubBase) BoardLock(board string) (map[string]string, error) {
-	b, code, err := g.get("adaptation-"+board+"/contents/board.lock?ref=main", "application/vnd.github.raw")
+func (g *githubBase) BoardLock(repo string) (map[string]string, error) {
+	b, code, err := g.get(repo+"/contents/board.lock?ref=main", "application/vnd.github.raw")
 	if err != nil {
 		return nil, err
 	}

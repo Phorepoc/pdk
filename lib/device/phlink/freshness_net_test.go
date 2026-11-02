@@ -8,13 +8,15 @@ import (
 	"testing"
 )
 
-// The GitHub side of the base check against the live public repositories (PHLINK_NET=1; needs the network).
+// The GitHub side of the base check against the live public repositories (PHLINK_NET=<a board repository>, e.g. the
+// name of a board's adaptation repository; needs the network).
 func TestGithubBaseLive(t *testing.T) {
-	if os.Getenv("PHLINK_NET") != "1" {
-		t.Skip("PHLINK_NET=1 runs it against github.com")
+	repo := os.Getenv("PHLINK_NET")
+	if repo == "" {
+		t.Skip("PHLINK_NET=<board repository> runs it against github.com")
 	}
 	g := newGithubBase()
-	lock, err := g.BoardLock("pinephone")
+	lock, err := g.BoardLock(repo)
 	if err != nil || lock["core"] == "" || lock["pdk"] == "" {
 		t.Fatalf("board.lock: %v %v", lock, err)
 	}

@@ -4,6 +4,7 @@
 package phlink
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -15,7 +16,10 @@ func img(record string) []byte {
 // fakeBase: the board pins core at c2; core's history is c1 -> c2 -> c3
 type fakeBase struct{}
 
-func (fakeBase) BoardLock(board string) (map[string]string, error) {
+func (fakeBase) BoardLock(repo string) (map[string]string, error) {
+	if repo != "adapt-exampleboard" {
+		return nil, fmt.Errorf("no repository %s", repo)
+	}
 	return map[string]string{"core": "c2", "pdk": "p1"}, nil
 }
 
@@ -25,21 +29,21 @@ func (fakeBase) Contains(repo, pin, head string) (bool, error) {
 }
 
 func TestProvenance(t *testing.T) {
-	clean := "PHOREPOC-BUILD v1\nboard exampleboard\ndate 2026-10-28T23:00:00Z\nrepo core c2\nrepo pdk p1\nEND\n"
+	clean := "PHOREPOC-BUILD v1\nboard exampleboard\ndate 2026-10-28T23:00:00Z\nrepo core c2\nrepo pdk p1\nrepo adapt-exampleboard a1\nEND\n"
 	p, err := checkProvenance(img(clean), false, fakeBase{})
-	if err != nil || p.Board != "exampleboard" || p.Repos["core"] != "c2" || len(p.Repos) != 2 || p.Base != "current" {
+	if err != nil || p.Board != "exampleboard" || p.Repos["core"] != "c2" || len(p.Repos) != 3 || p.Base != "current" {
 		t.Fatalf("clean record: %+v %v", p, err)
 	}
 	// an experiment: uncommitted changes on a current base are accepted and recorded
 	exp := "PHOREPOC-BUILD v1\nboard exampleboard\nrepo core c3+dirty\ndiff core 0123456789ab\nchanged core os/a.cpp\n" +
-		"changed core os/b.cpp\nrepo pdk p1\nEND\n"
+		"changed core os/b.cpp\nrepo pdk p1\nrepo adapt-exampleboard a1\nEND\n"
 	p, err = checkProvenance(img(exp), false, fakeBase{})
 	if err != nil || len(p.Dirty) != 1 || p.Changes["core"] == nil || p.Changes["core"].Diff != "0123456789ab" ||
 		len(p.Changes["core"].Files) != 2 {
 		t.Fatalf("experiment on a current base: %+v %v", p, err)
 	}
 	// a stale base (core behind its pin) is refused, clean or not
-	stale := "PHOREPOC-BUILD v1\nboard exampleboard\nrepo core c1\nrepo pdk p1\nEND\n"
+	stale := "PHOREPOC-BUILD v1\nboard exampleboard\nrepo core c1\nrepo pdk p1\nrepo adapt-exampleboard a1\nEND\n"
 	if _, err := checkProvenance(img(stale), false, fakeBase{}); err == nil || !strings.Contains(err.Error(), "stale base") {
 		t.Fatalf("a stale base was accepted: %v", err)
 	}
