@@ -225,8 +225,13 @@ def run(dirs: list[str]) -> int:
             continue
         text = MBG.inf_text(os.path.join(d, inf[0]))
         seen = set()
-        # icon MAKEFILES in the same dir (the older S60 form, pushmtm/Group/PushMtmIcons.mk)
-        for mk in sorted(f for f in os.listdir(d) if f.lower().endswith(".mk")):
+        # icon MAKEFILES in the same dir (the older S60 form, pushmtm/Group/PushMtmIcons.mk). Only the ones the
+        # bld.inf runs (an active `gnumakefile` line) come before its mifconv blocks: many dirs keep a stale .mk
+        # for the same target with the old list commented out of the bld.inf (calcsoft: icons_calcsoft.mk, 39
+        # icons, vs the block's 60). Built first, it shifted every id the .mbg (from the block) names.
+        mks = sorted(f for f in os.listdir(d) if f.lower().endswith(".mk"))
+        used = mk_referenced(text)
+        for mk in [m for m in mks if m.lower() in used]:
             for mif, _hdr, toks in MBG.mk_mifconv(os.path.join(d, mk)):
                 if mif.lower() not in seen:
                     seen.add(mif.lower())
@@ -248,7 +253,21 @@ def run(dirs: list[str]) -> int:
             else:
                 toks = opts.get("SOURCES", "").split()
             bad += 0 if build(target, toks, d) else 1
+        # an unreferenced .mk still builds a target nothing else makes (the icon files shipped so far)
+        for mk in [m for m in mks if m.lower() not in used]:
+            for mif, _hdr, toks in MBG.mk_mifconv(os.path.join(d, mk)):
+                if mif.lower() not in seen:
+                    seen.add(mif.lower())
+                    bad += 0 if build(mif.lower(), toks, d) else 1
     return 1 if bad else 0
+
+
+def mk_referenced(inf: str) -> set[str]:
+    """The makefiles a bld.inf runs: `gnumakefile <x>.mk` lines outside comments, lower-case basenames."""
+    text = re.sub(r"/\*.*?\*/", " ", inf, flags=re.S)
+    text = re.sub(r"//[^\n]*", "", text)
+    return {re.split(r"[\\/]", m)[-1].lower()
+            for m in re.findall(r"^\s*gnumakefile\s+(\S+)", text, re.I | re.M)}
 
 
 def mmp_bitmaps(mmp: str) -> int:
