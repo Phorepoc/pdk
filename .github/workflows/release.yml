@@ -42,7 +42,14 @@ jobs:
   binaries:
     needs: version
     if: needs.version.outputs.version != ''
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Linux and Windows cross-compile without cgo; macOS builds on a Mac: the serial-port enumerator phonelab
+          # uses (go.bug.st/serial) needs cgo and the IOKit framework there
+          - { runner: ubuntu-latest, targets: "linux/amd64 linux/arm64 windows/amd64 windows/arm64", cgo: "0" }
+          - { runner: macos-latest, targets: "darwin/amd64 darwin/arm64", cgo: "1" }
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,17 +64,20 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go test ./...
-      - name: Cross-compile
+      - name: Build
         env:
           VERSION: ${{ needs.version.outputs.version }}
+          TARGETS: ${{ matrix.targets }}
+          CGO: ${{ matrix.cgo }}
         run: |
           mkdir dist
-          for t in linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/amd64 darwin/arm64; do
-            os=${t%/*} arch=${t#*/} ext=
+          for t in $TARGETS; do
+            os=${t%/*} arch=${t#*/} ext= cc=cc
             [ "$os" = windows ] && ext=.exe
+            [ "$os" = darwin ] && cc="clang -arch $([ "$arch" = amd64 ] && echo x86_64 || echo arm64)"
             for p in phe phonelab; do
-              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$VERSION" \
-                -o "stage/$p$ext" "./cmd/$p"
+              GOOS=$os GOARCH=$arch CGO_ENABLED=$CGO CC="$cc" go build -trimpath \
+                -ldflags "-s -w -X main.version=$VERSION" -o "stage/$p$ext" "./cmd/$p"
             done
             name="pdk-$VERSION-$os-$arch"
             if [ "$os" = windows ]; then
@@ -77,15 +87,15 @@ jobs:
             fi
             rm -rf stage
           done
-          (cd dist && sha256sum * > SHA256SUMS)
           ls -l dist
       - uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-${{ matrix.runner }}
           path: dist/
 
+  # pushed only once every binary has built (a failed release must not leave an image behind)
   image:
-    needs: version
+    needs: [version, binaries]
     if: needs.version.outputs.version != ''
     runs-on: ubuntu-latest
     permissions:
@@ -122,8 +132,10 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
-          name: dist
+          pattern: dist-*
+          merge-multiple: true
           path: dist/
+      - run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
       - name: Tag and publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
