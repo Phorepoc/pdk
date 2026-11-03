@@ -644,7 +644,9 @@ def build(key: str) -> int:
             grp = ["--start-group"] + archives + ["--end-group"] if len(archives) > 1 else archives
             fh.write("\n".join([entry_o] + all_objs + extra_objs + grp + ([SUPCXX] if rtti and not ehdll else [])) + "\n")
         # 260 MB of archives in seconds). X32_LD=bfd forces GNU ld.
+        # `link_wrap` (registry): ld --wrap=<name>, as on ARM -- phgl puts the GL implementation's allocators on one heap
         args = [LD, "-m", "elf32_x86_64", "-n", "-q", "--gc-sections", "--no-demangle",
+                *[f"--wrap={n}" for n in comp.get("link_wrap", [])],
                 "-T", ld, f"@{rsp}", "-o", out]
         if ignore:
             args.insert(1, "--unresolved-symbols=ignore-all")
