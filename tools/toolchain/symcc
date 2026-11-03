@@ -30,7 +30,7 @@ DEFS=(-D__SYMBIAN32__ -D__GCCE__ -D__EABI__ -D__MARM__ -D__MARM_ARMV5__ -D__EPOC
 # Deliberately NO -D__GCC32__ (see toolchain/symbian_gcc_prefix.h).
 FLAGS=(-c -march=armv5te -fshort-wchar -fno-short-enums
        -fno-exceptions -fno-rtti -fpermissive
-       -fno-lifetime-dse -fno-strict-aliasing -fno-delete-null-pointer-checks
+       -fno-lifetime-dse -fno-strict-aliasing -fno-delete-null-pointer-checks -fcheck-new
        -ffunction-sections -fdata-sections "${USERFLAGS[@]}"
        -include "$HERE/symbian_gcc_prefix.h")
 # -fno-short-enums: bare-metal arm-none-eabi defaults to PACKED enums (1/2 bytes); the
@@ -40,6 +40,9 @@ FLAGS=(-c -march=armv5te -fshort-wchar -fno-short-enums
 # -fno-delete-null-pointer-checks: 2010 source calls members through NULL and tests `this`/
 # dereferenced pointers afterwards (RVCT kept the tests); modern -O2 deletes them. Was per-component
 # (_KEEPNULL in components.py) until it became global.
+# -fcheck-new: GCC assumes placement new never gets NULL and drops the test, so
+# `new(User::Alloc(n)) HBufC8(..)` (HBufC8::New and every alloc-then-construct) wrote to 0
+# when the heap ran out instead of returning NULL (RVCT kept the test).
 # -fno-strict-aliasing: 2010 source is not aliasing-clean (RVCT/old GCCE never exploited it).
 # aknlayout2 `TInt32 value=0; DecodeBytes(p,(TUint16*)&value);` then reads value -> modern -O2
 # keeps the 0 -> every layout param limit = -1 -> 'Layout panic 1' in akncapserver.

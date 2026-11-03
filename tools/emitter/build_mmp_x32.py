@@ -134,7 +134,7 @@ BASE_FLAGS = ["-mx32", "-ffreestanding", "-fno-pic", "-fno-stack-protector", "-n
               "-std=gnu++03", "-fno-exceptions", "-fno-rtti", "-fpermissive", "-w", "-masm=intel", "-O2",
               "-fno-builtin", "-fno-tree-loop-distribute-patterns", "-fshort-wchar",
               "-fno-access-control", "-fno-threadsafe-statics", "-fno-strict-aliasing",
-              "-fno-delete-null-pointer-checks", "-fno-lifetime-dse", "-fno-short-enums",
+              "-fno-delete-null-pointer-checks", "-fno-lifetime-dse", "-fno-short-enums", "-fcheck-new",
               "-ffunction-sections", "-fdata-sections", "-fcf-protection=none",
               # `TPckg<TInt> p(x.MaxLength()); ... SendReceive(.., &p)` -- TPckg keeps the ADDRESS
               # of a temporary that is dead by the IPC. RVCT left such slots alone; GCC reuses them and the
