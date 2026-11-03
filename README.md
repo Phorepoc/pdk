@@ -1,11 +1,11 @@
 <p align="center">
-  <img src=".github/readme/phonelab.png" width="860" alt="PhoneLab in a browser: a phone running Phorepoc on the live screen, its files on the left, the keypad on the right and the phone's log below">
+  <img src=".github/readme/phonelab.png" width="860" alt="PhoneLab in a browser: a phone running Phorepoc OS on the live screen, its files on the left, the keypad on the right and the phone's log below">
 </p>
 
 <h1 align="center">Phorepoc PDK</h1>
 
 <p align="center">
-  <b>Build Phorepoc from source, and work on a running phone from your browser.</b><br>
+  <b>Build Phorepoc OS from source, and work on a running phone from your browser.</b><br>
   <code>phe</code> builds the operating system and its images. PhoneLab puts a phone's screen, files, log and keys on one web page.
 </p>
 
@@ -14,7 +14,7 @@
   <a href="docs/phe/README.md">phe manual</a> ·
   <a href="docs/phonelab.md">PhoneLab</a> ·
   <a href="https://github.com/Phorepoc/core">core</a> ·
-  <a href="https://github.com/Phorepoc">Try Phorepoc</a>
+  <a href="https://github.com/Phorepoc">Try Phorepoc OS</a>
 </p>
 
 <p align="center">
@@ -26,9 +26,9 @@
 
 ---
 
-[Phorepoc](https://github.com/Phorepoc) brings Symbian back on hardware you can buy today. This is its toolbox: one
-command line that builds the whole system from the 2010 source, and one service that lets you, a script or an AI agent
-work on a phone while it runs, without opening its serial port by hand.
+[Phorepoc OS](https://github.com/Phorepoc) is an open-source mobile operating system with its roots in Symbian. This is
+its toolbox: one command line that builds the whole system from source, and one service that lets you, a script or an
+AI agent work on a phone while it runs, without opening its serial port by hand.
 
 ## PhoneLab
 
@@ -74,11 +74,11 @@ phonelab -mock testdata/boot-slotb-rearm.log -data /tmp/phonelab-mock
 ## phe
 
 <p align="center">
-  <img src=".github/readme/phone.png" width="760" alt="Phorepoc on a phone: the home screen, the Menu, Applications and Calculator">
-  <br><sub>What phe builds: Phorepoc on a phone, with the built-in Haze theme.</sub>
+  <img src=".github/readme/phone.png" width="760" alt="Phorepoc OS on a phone: the home screen, the Menu, Applications and Calculator">
+  <br><sub>What phe builds: Phorepoc OS on a phone, with the built-in Haze theme.</sub>
 </p>
 
-`phe` builds Phorepoc from the Symbian source: the components, the ROM, and the files a board ships. It starts the
+`phe` builds Phorepoc OS from source: the components, the ROM, and the files a board ships. It starts the
 [toolchain](https://github.com/Phorepoc/toolchain) container for you, so all you need is Docker.
 
 Download `phe` from the [latest release](https://github.com/Phorepoc/pdk/releases/latest), clone
