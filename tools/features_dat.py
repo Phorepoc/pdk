@@ -58,9 +58,10 @@ def main(out: str) -> None:
     # s60_features.xml: __BRIGHTNESS_CONTROL (1072) "DefaultingOtherFeatures NOT __SERIES60_AMBIENT_LIGHT_SENSOR" (1529)
     entries[1072] = 1
     entries[1529] = 0
-    # No IAD (Install Application Download) on our boards: iaupdateapi is the 2010 stub whose CIAUpdate::NewL always leaves KErrNotSupported.
-    # With KFeatureIdIAUpdate (30) on, Messages (mce) ran that NewL from an active object RunL -> the scheduler error handler popped
-    # "Messages: Feature is not supported" right after the main view drew . Off = no IAD check at all.
+    # No IAD (Install Application Download) app on our boards. With KFeatureIdIAUpdate (30) on, Messages (mce) ran an IAD check from
+    # an active object RunL; against the 2010 stub iaupdateapi (CIAUpdate::NewL always leaves KErrNotSupported) the scheduler error
+    # handler popped "Messages: Feature is not supported" right after the main view drew. core now ships the real IAD client (its
+    # checks complete with an error when the IAD app is missing), but off still = no IAD check at all.
     entries[30] = 0
     blob = struct.pack("<IHHII", 0x74616566, 1, 0, len(entries), len(DSR))
     for uid in sorted(entries):
