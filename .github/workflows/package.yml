@@ -1,0 +1,143 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# package.yml -- the reusable build of an installable package (docs/layering.md): a repository that is no board and
+# ships its own SIS files (Catalogue installs them; the index lists the releases). It starts from the published core
+# layer (core-<arch>:main), adds the repositories its package.conf names and the caller itself, and runs:
+#
+#   recipes/prebuild.sh   (optional) anything the components need first, in the toolchain container (PHOREPOC_ARCH set)
+#   the components        `phe component resources` + `phe component build` of COMPONENTS_<arch>
+#   recipes/sis.sh        writes the package's SIS files to $PHOREPOC_BUILD/sis/
+#
+# package.conf (KEY=value lines, # comments):
+#   NAME=codecpack                     the package
+#   ARCHES="arm x32"                   the architectures it is built for (one SIS set each)
+#   IMAGE=ghcr.io/phorepoc/web         the toolchain image (default ghcr.io/phorepoc/base:latest)
+#   REPOS_x32="cxxrt"                  repositories it needs on top of core, per architecture (built at main)
+#   COMPONENTS_arm="phevdecsw pheffmpeg"  what to build, providers first (also those of REPOS the package needs)
+#
+# The files come back as the artifact "package-files" (the SIS files, SHA256SUMS, built-from.txt, notes.md); the
+# caller's own workflow makes the release (a cross-repository workflow cannot: see board-image.yml).
+#
+#   jobs:
+#     package:
+#       uses: Phorepoc/pdk/.github/workflows/package.yml@main
+#       permissions: { contents: read, packages: read }
+
+name: package
+
+on:
+  workflow_call:
+
+jobs:
+  conf:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.c.outputs.matrix }}
+      image: ${{ steps.c.outputs.image }}
+      name: ${{ steps.c.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: c
+        name: package.conf
+        run: |
+          [ -f package.conf ] || { echo "::error::no package.conf in ${{ github.repository }}"; exit 1; }
+          NAME= ARCHES= IMAGE=; . ./package.conf
+          [ -n "$NAME" ] && [ -n "$ARCHES" ] || { echo "::error::package.conf: NAME and ARCHES are required"; exit 1; }
+          m=$(for a in $ARCHES; do
+                eval "r=\${REPOS_$a:-}; c=\${COMPONENTS_$a:-}"
+                [ -n "$c" ] || { echo "::error::package.conf: no COMPONENTS_$a" >&2; exit 1; }
+                jq -nc --arg a "$a" --arg r "$r" --arg c "$c" '{arch: $a, repos: $r, components: $c}'
+              done | jq -sc '{include: .}')
+          echo "$m"
+          { echo "matrix=$m"; echo "name=$NAME"; echo "image=${IMAGE:-ghcr.io/phorepoc/base:latest}"; } >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: conf
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.conf.outputs.matrix) }}
+    env:
+      PHOREPOC_IMAGE: ${{ needs.conf.outputs.image }}
+    steps:
+      - id: setup
+        uses: Phorepoc/pdk/.github/actions/board-setup@main
+        with:
+          arch: ${{ matrix.arch }}
+          repos: ${{ matrix.repos }} ${{ github.event.repository.name }}
+
+      - name: Start from the published core layer (core-<arch> at the core commit, else :main)
+        run: |
+          for tag in "${{ steps.setup.outputs.core }}" main; do
+            img="ghcr.io/$OWNER/core-$PHOREPOC_ARCH:$tag"
+            if docker pull -q "$img" 2>/dev/null; then
+              id=$(docker create "$img" true); docker cp "$id:/build/." build/; docker rm "$id" >/dev/null
+              docker rmi "$img" >/dev/null; echo "started from $img"; break
+            fi
+          done
+          [ -f build/.srcstamp ] || echo "no published core layer: a full (cold) build"
+          python3 pdk/tools/ci/srcstamp.py apply build ${{ steps.setup.outputs.list }}
+
+      - name: Exports + header case links
+        run: |
+          phe source export -a
+          phe source mbg -a
+
+      - name: The package's prebuild recipe (recipes/prebuild.sh)
+        run: |
+          r="${{ github.event.repository.name }}"
+          if [ -f "$r/recipes/prebuild.sh" ]; then phe image recipe prebuild; else echo "no recipes/prebuild.sh"; fi
+
+      - name: The repositories' prepare recipes (recipes/prepare.sh)
+        run: |
+          for r in $(echo "$PHOREPOC_ADAPTATIONS" | tr : ' '); do
+            [ -f "$r/recipes/prepare.sh" ] || continue
+            echo "== $(basename "$r")"; (cd "$r" && bash recipes/prepare.sh)
+          done
+
+      - name: Components
+        run: |
+          phe component resources ${{ matrix.components }} > resources-1.log 2>&1 || true
+          phe source casefix -a
+          phe component resources ${{ matrix.components }}
+          phe component build -arch "$PHOREPOC_ARCH" ${{ matrix.components }}
+
+      - name: The SIS files (recipes/sis.sh)
+        run: |
+          phe image recipe sis
+          sudo chown -R "$(id -u):$(id -g)" build
+          mkdir -p out && cp build/sis/*.sis out/ && ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sis-${{ matrix.arch }}
+          path: |
+            out/
+            built-from.txt
+          if-no-files-found: error
+
+  files:
+    needs: [conf, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sis-*
+          path: parts
+      - name: The release files
+        run: |
+          mkdir -p out
+          cp parts/*/out/*.sis out/
+          # every architecture built from the same commits; the first one's list stands for all
+          cp "$(ls parts/*/built-from.txt | head -n 1)" out/built-from.txt
+          (cd out && sha256sum *.sis > SHA256SUMS && cat SHA256SUMS)
+          { echo "Built from (repository commit):"; echo; echo '```'; cat out/built-from.txt; echo '```'; } > notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-files
+          path: |
+            out/
+            notes.md
+          if-no-files-found: error

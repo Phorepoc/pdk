@@ -7,12 +7,17 @@
 # Two kinds of build (docs/layering.md):
 #   a board   the caller is a board repository: its board.conf names the repositories (REPOS) and the architecture,
 #             its board.lock pins their commits
-#   core      `arch` is given: pdk + core alone, for that architecture (core-layer.yml)
+#   core      `arch` is given: pdk + core alone, for that architecture (core-layer.yml); with `repos`, those repositories
+#             on top (a package: package.yml)
 name: board-setup
 description: Check out and prepare a Phorepoc build
 inputs:
   arch:
     description: build core alone for this architecture (x32, arm); empty = the caller is a board repository
+    required: false
+    default: ""
+  repos:
+    description: with arch, the repositories built on top of core besides it (a package repository and what it needs, at main; the caller at its commit)
     required: false
     default: ""
 outputs:
@@ -51,7 +56,7 @@ runs:
       shell: bash
       run: |
         if [ -n "${{ inputs.arch }}" ]; then
-          echo "list=pdk core" >> "$GITHUB_OUTPUT"; echo "arch=${{ inputs.arch }}" >> "$GITHUB_OUTPUT"
+          echo "list=pdk core ${{ inputs.repos }}" >> "$GITHUB_OUTPUT"; echo "arch=${{ inputs.arch }}" >> "$GITHUB_OUTPUT"
           exit 0
         fi
         [ -f caller/board.conf ] || { echo "no board.conf in ${{ github.repository }} (and no arch given)"; exit 1; }
