@@ -77,11 +77,14 @@ elif [ "${FAST:-0}" = 1 ] && [ "$(cat "$CORE_STAMP" 2>/dev/null)" = "LEAVE_TRACE
   echo "FAST=1: core images (euser efsrv hal efile estart) kept from the last build"
 else
   rm -f "$CORE_STAMP"
-  python3 "$TOOLS/emitter/build_euser_x32.py" | tail -3
-  python3 "$TOOLS/emitter/build_efsrv_x32.py" | tail -3
-  python3 "$TOOLS/emitter/build_hal_x32.py" | tail -3
-  python3 "$TOOLS/emitter/build_efile_x32.py" | tail -4
-  python3 "$TOOLS/emitter/build_estart_x32.py" | tail -2
+  # each build's own exit status: "| tail" alone would hide a failure and the ROM would take the previous build's image
+  core_build() { n=$1; shift; python3 "$TOOLS/emitter/$1" > "$BUILD/rom/$1.log" 2>&1 || { tail -15 "$BUILD/rom/$1.log" >&2; echo "core image build $1 failed" >&2; exit 1; }; tail -"$n" "$BUILD/rom/$1.log"; }
+  mkdir -p "$BUILD/rom"
+  core_build 3 build_euser_x32.py
+  core_build 3 build_efsrv_x32.py
+  core_build 3 build_hal_x32.py
+  core_build 4 build_efile_x32.py
+  core_build 2 build_estart_x32.py
   # the stamp only when every core image is there (a failed build must not be "kept" by the next FAST=1 ROM)
   for f in euser_x32.dll efsrv_x32.dll hal_x32.dll efile_x32.exe estart_x32.exe; do
     [ -f "$BUILD/x32core/$f" ] || { echo "core image $f was not built (see above)" >&2; exit 1; }
