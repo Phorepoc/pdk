@@ -135,3 +135,26 @@ The list per component is in `stub-audit-replaced-sources.md`.
 * **R4** BrowserNG's own start-up (`browserng.exe`): the stock browser is not shipped.
 * **R8** WLAN hardware init (`CWlanHwInit`, `wlmserversrv`): by design the board supplies it -- the board with a WLAN chip answers its data and MAC address; the board without one answers no data and KErrNotFound. Only a core layer built alone shows the stub, hence the `board` flag.
 * **R10** (stand-in, no link stub) `rcse`, see above.
+
+## Plans (assessed 2026-11-04, nothing started)
+
+* **hbcore (kind 4 and 3, 5697 GAP ordinals).** The real Orbit source is in the 2010 release (`oss.FCL.sf.mw.hb`: hbcore 349 .cpp / ~178k
+  lines, hbwidgets 115 / 80k, hbinput, hbutils, hbfeedback, hbplugins, hbservers). It needs Qt (`core gui svg network xml`, OpenVG);
+  the registry already has the real build (`components_s4.py`, `PHOREPOC_S4=1`, Qt 4.7 or Qt 4.8 with `PHOREPOC_QT48=1`) and the frozen
+  `.def` is wired into the null. 51 mmps import it (SysAp, loghandling, hsappkeyplugin, phone client/server, startup, appinstall UIs).
+  Plan: build the Qt 4.8 + Orbit chain, replace the null mmp with the real one, re-run the audit. Not small: Qt 4.8 in the ROM, the
+  theme server and resources, and the 51 importers then run real Orbit code (days).
+* **R1 M3G (`hitchcock`, 38 names).** No `m3g*.h` or engine source in any release tree; only the Java glue (`javauis/m3g_qt`). Callers:
+  hitchcock's `huim3gmesh.cpp`, `alfm3gmesh.cpp`, mesh visuals and the VG10 surface setup; nothing else uses it and the shipped apps
+  load no meshes. API used: loader (`m3gCreateLoader`, `m3gDecodeData`), reference counting, scene graph (World/Group/Camera/Mesh/
+  SkinnedMesh/MorphingMesh), Appearance/CompositingMode/PolygonMode, Background, transforms, animation. Plan: write `m3gcore` (ours,
+  Apache-2.0): object model + `.m3g` decoder + transforms + animation (~2k lines for the 38 names), rendering through the existing VG
+  surface later.
+* **R3 JRT registry client.** The real client is in the release (`oss.FCL.sf.app.JRT/javamanager/javaregistry/client`, 9 files, 2337 lines,
+  API headers in `jrt_plat/java_registry_api`); the tree's `java_stubs` copy only leaves `KErrNotSupported`. It needs `javastorage`,
+  `javafileutils`, `javasecurity`, `javasizehelperclient`, all in the tree, built from hand-written mmps (the release's are qmake `.pro`).
+  About 5 small components, ~a day; a phone with no Java apps answers an empty registry (verify in `javaregistry.cpp`).
+* **Kind 5 work list (D10-D16):** retire the null ALF / sgresource / surfaceupdateclient variants (make the `*_real` / `*_nga` the
+  only ones; touches the ROM-args scripts of every board); real C32 on ARM (D11, wants a phone run); the SAT menu handler (D12) needs the
+  SAT server running without a SIM, which is the same real "no modem" adaptation as D13 (licensee TSY / simatktsy).
+* **R10 rcse:** the real engine is in `sf.app.iptelephony/richcallsettingsengine/rcse2`; still held (SIP framework, CenRep, boot test).
