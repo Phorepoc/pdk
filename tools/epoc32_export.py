@@ -225,6 +225,7 @@ def _save_manifest(m):
 def run(pkgs, scan_only=False):
     n_inf = n_new = n_same = n_missing = 0
     replaced = []
+    plan = {}
     manifest = _load_manifest()
     baseline = os.path.dirname(BASE)
     for pkg in pkgs:
@@ -244,29 +245,30 @@ def run(pkgs, scan_only=False):
                         continue
                     dst = os.path.join(OUT, rel.replace("/", os.sep).lower())
                     mkey = os.path.relpath(dst, OUT).replace(os.sep, "/")
-                    msrc = os.path.relpath(os.path.normpath(src), baseline).replace(os.sep, "/")
-                    if os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False):
-                        manifest[mkey] = msrc      # byte-identical = a true origin of what is in place
-                    if os.path.exists(dst) and os.path.getsize(dst) == os.path.getsize(src) \
-                            and os.path.getmtime(dst) >= os.path.getmtime(src):
-                        n_same += 1
-                        continue
-                    if scan_only:
-                        continue
-                    swapped = os.path.exists(dst) and not filecmp.cmp(src, dst, shallow=False)
-                    if swapped:
-                        # a DIFFERENT header of the same name was in place (another package, or the
-                        # other branch's copy): components already built against it may no longer
-                        replaced.append((mkey, manifest.get(mkey, "?"), msrc))
-                    os.makedirs(os.path.dirname(dst), exist_ok=True)
-                    shutil.copy2(src, dst)
-                    if swapped:
-                        # copy2 kept the source's checkout time, older than the objects built against the
-                        # header it replaces: date it now, or their dependency check keeps them (a stale
-                        # hash.dll with the other CMD5 layout crashed the SIS registry on the second boot)
-                        os.utime(dst)
-                    manifest[mkey] = msrc
-                    n_new += 1
+                    # (the later bld.inf wins: the plan keeps the last source of each destination)
+                    plan[mkey] = (src, dst, os.path.relpath(os.path.normpath(src), baseline).replace(os.sep, "/"))
+    # Apply the plan by CONTENT, never by time: a header whose bytes are already in place is left alone (its mtime is
+    # what the objects built against it were compared with), a different one is replaced and dated now. Resolving the
+    # winners first matters: copying each bld.inf's version in turn rewrote every header that two packages export
+    # (1256 of them), so a rerun on an up-to-date tree replaced them all and every object that includes one rebuilt.
+    for mkey, (src, dst, msrc) in plan.items():
+        if os.path.isdir(dst):             # (a destination that names a folder another export filled: into it, as cp does)
+            dst = os.path.join(dst, os.path.basename(src))
+        exists = os.path.exists(dst)
+        if exists and filecmp.cmp(src, dst, shallow=False):
+            manifest[mkey] = msrc          # byte-identical = a true origin of what is in place
+            n_same += 1
+            continue
+        if scan_only:
+            continue
+        if exists:
+            # a DIFFERENT header of the same name was in place (another package, the other branch's copy, an older
+            # source): components built against it may no longer be right
+            replaced.append((mkey, manifest.get(mkey, "?"), msrc))
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copyfile(src, dst)          # (now, not the source's mtime: whatever was built against the old one is older)
+        manifest[mkey] = msrc
+        n_new += 1
     _save_manifest(manifest)
     if scan_only:
         print("manifest: %d exported headers have a known origin (%d bld.inf scanned)" % (len(manifest), n_inf))

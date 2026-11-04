@@ -48,6 +48,7 @@ import components as C
 import case_shim as CS
 import devlink
 import mmp as MMP
+import objcache as OC
 from e32image import build_dll
 from elf import Elf32, extract
 from euser_def import parse_def
@@ -96,34 +97,6 @@ def _toolchain_rev() -> str:
 TOOLCHAIN_REV = None
 
 
-def read_deps(obj):
-    """Paths from <obj>.d (make syntax: backslash-newline continuations, backslash-space = a space
-    inside a path)."""
-    try:
-        text = open(obj + ".d", errors="replace").read()
-    except OSError:
-        return None
-    text = text.replace("\\\r\n", " ").replace("\\\n", " ")
-    body = text.split(": ", 1)[1] if ": " in text else ""
-    return [d.strip().replace("\t", " ") for d in body.replace("\\ ", "\t").split(" ") if d.strip()]
-
-
-def _deps_newer(obj):
-    """True if a recorded dependency is newer than the object (no .d yet = unknown = not newer:
-    objects built before -MMD keep their old behaviour until their next rebuild)."""
-    deps = read_deps(obj)
-    if not deps:
-        return False
-    t = os.path.getmtime(obj)
-    for d in deps:
-        try:
-            if os.path.getmtime(d) > t:
-                return True
-        except OSError:
-            return True          # a header it used is gone
-    return False
-
-
 _SYMCC_CMDS = {}
 _SYMCC_LOCK = threading.Lock()
 
@@ -144,17 +117,19 @@ def _compile_one(src, obj, flags, env):
     global TOOLCHAIN_REV
     if TOOLCHAIN_REV is None:
         TOOLCHAIN_REV = _toolchain_rev()
-    key = hashlib.sha1((TOOLCHAIN_REV + " ".join(flags) + src).encode()).hexdigest()
-    stamp = obj + ".key"
-    if (os.path.exists(obj) and os.path.exists(stamp) and open(stamp).read() == key
-            and os.path.getmtime(obj) >= os.path.getmtime(src) and not _deps_newer(obj)):
-        return src, 0, ""
     if "-DSYMCC_C_DRIVER" in flags:
         # a C source of a `cdriver` component: g++ compiles even a .c as C++, so hand symcc the
         # gcc driver (its SYMBIAN_GXX override)
         env = dict(env, SYMBIAN_GXX=BE.GCC)
-    # -MMD: <obj>.d = every header this TU read. Feeds _deps_newer (a header-tree change, e.g. a
-    # branch move, recompiles its dependents) and tools/closure_export.py (the source deliverable).
+    # up to date = the same compiler, command and file contents as when the object was made (objcache.py)
+    cmd0 = _symcc_cmd(src, flags, env)
+    key = OC.make_key(cmd0[0], [*cmd0, src, "-O2", "-w", *flags], TOOLCHAIN_REV)
+    why = OC.check(obj, key)
+    OC.count(why)
+    if not why:
+        return src, 0, ""
+    # -MMD: <obj>.d = every header this TU read. Feeds objcache.py (a change in any of them recompiles the TU)
+    # and tools/closure_export.py (the source deliverable).
     # g++ directly with symcc's command line (SYMCC_PRINT, cached per flag set): no shell start per TU
     if os.environ.get("MMP_DUMPCMD") == os.path.basename(src):      # debug: the full compile command of one TU
         with open(os.path.join(ARM_ROOT, "mmp-cmd.txt"), "w") as fh:
@@ -180,7 +155,7 @@ def _compile_one(src, obj, flags, env):
             xc = ["-I" + shim, *xc]
         r = cc()
     if r.returncode == 0:
-        open(stamp, "w").write(key)
+        OC.record(obj, key)
     return src, r.returncode, (r.stdout + r.stderr)
 
 

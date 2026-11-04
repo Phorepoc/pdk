@@ -94,6 +94,35 @@ jobs:
     permissions: { contents: write, packages: write }
 ```
 
+### What a build reuses
+
+A build is incremental at every level, and every reuse is decided by **content**, never by a time (a fresh checkout dates
+every file now, an unpacked layer dates every object when it was unpacked):
+
+- **Objects.** `tools/emitter/objcache.py` stores next to each object a key (the compiler's own bytes and the command
+  line, with the mount points written as what they are, so the core layer and a board build name things alike) and a
+  digest of the content of every file the compiler read (the `-MMD` depfile). The object is reused when both are
+  unchanged. So the board starts from `core-<arch>` and compiles only its own components and whatever really changed,
+  and no cache can hand back an object made from other bytes. (Like make, it cannot see a *new* file that would now be
+  found earlier on an include path; the include directories under the merged OS tree list the files a layer other than
+  core adds to them in the key.) `OBJCACHE_EXPLAIN=1` (workflow input `explain`) names the file that made an object rebuild.
+- **Exports.** `phe source export` resolves which bld.inf wins each header first and writes a header only when its bytes
+  differ, so an unchanged tree keeps every header untouched.
+- **Layers' prepare recipes.** A repository lists in `recipes/prepare.cache` the images, key files and folders its
+  prepare recipe leaves behind (Mesa: its source, host build and objects); `tools/ci/prepare_cache.sh` turns that into one
+  `actions/cache` entry keyed by their content. What the cached files are compiled against is still checked by content
+  when they are used.
+- **The Symbian source** (`core/fetch.sh`'s output) is cached by the content of `sources.lock` and `fetch.sh`.
+- **Jobs.** When the published layer was made by the same compile front end (`tools/ci/frontend_id.sh`: the trees of
+  `tools/emitter` and `tools/toolchain`, the toolchain image), little is left to compile, so the job that prepared the
+  tree also links and releases (`.github/actions/board-finish`). Otherwise (no layer, a changed compiler or flag set) the
+  compile is split over shards as before. The split only decides how fast it goes, not what is reused.
+
+A board's release workflow keeps `concurrency: {group: release, cancel-in-progress: false}`: GitHub keeps one running and
+one pending run and cancels an older *pending* one when a newer is queued, which is safe because each run works out its
+version from the tags and the commits since the last release. A running release is never cancelled (it may be
+publishing). `layer_prefix` lets a test run read and write its own layers (`test-<commit>`) instead of the boards'.
+
 ## Keeping it this way
 
 Every repository's lint checks for names from the layers above it (`tools/ci/layering.sh` in the pdk, given that

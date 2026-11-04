@@ -49,6 +49,7 @@ sys.path.insert(0, HERE)
 
 from paths import OS_ROOT, BUILD, SYMBIAN, has_layer, prefix_maps, resolve as pathres           # noqa: E402
 import mmp as MMP                                   # noqa: E402
+import objcache as OC                               # noqa: E402
 MMP.CPP = "cpp"                                     # same -undef -nostdinc run as the ARM build
 # Some mmps `#include <vg\openvguids.hrh>` (backslash): a Linux cpp rejects that. Preprocess such a file from a
 # with the original dir on -I.
@@ -239,10 +240,11 @@ def compile_one(src: str, obj: str, flags: list[str]) -> tuple[str, int, str]:
     if RETURN_CENSUS:
         return_census(src, flags)
     cmd = ["gcc", *flags, "-c", src, "-o", obj, "-MMD", "-MF", obj + ".d"]
-    key = hashlib.sha1((" ".join(cmd)).encode()).hexdigest()
-    stamp = obj + ".key"
-    if (os.path.exists(obj) and os.path.exists(stamp) and open(stamp).read() == key
-            and os.path.getmtime(obj) >= os.path.getmtime(src) and not deps_newer(obj)):
+    # up to date = the same compiler, command and file contents as when the object was made (objcache.py)
+    key = OC.make_key("gcc", ["gcc", *flags, "-c", src])
+    why = OC.check(obj, key)
+    OC.count(why)
+    if not why:
         return src, 0, ""
     # the container's filesystem is neither. On "No such file", resolve the name that way against
     # this compile's include path and retry with a shim dir of symlinks .
@@ -261,7 +263,7 @@ def compile_one(src: str, obj: str, flags: list[str]) -> tuple[str, int, str]:
             cmd = cmd[:1] + ["-I", shim] + cmd[1:]
         r = run(cmd, cwd=BUILD)
     if r.returncode == 0:
-        open(stamp, "w").write(key)
+        OC.record(obj, key)
     elif os.environ.get("X32_FULLERR"):
         # (the command itself, to rerun one TU by hand: -E, -H, -dM ...)
         return src, r.returncode, "$ " + " ".join(cmd) + "\n" + r.stdout + r.stderr
@@ -280,23 +282,6 @@ def local_case_shim(src: str, flags: list[str], shim: str) -> bool:
 def case_shim(stderr: str, src: str, flags: list[str], shim: str) -> bool:
     """Link each "No such file" include a case-insensitive lookup finds into the shim (case_shim.py)."""
     return CS.missing(stderr, src, flags, shim, BUILD)
-
-
-def deps_newer(obj: str) -> bool:
-    try:
-        text = open(obj + ".d", errors="replace").read()
-    except OSError:
-        return False
-    text = text.replace("\\\n", " ")
-    body = text.split(": ", 1)[1] if ": " in text else ""
-    t = os.path.getmtime(obj)
-    for d in body.split():
-        try:
-            if os.path.getmtime(d) > t:
-                return True
-        except OSError:
-            return True
-    return False
 
 
 # LIBRARY names the release uses but never builds, and the DLL that really provides what their users

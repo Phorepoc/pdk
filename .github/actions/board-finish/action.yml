@@ -1,0 +1,166 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# board-finish -- the last steps of a board-image build, once every object is compiled or can be reused: link every
+# component in provider order, publish the core layer or make the board's release files, run its boot test, write the
+# release notes. board-image.yml runs it at the end of the job that compiled (the usual case: the tree started from a
+# published layer made by the same compile front end, little is left to compile) or in the finish job after the shards.
+name: board-finish
+description: Link, publish the layer or make the release files, boot test
+inputs:
+  arch:
+    description: the architecture built for (x32, arm)
+    required: true
+  board:
+    description: the board's name (empty for a core build)
+    required: true
+  core:
+    description: the core commit checked out
+    required: true
+  list:
+    description: the repositories checked out
+    required: true
+  core_arch:
+    description: the workflow's `arch` input (set = a core build, empty = a board)
+    required: true
+  images:
+    description: run the board's RELEASE recipe
+    required: true
+  publish_layer:
+    description: push the build tree as the core layer
+    required: true
+  layer_prefix:
+    description: prefix of the layer's tags
+    required: true
+  version:
+    description: tag and release this version
+    required: true
+  release:
+    description: attach the release files to the caller's release for this tag
+    required: true
+  draft:
+    description: make that release a draft
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Link every component, providers first
+      shell: bash
+      run: |
+        # (a bulk build exits 1 when a component failed; the pipes below must not turn that into this step's verdict)
+        set +o pipefail
+        phe component build -A -arch "$PHOREPOC_ARCH" 2>&1 | tee component-build.log | tail -n 20
+        grep -h '^objcache:' component-build.log || true
+        # a bulk build goes on past a component that fails (exit 1): the image steps are the verdict, so name them here
+        failed=$(awk '/^=== /{c=$2} /FAIL/{print c}' component-build.log | tr -d : | sort -u)
+        echo "components failed: $(echo "$failed" | grep -c . || true)"; echo $failed | fold -w 200
+
+    - name: Relink what was linked before a provider of its existed (x32 import stubs; dependency cycles need passes)
+      if: inputs.arch == 'x32'
+      shell: bash
+      run: |
+        set +o pipefail
+        for pass in 1 2 3 4; do
+          keys=$(phe component stale | awk -F: '/: relink/ { print $1 }')
+          [ -n "$keys" ] || break
+          echo "pass $pass: relink $(echo $keys | wc -w): $(echo $keys | cut -c1-300)"
+          phe component build -arch x32 $keys >> component-relink.log 2>&1 || true
+        done
+        phe component stale | tail -n 1
+
+    - name: Own the build folder (the container wrote it as root)
+      if: always()
+      shell: bash
+      run: sudo chown -R "$(id -u):$(id -g)" build
+
+    - name: Publish the core layer (core-<arch>:<core commit> + :main)
+      if: inputs.publish_layer == 'true' && inputs.core_arch != ''
+      shell: bash
+      run: |
+        img="ghcr.io/$OWNER/core-$PHOREPOC_ARCH"
+        core="${{ inputs.core }}"
+        pre="${{ inputs.layer_prefix }}"
+        # the compile front end this tree was made by: a build that starts from it compiles in one job when its own matches
+        [ -f pdk/tools/ci/frontend_id.sh ] && sh pdk/tools/ci/frontend_id.sh > build/.compile-frontend || rm -f build/.compile-frontend
+        printf 'FROM busybox:1.36\nCOPY build /build\n' > Dockerfile.layer; printf '*\n!build\n' > .dockerignore
+        docker build -q -f Dockerfile.layer -t "$img:$pre$core" -t "$img:${pre}main" \
+          --label org.opencontainers.image.source="https://github.com/${{ github.repository }}" .
+        docker push -q "$img:$pre$core"; docker push -q "$img:${pre}main"
+        docker rmi "$img:$pre$core" "$img:${pre}main" >/dev/null
+
+    - name: The board's release files (board.conf RELEASE)
+      if: inputs.images == 'true' && inputs.core_arch == ''
+      shell: bash
+      run: phe image release -b "${{ inputs.board }}" -o "$PWD/out"
+
+    - name: Checksums + provenance
+      if: inputs.images == 'true' && inputs.core_arch == ''
+      shell: bash
+      run: |
+        mkdir -p out
+        cp built-from.txt out/
+        (cd out && sha256sum * > SHA256SUMS && cat SHA256SUMS)
+
+    - uses: actions/upload-artifact@v4
+      if: inputs.images == 'true' && inputs.core_arch == ''
+      with:
+        name: phorepoc-${{ inputs.board }}
+        path: out/
+        if-no-files-found: warn
+
+    # the board's own boot test, when it has one (recipes/first-boot.sh): nothing is released unless it passes
+    - name: Boot test (the board's recipes/first-boot.sh)
+      if: inputs.images == 'true' && inputs.core_arch == ''
+      shell: bash
+      run: |
+        r="${{ github.event.repository.name }}"
+        if [ -f "$r/recipes/first-boot.sh" ]; then
+          phe image recipe first-boot -b "${{ inputs.board }}"
+        else
+          echo "the board has no recipes/first-boot.sh: no boot test in CI"
+        fi
+
+    - uses: actions/upload-artifact@v4
+      if: always() && inputs.images == 'true' && inputs.core_arch == ''
+      with:
+        name: boot-test-${{ inputs.board }}
+        path: build/x86/regress/first-boot/
+        if-no-files-found: ignore
+
+    # A computed version: the caller's own publish job makes the release from this artifact. GitHub refused
+    # the release from inside this cross-repository workflow (HTTP 403 with contents: write, 2026-11-02),
+    # while the same command works in a repository's own workflow (the pdk's release.yml).
+    - name: Release notes
+      if: inputs.images == 'true' && inputs.core_arch == '' && inputs.version != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      # what changed in every pinned repository since the previous release (Conventional Commits), then the commits
+      run: python3 pdk/tools/ci/release_notes.py --repo "${{ github.repository }}" --version "${{ inputs.version }}" --built-from out/built-from.txt --out notes.md
+
+    - uses: actions/upload-artifact@v4
+      if: inputs.images == 'true' && inputs.core_arch == '' && inputs.version != ''
+      with:
+        name: release-files
+        path: |
+          out/
+          notes.md
+        if-no-files-found: error
+
+    - name: Release
+      if: inputs.images == 'true' && inputs.core_arch == '' && inputs.release == 'true' && inputs.version == ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ inputs.version }}
+        DRAFT: ${{ inputs.draft }}
+      run: |
+        tag="${VERSION:-$GITHUB_REF_NAME}"
+        draft=; [ "$DRAFT" = true ] && draft=--draft
+        if ! gh release view "$tag" -R "${{ github.repository }}" >/dev/null 2>&1; then
+          python3 pdk/tools/ci/release_notes.py --repo "${{ github.repository }}" --version "$tag" \
+            --built-from out/built-from.txt --out notes.md
+          gh release create "$tag" -R "${{ github.repository }}" --target "${{ github.sha }}" --title "$tag" \
+            --notes-file notes.md $draft
+        fi
+        gh release upload "$tag" out/* -R "${{ github.repository }}" --clobber

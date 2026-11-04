@@ -39,11 +39,14 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Make room (the source trees + a full build need ~25 GB)
+    - name: Make room (the source trees + a full build need ~25 GB; hosted runners usually have far more)
       shell: bash
       run: |
-        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
-        docker image prune -af >/dev/null || true
+        avail=$(df --output=avail -BG / | tail -n 1 | tr -dc 0-9)
+        if [ "$avail" -lt 50 ]; then
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          docker image prune -af >/dev/null || true
+        fi
         df -h /
 
     - name: Check out the caller (its board.conf + board.lock)
@@ -102,6 +105,14 @@ runs:
       run: |
         (cd pdk && go build -o ../bin/phe ./cmd/phe)
         echo "$PWD/bin" >> "$GITHUB_PATH"
+
+    # core/symbian is what fetch.sh makes from core's sources.lock: the same bytes for the same lock and script, so the
+    # cache is keyed by those two files and nothing else (a cache miss runs fetch.sh, which only adds what is missing)
+    - name: The Symbian source, from the cache
+      uses: actions/cache@v4
+      with:
+        path: core/symbian
+        key: symbian-source-${{ hashFiles('core/sources.lock', 'core/fetch.sh') }}
 
     - name: Fetch the Symbian source (pinned in core's sources.lock)
       shell: bash
