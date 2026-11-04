@@ -59,6 +59,13 @@ def main() -> int:
         if key == a.keys[0]:
             uid3, caps = struct.unpack_from("<I", img, 8)[0], img_caps
         files.append((img, "!:\\sys\\bin\\" + rom, img_caps))
+        if m.targettype == "plugin":
+            # an ECOM plug-in is found through its registration resource (compile_registration: BUILD/plugins/<stem>.rsc), which
+            # the ROM carries in \resource\plugins; installed, it goes to the same folder of the install drive
+            reg = os.path.join(BUILD, "plugins", os.path.splitext(rom)[0] + ".rsc")
+            if not os.path.isfile(reg):
+                sys.exit(f"make_sis: {key} is an ECOM plug-in but {reg} (its registration) was not built: run the resource step first")
+            files.append((open(reg, "rb").read(), "!:\\resource\\plugins\\" + os.path.basename(reg), None))
         lines = list(comp.get("rom_data", []))
         man = os.path.join(BUILD, "romfiles", rom + ".romfiles")
         if os.path.isfile(man):
