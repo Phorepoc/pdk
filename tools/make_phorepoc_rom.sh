@@ -210,6 +210,12 @@ if [ -n "${BOOT:-}" ]; then
                                     "SCR_TWIP_HEIGHT2 2235" "S60_SCR_SOFTKEY_LOCATION2 right" "S60_SCR_STYLE_NAME2 QHDTOUCH"
                                     "S60_HWSTATE_KEYCODE0 EKeyDeviceB" "S60_HWSTATE_SCREENMODE0 1" "S60_HWSTATE_ALT_SCREENMODE0 2"
                                     "S60_HWSTATE_KEYCODE1 EKeyDeviceA" "S60_HWSTATE_SCREENMODE1 2" "S60_HWSTATE_ALT_SCREENMODE1 1" "${FADER_INI[@]}")
+  # the board's own window-server lines (os/board/wsini.txt, one wsini line per row, # = comment): the screen modes of a board whose
+  # panel the architecture does not describe (a board with two modes: portrait and a rotated landscape one)
+  if [ -f "$BOARDDIR/wsini.txt" ]; then
+    mapfile -t BOARD_WS < <(grep -v '^[[:space:]]*#' "$BOARDDIR/wsini.txt" | grep -v '^[[:space:]]*$' | tr -d '\r')
+    FADER_INI=("${BOARD_WS[@]}" "${FADER_INI[@]}")
+  fi
   # touch feedback: WSERV loads the tactile click plug-in named here (KEYCLICK.CPP CClick::InitStaticsL; S60's own
   # wsini line) -- without it the touch feedback client finds no plug-in and no tap ever reaches the vibra/audio players.
   # On by default (TACTILE=0 = off; verified on the phone 2026-10-28); the lines go FIRST: WSERV reads them only from the global section
