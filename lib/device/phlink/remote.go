@@ -355,8 +355,10 @@ func textKey(r rune) (code uint32, shift bool, err error) {
 		return Keys["space"], false, nil
 	case r == '\n':
 		return Keys["enter"], false, nil
-	case r >= '0' && r <= '9', r >= 'a' && r <= 'z':
+	case r >= '0' && r <= '9':
 		return uint32(r), false, nil
+	case r >= 'a' && r <= 'z':
+		return uint32(r - 'a' + 'A'), false, nil // letter scan codes are the upper-case ASCII
 	case r >= 'A' && r <= 'Z':
 		return uint32(r), true, nil
 	}

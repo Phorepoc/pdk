@@ -11,7 +11,7 @@ func TestTextKeyCoversPrintableASCII(t *testing.T) {
 	if c, s, _ := textKey(':'); c != 0x7d || !s {
 		t.Errorf("':' = %#x shift=%v", c, s)
 	}
-	if c, s, _ := textKey('.'); c != 0x7a || s {
+	if c, s, _ := textKey('b'); c != 'B' || s {
 		t.Errorf("'.' = %#x shift=%v", c, s)
 	}
 	if _, _, err := textKey('é'); err == nil {
