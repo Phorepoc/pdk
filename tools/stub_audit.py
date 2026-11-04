@@ -17,7 +17,8 @@ The check compares the records with tools/stub-allow/<arch>.allow:
   * an allowlist line that no record has any more fails too (delete it: the list only ever shrinks);
   * an allowlist line must name a reason of stub-allow/reasons.txt (each with its tracking line in docs/stub-audit.md);
   * an image without a record fails (an image the audit cannot see);
-  * (kind 5) a source the registry's drop=/nosrc leaves out of a build needs a line in stub-allow/dropped.allow with a
+  * (kind 5) a source the registry's drop=/nosrc leaves out of a build needs a line in stub-allow/dropped.allow (an
+    adaptation's own drops: <adaptation>/stub-allow/dropped.allow) with a
     reason of dropped-reasons.txt; a line no registry entry drops any more fails too;
   * the C++ exception-handling runtime names (never called: nothing unwinds through them) fail the build unless the
     architecture'"'"'s allowlist says `#eh allowed` (arm: until its images import them from drtaeabi, docs/stub-audit.md).
@@ -169,8 +170,10 @@ def registry_drops(arch):
 def load_dropped():
     """({(component, source): reason}, {reason ids})."""
     entries, reasons = {}, set()
-    path = os.path.join(ALLOW_DIR, "dropped.allow")
-    if os.path.exists(path):
+    # the pdk's list (core's drops), then each adaptation's own stub-allow/dropped.allow (the sources only its registry drops)
+    for path in [os.path.join(ALLOW_DIR, "dropped.allow")] + [os.path.join(a, "stub-allow", "dropped.allow") for a in paths.ADAPTATIONS]:
+        if not os.path.exists(path):
+            continue
         for line in open(path, encoding="utf-8"):
             if line.strip() and not line.startswith("#"):
                 rid, comp, src = line.split()
