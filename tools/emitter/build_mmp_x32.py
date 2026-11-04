@@ -47,7 +47,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from paths import OS_ROOT, BUILD, SYMBIAN, has_layer, prefix_maps, resolve as pathres           # noqa: E402
+from paths import OS_ROOT, BUILD, SYMBIAN, has_layer, prefix_maps, prune_gated, resolve as pathres           # noqa: E402
 import mmp as MMP                                   # noqa: E402
 import objcache as OC                               # noqa: E402
 MMP.CPP = "cpp"                                     # same -undef -nostdinc run as the ARM build
@@ -929,6 +929,7 @@ def main() -> int:
         keys = closure([k for k, c in C.COMPONENTS.items()
                         if not c.get("arm_only") and (not c.get("needs") or has_layer(c["needs"]))])
         print(f"all: {len(keys)} components")
+        prune_gated(C.COMPONENTS, [IMG] + ([IMG_OUT] if S4 else []), keys)
     if keys[:1] == ["--list-closure"]:
         print(" ".join(closure(keys[1:])))
         return 0

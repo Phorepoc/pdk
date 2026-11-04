@@ -51,6 +51,32 @@ def has_layer(name: str) -> bool:
     return name in names or any(os.path.basename(a) == name for a in ADAPTATIONS)
 
 
+def prune_gated(components, img_dirs, keys) -> None:
+    """--all: delete the images left in the build tree of the components whose layer this build lacks (needs=) and that
+    `keys` does not build. A restored build cache keeps them, and the ROM lists and the stub audit would see them as built.
+    An image name a kept key also produces stays."""
+    keep = set(keys)
+    kept = {c["rom"].lower() for k, c in components.items() if k in keep and "rom" in c} | {k.lower() + e for k in keep for e in (".dll", ".exe")}
+    gone = []
+    for k, c in components.items():
+        if k in keep or not c.get("needs") or has_layer(c["needs"]):
+            continue
+        for n in ([c["rom"]] if "rom" in c else [k + ".dll", k + ".exe"]):
+            if n.lower() in kept:
+                continue
+            for d in img_dirs:
+                hit = False
+                for suf in ("", ".meta", ".linkstubs", ".map"):
+                    f = os.path.join(d, n + suf)
+                    if os.path.exists(f):
+                        os.remove(f)
+                        hit = True
+                if hit:
+                    gone.append(n)
+    if gone:
+        print(f"pruned {len(gone)} image(s) of components this build's layers leave out: {' '.join(sorted(set(gone)))}")
+
+
 ADAPTATION_REGISTRIES = [os.path.join(a, "registry") for a in ADAPTATIONS if os.path.isdir(os.path.join(a, "registry"))]
 for _r in ADAPTATION_REGISTRIES:
     if _r not in sys.path:

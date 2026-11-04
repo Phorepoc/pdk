@@ -52,7 +52,7 @@ import objcache as OC
 from e32image import build_dll
 from elf import Elf32, extract
 from euser_def import parse_def
-from paths import PDK, OS_ROOT, SYMBIAN, BUILD, has_layer, prefix_maps, resolve as rpath
+from paths import PDK, OS_ROOT, SYMBIAN, BUILD, has_layer, prefix_maps, prune_gated, resolve as rpath
 from refcheck import check_image, format_result
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1055,6 +1055,8 @@ def main() -> int:
     keys = ([k for k, c in C.COMPONENTS.items() if not (c.get("x32_archives") and not c.get("arm_archives"))
              and (not c.get("needs") or has_layer(c["needs"]))]
             if args == ["--all"] else args)
+    if args == ["--all"] and not rsc_only:
+        prune_gated(C.COMPONENTS, [IMG_DIR], keys)
     if shard:
         keys = keys[shard[0]::shard[1]]
         print(f"shard {shard[0]}/{shard[1]}: {len(keys)} components")
