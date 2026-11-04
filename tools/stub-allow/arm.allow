@@ -1,13 +1,6 @@
 # Link stubs allowed in the arm images: reason, image, name. The list only ever shrinks
 # (tools/stub_audit.py check; reasons: stub-allow/reasons.txt, tracked in docs/stub-audit.md).
 #eh allowed
-R4 browserng.exe _Z7E32Mainv
-R4 browserng.exe _ZN4User11InitProcessEv
-R4 browserng.exe _ZN4User15HandleExceptionEPv
-R4 browserng.exe _ZN4User4ExitEi
-R4 browserng.exe _ZN4User9InvariantEv
-R4 browserng.exe _ZN7UserSvr9DllSetTlsEiiPv
-R4 browserng.exe _ZN8UserHeap15SetupThreadHeapEiR24SStdEpocThreadCreateInfo
 R1 hitchcock.dll m3gAddChild
 R1 hitchcock.dll m3gAddRef
 R1 hitchcock.dll m3gAlignNode
