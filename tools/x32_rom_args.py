@@ -23,7 +23,7 @@ import glob
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import OS_ROOT, SYMBIAN, BUILD, resolve  # noqa: E402
+from paths import OS_ROOT, SYMBIAN, BUILD, has_layer, resolve  # noqa: E402
 import components as C  # noqa: E402
 import mmp as MMP  # noqa: E402
 
@@ -266,6 +266,10 @@ def main() -> None:
     alf_taken = {c["rom_as"].lower() for c in C.COMPONENTS.values()
                  if c.get("alf") and c["alf"] != "build" and ALF_LV >= int(c["alf"]) and c.get("rom_as")}
     for key, comp in C.COMPONENTS.items():
+        # a component that builds against a layer this board does not have is in no ROM, even when an image of it is left
+        # in the build tree (a restored build cache keeps the images of keys gated since: core's s60web)
+        if comp.get("needs") and not has_layer(comp["needs"]):
+            continue
         if key in OWN or key in TEXT_SHELL or key in exclude:
             continue
         if key in PHETTY_KEYS and PHETTY == "exclude":    # PHETTY=exclude: a product ROM has no developer ttys at all

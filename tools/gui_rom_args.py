@@ -14,7 +14,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import OS_ROOT, SYMBIAN, BUILD  # noqa: E402
+from paths import OS_ROOT, SYMBIAN, BUILD, has_layer  # noqa: E402
 import components as C  # noqa: E402
 import mmp as MMP  # noqa: E402
 
@@ -48,6 +48,10 @@ def _closure(roots):
     import re
     by_rom = {}
     for key, comp in C.COMPONENTS.items():
+        # a component that builds against a layer this board does not have is in no ROM, even when an image of it is left
+        # in the build tree (a restored build cache keeps the images of keys gated since: core's s60web)
+        if comp.get("needs") and not has_layer(comp["needs"]):
+            continue
         if comp.get("alf") and (comp["alf"] == "build" or ALF_LV < int(comp["alf"])):   # ALF=1 only
             continue
         if ALF_LV >= 2 and (key in ("alfclient", "alfdecoderserverclient", "libegl", "sflibopenvgrefimpl") or key == "goommonitor" or key == "goommonitor_alfnull" and ALF_LV >= 3):
@@ -89,6 +93,10 @@ def main() -> None:
     if keep is not None:
         print("gui_rom_args: GUI_ROOTS closure = %d components" % len(keep), file=sys.stderr)
     for key, comp in C.COMPONENTS.items():
+        # a component that builds against a layer this board does not have is in no ROM, even when an image of it is left
+        # in the build tree (a restored build cache keeps the images of keys gated since: core's s60web)
+        if comp.get("needs") and not has_layer(comp["needs"]):
+            continue
         if comp.get("alf") and (comp["alf"] == "build" or ALF_LV < int(comp["alf"])):   # ALF=1 only
             continue
         if ALF_LV >= 2 and (key in ("alfclient", "alfdecoderserverclient") or key == "goommonitor" or key == "goommonitor_alfnull" and ALF_LV >= 3):
