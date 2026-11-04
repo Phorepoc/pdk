@@ -262,7 +262,10 @@ jobs:
       # while the same command works in a repository's own workflow (the pdk's release.yml).
       - name: Release notes
         if: inputs.images && inputs.arch == '' && inputs.version != ''
-        run: '{ echo "Built from (repository commit):"; echo; echo "\`\`\`"; cat out/built-from.txt; echo "\`\`\`"; } > notes.md'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # what changed in every pinned repository since the previous release (Conventional Commits), then the commits
+        run: python3 pdk/tools/ci/release_notes.py --repo "${{ github.repository }}" --version "${{ inputs.version }}" --built-from out/built-from.txt --out notes.md
 
       - uses: actions/upload-artifact@v4
         if: inputs.images && inputs.arch == '' && inputs.version != ''
@@ -283,9 +286,8 @@ jobs:
           tag="${VERSION:-$GITHUB_REF_NAME}"
           draft=; [ "$DRAFT" = true ] && draft=--draft
           if ! gh release view "$tag" -R "${{ github.repository }}" >/dev/null 2>&1; then
-            {
-              echo "Built from (repository commit):"; echo; echo '```'; cat out/built-from.txt; echo '```'
-            } > notes.md
+            python3 pdk/tools/ci/release_notes.py --repo "${{ github.repository }}" --version "$tag" \
+              --built-from out/built-from.txt --out notes.md
             gh release create "$tag" -R "${{ github.repository }}" --target "${{ github.sha }}" --title "$tag" \
               --notes-file notes.md $draft
           fi

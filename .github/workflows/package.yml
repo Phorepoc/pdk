@@ -127,13 +127,21 @@ jobs:
           pattern: sis-*
           path: parts
       - name: The release files
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p out
           cp parts/*/out/*.sis out/
           # every architecture built from the same commits; the first one's list stands for all
           cp "$(ls parts/*/built-from.txt | head -n 1)" out/built-from.txt
           (cd out && sha256sum *.sis > SHA256SUMS && cat SHA256SUMS)
-          { echo "Built from (repository commit):"; echo; echo '```'; cat out/built-from.txt; echo '```'; } > notes.md
+          # what changed since the previous release (the newest one: this one is made after), by the pdk it was built with
+          pdk=$(awk '$1 == "pdk" { print $2 }' out/built-from.txt)
+          for ref in "$pdk" main; do   # (a pdk older than release_notes.py: the current one)
+            curl -fsSL -o /tmp/release_notes.py \
+              "https://raw.githubusercontent.com/${{ github.repository_owner }}/pdk/$ref/tools/ci/release_notes.py" && break
+          done
+          python3 /tmp/release_notes.py --repo "${{ github.repository }}" --built-from out/built-from.txt --out notes.md
       - uses: actions/upload-artifact@v4
         with:
           name: package-files
