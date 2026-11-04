@@ -100,7 +100,7 @@ func remoteOps() []device.OpSpec {
 				{Name: "hold_ms", Type: "int", Description: "press duration (default 100; >800 = a long press)"},
 			}},
 		{Name: "text", Capability: "input",
-			Description: "Type text as key presses (digits, letters, space, enter via \\n). Uses the scan codes; what appears depends on the focused editor's input mode.",
+			Description: "Type text as key presses (all printable ASCII, Shift where the layout needs it, enter via \\n). A failure names the character and position. Uses the scan codes; what appears depends on the focused editor's input mode.",
 			Params:      []device.Param{{Name: "text", Type: "string", Required: true, Description: "text to type"}}},
 		{Name: "touch", Capability: "input",
 			Description: "Touch the screen at x,y in OS screen pixels (360x640). action = tap (default) | down | move | up.",
