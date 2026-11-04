@@ -30,6 +30,75 @@
 its toolbox: one command line that builds the whole system from source, and one service that lets you, a script or an
 AI agent work on a phone while it runs, without opening its serial port by hand.
 
+## Install
+
+The PDK ships two programs, and you can install either one alone or both:
+
+| | What it is | Where to get it |
+|---|---|---|
+| **`phe`** | the command line: builds Phorepoc OS, and drives a device | `pdk-<version>-<os>-<arch>` archive on the [release page](https://github.com/Phorepoc/pdk/releases/latest) |
+| **PhoneLab** | the service that owns the phone's link: web page, REST, MCP | the same archive (`phonelab`), or the Docker image `ghcr.io/phorepoc/phonelab` (`:<version>` and `:latest`, linux/amd64 and arm64) |
+
+Every release publishes both. Release archives are `.tar.gz` (Linux, macOS) or `.zip` (Windows); `SHA256SUMS` lists their
+checksums.
+
+### Only the command line
+
+Download the archive for your system, unpack it, and put `phe` on your `PATH` (ignore `phonelab` in the archive):
+
+```sh
+tar -xzf pdk-<version>-linux-amd64.tar.gz phe && sudo install phe /usr/local/bin/    # Windows: unzip phe.exe, add its folder to PATH
+phe version
+```
+
+- **Works on its own** (needs Docker, for the [toolchain](https://github.com/Phorepoc/toolchain) container): `phe source`,
+  `phe component`, `phe image`, `phe board`, `phe package list|info|fetch`, `phe shell`.
+- **Needs a running PhoneLab** (here or on another machine; the phone itself is never opened by `phe`): every
+  `phe device ...` command and `phe package install`. Point it at the service with `-url http://host:8737` or
+  `PHONELAB_URL` (and `-token` / `PHONELAB_TOKEN` if the service has a token). Images and files are uploaded through the
+  service, so it does not matter that the service runs elsewhere or in Docker.
+
+### Only PhoneLab
+
+**Linux, Docker** (the phone is found on USB by itself, and again after every reboot). Needs only Docker; nothing is
+cloned:
+
+```sh
+curl -LO https://raw.githubusercontent.com/Phorepoc/pdk/main/docker/compose.yaml
+docker compose -f compose.yaml up -d                       # PHONELAB_VERSION=v0.9.0 pins a release (default: latest)
+```
+
+or without compose:
+
+```sh
+docker run -d --name phonelab --restart unless-stopped -p 8737:8737 \
+  -v phonelab-data:/data -v /dev:/dev -v /run/udev:/run/udev:ro \
+  --device-cgroup-rule 'c 166:* rmw' ghcr.io/phorepoc/phonelab:latest
+```
+
+Open <http://localhost:8737>; MCP clients use `http://localhost:8737/mcp`. The image also holds `phe`, so
+`docker exec phonelab phe device status` works without installing anything on the host. A stable device name comes from
+[docker/99-phonelab.rules](docker/99-phonelab.rules) (copy it to `/etc/udev/rules.d/`). To build the image from a clone
+instead: `docker compose -f docker/compose.yaml -f docker/compose.build.yaml up -d --build`.
+
+**Windows, native** (Docker Desktop cannot see COM ports). Unpack `phonelab.exe` from the release archive, then, once, in
+an administrator PowerShell, with [scripts/install-windows.ps1](scripts/install-windows.ps1) from this repository:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install-windows.ps1 -PhonelabExe C:\tools\phonelab.exe
+Start-ScheduledTask PhoneLab
+```
+
+That opens the port on the private network and starts PhoneLab at every logon, with its log in
+`%LOCALAPPDATA%\phonelab`. (Without `-PhonelabExe` the script builds `phonelab.exe` from a clone, which needs Go.)
+**macOS / by hand:** run `phonelab` (`-config <file>` for [phonelab.toml](phonelab.toml), `-listen`, `-data`).
+No phone plugged in? `phonelab -mock testdata/boot-slotb-rearm.log -data /tmp/phonelab-mock` replays a recording.
+
+### Both
+
+Install PhoneLab where the phone is plugged in, `phe` wherever you work. On one machine, `phe` finds the service on
+`localhost:8737` by itself.
+
 ## PhoneLab
 
 PhoneLab holds the phone's debug link and gives you everything on it at once, in a browser:
@@ -51,25 +120,7 @@ It also works with stock Nokia Symbian phones, your own phone and your own apps
 
 ### Run it
 
-With Docker on Linux (the phone is found on USB by itself, and found again after every reboot):
-
-```sh
-docker run -d --name phonelab --restart unless-stopped -p 8737:8737 \
-  -v phonelab-data:/data -v /dev:/dev -v /run/udev:/run/udev:ro \
-  --device-cgroup-rule 'c 166:* rmw' ghcr.io/phorepoc/phonelab:latest
-```
-
-Then open <http://localhost:8737>. MCP clients connect to `http://localhost:8737/mcp`. The same setup as a compose file
-is in [docker/compose.yaml](docker/compose.yaml).
-
-Without Docker, download the archive for your system from the
-[latest release](https://github.com/Phorepoc/pdk/releases/latest) and run `phonelab`. On Windows,
-`scripts/install-windows.ps1` (run once as administrator) starts it when you log in. No phone plugged in? Replay a
-recorded session instead:
-
-```sh
-phonelab -mock testdata/boot-slotb-rearm.log -data /tmp/phonelab-mock
-```
+See [Install](#install) above. Then open <http://localhost:8737> (MCP: `/mcp`).
 
 ## phe
 
@@ -81,7 +132,7 @@ phonelab -mock testdata/boot-slotb-rearm.log -data /tmp/phonelab-mock
 `phe` builds Phorepoc OS from source: the components, the ROM, and the files a board ships. It starts the
 [toolchain](https://github.com/Phorepoc/toolchain) container for you, so all you need is Docker.
 
-Download `phe` from the [latest release](https://github.com/Phorepoc/pdk/releases/latest), clone
+Install `phe` (see [Install](#install)), clone
 [core](https://github.com/Phorepoc/core) and the repositories of your board next to each other, and:
 
 ```sh
@@ -102,6 +153,9 @@ phe image release -b <board>                      # the board's release files, i
 | `phe device push <image> -w 'running slot B'` | Flash an image through PhoneLab, wait for the boot, show its report |
 | `phe device log -g fault -n 50` | The last 50 log lines that mention a fault |
 | `phe device shot -o screen.png` | A screenshot |
+| `phe device ls`, `pull`, `put`, `rm` | The phone's files |
+| `phe device boots`, `events`, `history`, `list` | What PhoneLab recorded: boots, faults, operations, devices |
+| `phe device blobs`, `upload`, `pin` | Uploaded images and screenshots; keep a boot or image past retention |
 
 `phe help` lists every command and `phe help <command>` explains one; the same pages are in
 [docs/phe](docs/phe/README.md). A board is a repository with a `board.conf`;

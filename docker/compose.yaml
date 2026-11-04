@@ -1,7 +1,9 @@
 # Copyright The Phorepoc Authors
 # SPDX-License-Identifier: Apache-2.0
 
-# Linux: docker compose -f docker/compose.yaml up -d   (from the repository root)
+# Linux: docker compose -f docker/compose.yaml up -d      (runs the released image, ghcr.io/phorepoc/phonelab; no clone needed:
+#        save this file and run the same command; PHONELAB_VERSION=v0.9.0 pins a release, default latest)
+# From source: docker compose -f docker/compose.yaml -f docker/compose.build.yaml up -d --build   (from the repository root)
 # The phone re-enumerates on every reboot, so instead of passing one /dev/ttyACMn (which goes stale) the
 # container gets the whole USB-serial major (166 = ttyACM) through a cgroup rule plus a live /dev bind:
 # the service then finds the phone by VID/PID each time it comes back. Install 99-phonelab.rules on the host
@@ -9,10 +11,7 @@
 # ACM ports are ttyACM* as well (major 166), named /dev/nokia-acm-<ifnum> by 99-phonelab.rules (docs/nokia.md).
 services:
   phonelab:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    image: phonelab
+    image: ghcr.io/phorepoc/phonelab:${PHONELAB_VERSION:-latest}
     restart: unless-stopped
     ports:
       - "8737:8737"

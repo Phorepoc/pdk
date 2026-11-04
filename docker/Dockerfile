@@ -3,7 +3,8 @@
 
 # PhoneLab for Linux hosts (build context = the repository root):
 #   docker build -f docker/Dockerfile -t phonelab .
-# Released images: ghcr.io/phorepoc/phonelab:<version> (linux/amd64, linux/arm64; .github/workflows/release.yml).
+# Released images: ghcr.io/phorepoc/phonelab:<version> and :latest (linux/amd64, linux/arm64), pushed by every release
+# (.github/workflows/release.yml). The image holds phonelab and phe, so "docker exec phonelab phe device list" works.
 # The web UI is built in the first stage and embedded into the static Go binary. Both build stages run on the build
 # machine's own platform and Go cross-compiles for the target, so a multi-arch build needs no emulation.
 FROM --platform=$BUILDPLATFORM node:24-alpine AS web

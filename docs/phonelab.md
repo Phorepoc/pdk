@@ -30,6 +30,43 @@ Windows runs the service natively (Docker Desktop cannot see COM ports, and the 
 Linux runs it in Docker: `docker/compose.yaml` passes the ttyACM device major through a cgroup rule and a live `/dev`,
 so the port is found again after each reboot; `docker/99-phonelab.rules` gives it a stable name.
 
+## Install, and what reaches what
+
+Install only `phe`, only PhoneLab, or both: see the README's [Install](../README.md#install). `phe` never opens a
+phone's port; every `phe device` command (and `phe package install`) is a call on a PhoneLab service through `lib/client`,
+so the service can run on another machine or in Docker. The release ships `phe` and `phonelab` in one archive per system
+and the service as the image `ghcr.io/phorepoc/phonelab:<version>` and `:latest`.
+
+Each front end is a thin layer over the same library (`lib/core`, `lib/store`, `lib/client`); this is what each one reaches.
+The ops themselves (`peek`, `poke`, `dump`, `profile`, `hotspots`, `threads`, `reboot`, `fs_*`, `tty_*`, `key`, `touch`, `text`,
+`swipe`, `exec`, `ps` ... whatever the device's driver offers) are generated into REST (`POST /ops/<op>`), MCP (one tool each) and
+the Ops console, and `phe device op <op> key=value` runs any of them.
+
+| Capability | `phe` | REST | MCP | Web UI |
+|---|---|---|---|---|
+| Health, link state | `device status` | `GET /api/health` | `health` | status bar, device card |
+| Device list | `device list` | `GET /api/devices` | `devices` | device card |
+| List a device's ops | `device ops` | `GET .../ops` | `ops_list` | Ops console |
+| Run any op | `device op` | `POST .../ops/<op>` | one tool per op | Ops console |
+| Push an image, wait for the boot report | `device push` (uploads the file; `-s` server path, `-B` blob) | op `push` (+ `POST /api/blobs`) | `push`, `blob_put` | Push page |
+| Wait for a boot / a log line | `device push -w`, op `wait_boot` / `wait_for` | ops | tools `wait_boot`, `wait_for` | Push page |
+| Boot report, boot diff | `device report`, `device diff` | ops `boot_report`, `diff_boots` | tools | Boots page |
+| Input script (keys, text, taps, swipes) | `device input` | op `input` | `input` | Phone controls |
+| Screenshot | `device shot` | op `screenshot` + `GET /api/blobs/<sha>` | `screenshot` (`inline`) | Screenshots, live screen |
+| Live screen | (screenshots) | `GET .../frame`, WebSocket stream | (screenshots) | Live screen |
+| Stored log lines, filtered | `device log` (`-g -a -x -b -n`, `-f` follows) | `GET .../lines` | `log_lines` | Log history, live log |
+| Structured events | `device events` | `GET .../events` | `events` | Timeline, event list |
+| Boots | `device boots` | `GET .../boots` | `boots` | Boots page |
+| Operation history | `device history` | `GET .../history` | `op_history` | Ops console |
+| Phone files: list, read, write, delete | `device ls`, `pull`, `put`, `rm` | `.../fs`, `.../fs/content` | ops `fs_list`, `fs_read`, `fs_write`, `fs_delete` | file browser |
+| Terminals | `package install` (scripted); ops `tty_*` | `.../ttys`, WebSocket `.../tty/<id>` | ops `tty_*` | terminal tabs |
+| Blob store: upload, list, download | `device upload`, `blobs` | `/api/blobs` | `blob_put`, `blobs` | Push, Screenshots |
+| Keep a boot or blob | `device pin` | `POST /api/pin` | `pin` | pin buttons |
+| Live event stream | `device log -f` (polls) | WebSocket `/api/stream` | (poll `log_lines`) | live panels |
+
+Not on the command line: an interactive terminal (use the web terminal; `phe device op tty_new` / `tty_write` / `tty_read`
+script one) and the live screen as a video (`device shot` in a loop; the web page or `GET .../frame`).
+
 ## Operations (phlink)
 
 | Op | What |

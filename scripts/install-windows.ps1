@@ -8,7 +8,9 @@
 # - a scheduled task "PhoneLab" starts it at logon (the phone's COM port belongs to the logged-on user's session),
 #   restarting it if it dies; logs to %LOCALAPPDATA%\phonelab\phonelab.log
 # -Uninstall removes the rule and the task.
-param([int]$Port = 8737, [switch]$NoBuild, [switch]$Uninstall, [switch]$TaskOnly, [string]$Config = '')
+param([int]$Port = 8737, [switch]$NoBuild, [switch]$Uninstall, [switch]$TaskOnly, [string]$Config = '', [string]$PhonelabExe = '')
+# -PhonelabExe: use this phonelab.exe (from a release archive) instead of building one: no clone and no Go needed. The release
+#   archive carries no phonelab.toml: without -Config the built-in defaults apply (one phlink phone, port 8737).
 # -Config: a phonelab.toml of your own (devices, workspace, token); default: the repository's phonelab.toml
 # -TaskOnly: rebuild + re-register the logon task only (no admin needed; the firewall rules stay as they are)
 $ErrorActionPreference = 'Stop'
@@ -26,6 +28,7 @@ if ($Uninstall) {
 }
 $server = Join-Path $PSScriptRoot '..' | Resolve-Path
 $exe = Join-Path $server 'phonelab.exe'
+if ($PhonelabExe) { $exe = (Resolve-Path $PhonelabExe).Path; $NoBuild = $true }
 if (-not $NoBuild) {
 	Push-Location $server
 	# -H windowsgui: no console window (closing one would kill the service); it logs with -log instead
@@ -48,9 +51,10 @@ if ($prof -and $prof.NetworkCategory -ne 'Private') {
 
 $data = Join-Path $env:LOCALAPPDATA 'phonelab'
 New-Item -ItemType Directory -Force $data | Out-Null
-$cfg = if ($Config) { Resolve-Path $Config } else { Join-Path $server 'phonelab.toml' }
-$cmd = "-config `"$cfg`" -listen 0.0.0.0:$Port -log `"$data\phonelab.log`""
-$action = New-ScheduledTaskAction -Execute $exe -Argument $cmd -WorkingDirectory $server
+$cfg = if ($Config) { Resolve-Path $Config } elseif ($PhonelabExe) { '' } else { Join-Path $server 'phonelab.toml' }
+$cfgArg = if ($cfg) { "-config `"$cfg`" " } else { '' }
+$cmd = "${cfgArg}-listen 0.0.0.0:$Port -log `"$data\phonelab.log`""
+$action = New-ScheduledTaskAction -Execute $exe -Argument $cmd -WorkingDirectory (Split-Path $exe)
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $id.Name
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0 `
 	-RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
