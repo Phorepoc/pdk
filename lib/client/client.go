@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -42,20 +43,26 @@ func (e *Error) Error() string { return fmt.Sprintf("%s (HTTP %d)", e.Message, e
 
 func (c *Client) do(method, path string, body any, out any, ok ...int) error {
 	var rd io.Reader
+	ct := ""
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
 			return err
 		}
-		rd = bytes.NewReader(b)
+		rd, ct = bytes.NewReader(b), "application/json"
 	}
+	return c.send(method, path, rd, ct, out, ok...)
+}
+
+// send: one request with a ready body (JSON, raw bytes, multipart) and its content type.
+func (c *Client) send(method, path string, rd io.Reader, contentType string, out any, ok ...int) error {
 	req, err := http.NewRequest(method, c.Base+path, rd)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("X-Phonelab-Caller", "cli")
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 	if c.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.Token)
@@ -139,4 +146,141 @@ func (c *Client) Blob(sha string) ([]byte, error) {
 	var b []byte
 	err := c.do("GET", "/api/blobs/"+url.PathEscape(sha), nil, &b)
 	return b, err
+}
+
+func devPath(dev, rest string) string { return "/api/devices/" + url.PathEscape(dev) + rest }
+
+// Device is one entry of the service's device list.
+type Device struct {
+	ID     string          `json:"id"`
+	Driver string          `json:"driver"`
+	Health core.Health     `json:"health"`
+	Ops    []device.OpSpec `json:"ops"`
+}
+
+// Devices the service has, with driver and health.
+func (c *Client) Devices() ([]Device, error) {
+	var d []Device
+	err := c.do("GET", "/api/devices", nil, &d)
+	return d, err
+}
+
+// LineQuery filters stored log lines: Grep = substring, Any / Exclude = substrings separated by |, Boot -1 = the
+// current boot, 0 = all, After / Before = line ids.
+type LineQuery struct {
+	Grep, Any, Exclude  string
+	Boot, After, Before int64
+	Limit               int
+}
+
+// LinesQ reads stored log lines with the full filter set of the REST API.
+func (c *Client) LinesQ(dev string, q LineQuery) ([]store.Line, error) {
+	v := url.Values{}
+	for k, s := range map[string]string{"grep": q.Grep, "any": q.Any, "exclude": q.Exclude} {
+		if s != "" {
+			v.Set(k, s)
+		}
+	}
+	for k, n := range map[string]int64{"boot": q.Boot, "after": q.After, "before": q.Before, "limit": int64(q.Limit)} {
+		if n != 0 {
+			v.Set(k, fmt.Sprint(n))
+		}
+	}
+	var l []store.Line
+	err := c.do("GET", devPath(dev, "/lines?"+v.Encode()), nil, &l)
+	return l, err
+}
+
+// Boots lists recent boots (before = a boot id to page from, 0 = newest).
+func (c *Client) Boots(dev string, before int64, limit int) ([]store.Boot, error) {
+	var b []store.Boot
+	err := c.do("GET", devPath(dev, fmt.Sprintf("/boots?before=%d&limit=%d", before, limit)), nil, &b)
+	return b, err
+}
+
+// Events lists the structured events parsed from the log; kinds is a comma list (a trailing dot = prefix).
+func (c *Client) Events(dev, kinds string, boot int64, limit int) ([]store.Event, error) {
+	v := url.Values{"boot": {fmt.Sprint(boot)}, "limit": {fmt.Sprint(limit)}}
+	if kinds != "" {
+		v.Set("kind", kinds)
+	}
+	var e []store.Event
+	err := c.do("GET", devPath(dev, "/events?"+v.Encode()), nil, &e)
+	return e, err
+}
+
+// History lists the operations run on the device, newest first.
+func (c *Client) History(dev string, before int64, limit int) ([]store.Op, error) {
+	var o []store.Op
+	err := c.do("GET", devPath(dev, fmt.Sprintf("/history?before=%d&limit=%d", before, limit)), nil, &o)
+	return o, err
+}
+
+// FsListing is a directory on the device.
+type FsListing struct {
+	Path    string          `json:"path"`
+	Entries json.RawMessage `json:"entries"`
+}
+
+// FsList lists a directory on the device.
+func (c *Client) FsList(dev, path string) (FsListing, error) {
+	var l FsListing
+	err := c.do("GET", devPath(dev, "/fs?"+url.Values{"path": {path}}.Encode()), nil, &l)
+	return l, err
+}
+
+// FsRead downloads a file from the device.
+func (c *Client) FsRead(dev, path string) ([]byte, error) {
+	var b []byte
+	err := c.do("GET", devPath(dev, "/fs/content?"+url.Values{"path": {path}}.Encode()), nil, &b)
+	return b, err
+}
+
+// FsWrite uploads r as a file on the device (the first chunk truncates).
+func (c *Client) FsWrite(dev, path string, r io.Reader) (int64, error) {
+	var w struct {
+		Written int64 `json:"written"`
+	}
+	err := c.send("PUT", devPath(dev, "/fs/content?"+url.Values{"path": {path}}.Encode()), r, "application/octet-stream", &w)
+	return w.Written, err
+}
+
+// FsDelete deletes a file on the device.
+func (c *Client) FsDelete(dev, path string) error {
+	return c.do("DELETE", devPath(dev, "/fs/content?"+url.Values{"path": {path}}.Encode()), nil, nil)
+}
+
+// PutBlob uploads r into the service's blob store (kind "image" for a push).
+func (c *Client) PutBlob(kind, name, dev string, r io.Reader) (store.Blob, error) {
+	pr, pw := io.Pipe()
+	mw := multipart.NewWriter(pw)
+	go func() {
+		part, err := mw.CreateFormFile("file", name)
+		if err == nil {
+			_, err = io.Copy(part, r)
+		}
+		if err == nil {
+			err = mw.Close()
+		}
+		pw.CloseWithError(err)
+	}()
+	q := url.Values{"kind": {kind}}
+	if dev != "" {
+		q.Set("device", dev)
+	}
+	var b store.Blob
+	err := c.send("POST", "/api/blobs?"+q.Encode(), pr, mw.FormDataContentType(), &b)
+	return b, err
+}
+
+// Blobs lists stored blobs of a kind ("" = all).
+func (c *Client) Blobs(kind string, limit int) ([]store.Blob, error) {
+	var b []store.Blob
+	err := c.do("GET", "/api/blobs?"+url.Values{"kind": {kind}, "limit": {fmt.Sprint(limit)}}.Encode(), nil, &b)
+	return b, err
+}
+
+// Pin keeps (or releases) a boot or a blob against retention: what = "boot" or "blob".
+func (c *Client) Pin(what, id string, on bool) error {
+	return c.do("POST", "/api/pin", map[string]any{"what": what, "id": id, "on": on}, nil)
 }

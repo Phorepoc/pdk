@@ -5,7 +5,7 @@ Show stored log lines.
 ## Synopsis
 
 ```
-phe device log [-b <boot>] [-d <device>] [-g <text>] [-n <lines>] [-token <token>] [-url <url>]
+phe device log [-f] [-a <texts>] [-b <boot>] [-d <device>] [-g <text>] [-n <lines>] [-token <token>] [-url <url>] [-x <texts>]
 ```
 
 ## Description
@@ -14,12 +14,15 @@ The device's log as the service stored it: the newest lines, or those of one boo
 
 ## Options
 
-- `-b <boot>`: Only this boot (default: all).
+- `-a <texts>`: Only lines containing one of these texts, separated by |.
+- `-b <boot>`: Only this boot (default: all; -1 = the current boot).
 - `-d <device>`: The device id (default: the only device the service has).
+- `-f`: Keep running and print new lines as they arrive (until interrupted).
 - `-g <text>`: Only lines containing this text (case-insensitive).
 - `-n <lines>`: At most this many lines (default: 200).
 - `-token <token>`: The service's bearer token (default: $PHONELAB_TOKEN).
 - `-url <url>`: The PhoneLab service url (default: $PHONELAB_URL, else http://localhost:8737).
+- `-x <texts>`: Drop lines containing one of these texts, separated by |.
 
 ## Examples
 

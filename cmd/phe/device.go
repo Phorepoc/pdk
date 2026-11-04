@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Phorepoc/pdk/lib/cli"
 	"github.com/Phorepoc/pdk/lib/client"
@@ -143,11 +144,14 @@ func deviceCommands() []*cli.Command {
 			Group: "device", Name: "push", Operands: "<image>",
 			Summary: "Install an image and boot it",
 			Description: "Uploads the image into the device's test slot, reboots into it, waits for the new boot " +
-				"(and for a log line, with -w), and prints the boot's report: faults, panics, test lines.",
+				"(and for a log line, with -w), and prints the boot's report: faults, panics, test lines. The image is a local " +
+				"file, uploaded to the service first, so it works against a service on another machine or in Docker.",
 			Flags: with(func(fs *flag.FlagSet) {
 				fs.String("w", "", "after the reboot, wait for a log line matching this `regexp`")
 				fs.Int("t", 240, "wait at most this many `seconds`")
 				fs.String("m", "", "the upload `mode`: auto, full or delta (default: auto)")
+				fs.Bool("s", false, "the operand is a path on the service's disk (default: a local file, uploaded first)")
+				fs.Bool("B", false, "the operand is the sha256 of an image already uploaded (\"device upload\")")
 			}),
 			Aliases: []string{"push"},
 			Examples: []cli.Example{
@@ -165,7 +169,21 @@ func deviceCommands() []*cli.Command {
 				if wait == "" {
 					wait = "." // the new boot's first line: still waits for it, and reports
 				}
-				a := map[string]any{"file": args[0], "wait": wait}
+				a := map[string]any{"wait": wait}
+				switch {
+				case on(fs, "B"):
+					a["blob"] = args[0]
+				case on(fs, "s"):
+					a["file"] = args[0]
+				default:
+					if _, err := os.Stat(args[0]); err != nil {
+						a["file"] = args[0] // not a local file: a path the service can see
+					} else if b, err := uploadFile(fs, args[0], "image"); err != nil {
+						return err
+					} else {
+						a["blob"] = b.SHA
+					}
+				}
 				if t, err := strconv.Atoi(str(fs, "t")); err == nil {
 					a["wait_timeout_s"] = t
 				}
@@ -243,8 +261,11 @@ func deviceCommands() []*cli.Command {
 			Description: "The device's log as the service stored it: the newest lines, or those of one boot, optionally filtered.",
 			Flags: with(func(fs *flag.FlagSet) {
 				fs.String("g", "", "only lines containing this `text` (case-insensitive)")
-				fs.Int64("b", 0, "only this `boot` (default: all)")
+				fs.Int64("b", 0, "only this `boot` (default: all; -1 = the current boot)")
+				fs.String("a", "", "only lines containing one of these `texts`, separated by |")
+				fs.String("x", "", "drop lines containing one of these `texts`, separated by |")
 				fs.Int("n", 200, "at most this many `lines`")
+				fs.Bool("f", false, "keep running and print new lines as they arrive (until interrupted)")
 			}),
 			Aliases: []string{"log"},
 			Examples: []cli.Example{
@@ -260,12 +281,25 @@ func deviceCommands() []*cli.Command {
 				}
 				boot, _ := strconv.ParseInt(str(fs, "b"), 10, 64)
 				n, _ := strconv.Atoi(str(fs, "n"))
-				lines, err := c.Lines(dev, str(fs, "g"), boot, n)
+				lines, err := c.LinesQ(dev, client.LineQuery{Grep: str(fs, "g"), Any: str(fs, "a"), Exclude: str(fs, "x"), Boot: boot, Limit: n})
 				if err != nil {
 					return err
 				}
+				var last int64
 				for _, l := range lines {
 					fmt.Printf("%d  b%d  %s\n", l.ID, l.Boot, l.Text)
+					last = max(last, l.ID)
+				}
+				for on(fs, "f") {
+					time.Sleep(time.Second)
+					more, err := c.LinesQ(dev, client.LineQuery{Grep: str(fs, "g"), Any: str(fs, "a"), Exclude: str(fs, "x"), Boot: boot, After: last, Limit: 2000})
+					if err != nil {
+						return err
+					}
+					for _, l := range more {
+						fmt.Printf("%d  b%d  %s\n", l.ID, l.Boot, l.Text)
+						last = max(last, l.ID)
+					}
 				}
 				return nil
 			},

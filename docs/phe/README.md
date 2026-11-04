@@ -79,6 +79,17 @@ A device on the PhoneLab service: push images, read logs, take screenshots.
 | [`phe device log`](phe-device-log.md) | Show stored log lines |
 | [`phe device report`](phe-device-report.md) | Show how a boot went |
 | [`phe device diff`](phe-device-diff.md) | Show the log lines one boot has and another has not |
+| [`phe device list`](phe-device-list.md) | List the service's devices |
+| [`phe device boots`](phe-device-boots.md) | List the device's recent boots |
+| [`phe device events`](phe-device-events.md) | Show the structured events parsed from the log |
+| [`phe device history`](phe-device-history.md) | Show the operations run on the device |
+| [`phe device ls`](phe-device-ls.md) | List a directory on the device |
+| [`phe device pull`](phe-device-pull.md) | Copy a file from the device |
+| [`phe device put`](phe-device-put.md) | Copy a file to the device |
+| [`phe device rm`](phe-device-rm.md) | Delete a file on the device |
+| [`phe device blobs`](phe-device-blobs.md) | List the service's stored blobs |
+| [`phe device upload`](phe-device-upload.md) | Store a file in the service's blob store |
+| [`phe device pin`](phe-device-pin.md) | Keep a boot or a blob past the retention period |
 
 ## Other
 

@@ -263,6 +263,7 @@ func NewServer(mgr *core.Manager, version string) *mcp.Server {
 			}
 			return result(mgr.Store.Ops(s.ID, 0, int(num(m, "limit"))))
 		})
+	addStoreTools(srv, mgr, h)
 	return srv
 }
 
