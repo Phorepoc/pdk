@@ -338,7 +338,7 @@ if [ -n "${BOOT:-}" ]; then
     # after Resource\Fonts). NOT under Resource\Fonts, not even a subdirectory: with them there the boot stalled
     # after cryptospisetup (SSM). WEBFONTS=0 leaves them out.
     if [ "${WEBFONTS:-1}" = 1 ] && [ -f "$OS_ROOT/tools/font_web_gen.py" ]; then
-      [ -f "$BUILD/font-gen/web/NotoSansCJKsc-Subset.otf" ] || python3 "$OS_ROOT/tools/font_web_gen.py" >/dev/null
+      [ -f "$BUILD/font-gen/web/NotoSansCJKsc-Subset.otf" ] || python3 "$OS_ROOT/tools/font_web_gen.py" "$BUILD/font-gen/web" >/dev/null   # (no outdir wrote to $OS_ROOT/.font-gen/web, which the loop below never reads: the images shipped without the fallback faces)
       for ttf in "$BUILD"/font-gen/web/*.ttf "$BUILD"/font-gen/web/*.otf; do
         [ -f "$ttf" ] || continue
         printf -- '--data\nResource\\phweb\\fonts\\%s=%s\n' "$(basename "$ttf")" "$ttf"
