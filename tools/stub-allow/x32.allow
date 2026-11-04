@@ -2,7 +2,6 @@
 # (tools/stub_audit.py check; reasons: stub-allow/reasons.txt, tracked in docs/stub-audit.md).
 #ceiling eh 0
 R4 browserng.exe _Z7E32Mainv
-R9 eikcoctl.dll _ZNK19CTextListItemDrawer4FontEi
 R1 hitchcock.dll m3gAddChild
 R1 hitchcock.dll m3gAddRef
 R1 hitchcock.dll m3gAlignNode

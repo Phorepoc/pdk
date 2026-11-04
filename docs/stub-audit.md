@@ -52,7 +52,7 @@ Link stubs, excluding the exception-runtime names, over every image the componen
 | | x32 (PC) before | x32 now | arm (PinePhone) before | arm now |
 |---|---|---|---|---|
 | images with a record | 1627 | 1659 | 1696 | 1729 (+ the board's own) |
-| link-stub call sites | 1078 in 968 images | **53 in 6 images** | 2150 in 1033 images | **59 in 6 images** |
+| link-stub call sites | 1078 in 968 images | **52 in 5 images** | 2150 in 1033 images | **59 in 6 images** |
 | exception-runtime names (kind 1, counted apart) | 0 | 0 | 5049 | 5069 (ceiling) |
 
 What went: `__stack_chk_fail` (963 x32 images), `abort`, `__gnu_Unwind_Find_exidx` (~1000 arm images) and `_impure_ptr`
@@ -123,5 +123,4 @@ reason table like this one.
 * **R4** BrowserNG's own start-up (`browserng.exe`): the stock browser is not shipped.
 * **R6** Thumbnail engine (`CTNEVideoClipInfo`): `tneengine` does not compile yet (the MP4 parser header).
 * **R8** WLAN hardware init (`CWlanHwInit`, `wlmserversrv`): by design the board supplies it -- adaptation-pinephone (the chip), adaptation-pc (no chip: no data, KErrNotFound for the MAC address). Only a core layer built alone shows the stub, hence the `board` flag.
-* **R9** `eikcoctl`: one `CTextListItemDrawer` method the Avkon lift does not carry.
 * **R10** (stand-in, no link stub) `rcse`, see above.

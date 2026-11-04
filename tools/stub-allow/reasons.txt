@@ -7,4 +7,3 @@ R3 | 4Java | JRT registry client (Java::CJavaRegistry*): `javaregistryclient` is
 R4 | ^(_Z7E32Mainv|_ZN4User|_ZN7UserSvr|_ZN8UserHeap) | BrowserNG's own EXE start-up (E32Main and the euser start-up calls): the stock browser is not shipped, it is not linked against the start-up library | docs/stub-audit.md, reason R4
 R6 | CTNEVideoClipInfo | Thumbnail engine (tneengine): the MP4 parser header does not compile (CParser) | docs/stub-audit.md, reason R6
 R8 | CWlanHwInit | the licensee's WLAN hardware-init plug-in: a board with WLAN supplies it (adaptation `wlanhwinit`), a board without says "not present" | docs/stub-audit.md, reason R8 | board
-R9 | CTextListItemDrawer | eikcoctl: a CTextListItemDrawer method the Avkon lift does not carry yet (registry `drop`) | docs/stub-audit.md, reason R9
