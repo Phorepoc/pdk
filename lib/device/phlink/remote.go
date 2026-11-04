@@ -330,6 +330,60 @@ func keyCode(k string) (uint32, error) {
 	return uint32(v), nil
 }
 
+// textKeys maps the printable ASCII characters that are not letters or digits to the scan code that produces them
+// on the phone's keyboard layout and whether Shift is held. The layout is the keymap data the ROM ships as ekdata.dll
+// (syborg keymap.cpp, UK layout, US_KEYBOARD undefined); derived from its convKeyCodes_base and convKeyCodes_shift
+// tables: the shifted digit row is ) ! " (pound) $ % ^ & * (, and the block EStdKeyXXX..EStdKeyEquals (0x78..0x83)
+// gives ` , . / \ ; ' # [ ] - = unshifted and (not) < > ? | : @ ~ { } _ + shifted.
+var textKeys = map[rune]struct {
+	code  uint32
+	shift bool
+}{
+	'`': {0x78, false}, ',': {0x79, false}, '.': {0x7a, false}, '/': {0x7b, false}, '\\': {0x7c, false},
+	';': {0x7d, false}, '\'': {0x7e, false}, '#': {0x7f, false}, '[': {0x80, false}, ']': {0x81, false},
+	'-': {0x82, false}, '=': {0x83, false},
+	'<': {0x79, true}, '>': {0x7a, true}, '?': {0x7b, true}, '|': {0x7c, true}, ':': {0x7d, true},
+	'@': {0x7e, true}, '~': {0x7f, true}, '{': {0x80, true}, '}': {0x81, true}, '_': {0x82, true}, '+': {0x83, true},
+	')': {'0', true}, '!': {'1', true}, '"': {'2', true}, '$': {'4', true}, '%': {'5', true}, '^': {'6', true},
+	'&': {'7', true}, '*': {'8', true}, '(': {'9', true},
+}
+
+// textKey returns the scan code and the Shift state that type r.
+func textKey(r rune) (code uint32, shift bool, err error) {
+	switch {
+	case r == ' ':
+		return Keys["space"], false, nil
+	case r == '\n':
+		return Keys["enter"], false, nil
+	case r >= '0' && r <= '9', r >= 'a' && r <= 'z':
+		return uint32(r), false, nil
+	case r >= 'A' && r <= 'Z':
+		return uint32(r), true, nil
+	}
+	if k, ok := textKeys[r]; ok {
+		return k.code, k.shift, nil
+	}
+	return 0, false, fmt.Errorf("not a printable ASCII character with a key")
+}
+
+// typeKey presses one key, holding Shift around it when asked, with the pacing the text op has always used.
+func (d *Driver) typeKey(ctx context.Context, l device.Link, code uint32, shift bool) error {
+	const shiftCode = 0x12 // EStdKeyLeftShift
+	if shift {
+		if err := d.press(ctx, l, shiftCode, "down", 0); err != nil {
+			return err
+		}
+		defer l.Write(context.WithoutCancel(ctx), cmd9('K', shiftCode, 1))
+		if err := sleep(ctx, 30*time.Millisecond); err != nil {
+			return err
+		}
+	}
+	if err := d.press(ctx, l, code, "press", 60*time.Millisecond); err != nil {
+		return err
+	}
+	return sleep(ctx, 60*time.Millisecond)
+}
+
 func sleep(ctx context.Context, d time.Duration) error {
 	t := time.NewTimer(d)
 	defer t.Stop()
@@ -497,28 +551,18 @@ func (d *Driver) execRemote(ctx context.Context, l device.Link, op string, a dev
 		return map[string]any{"scan_code": fmt.Sprintf("0x%02x", code)}, true, d.press(ctx, l, code, str("action"), hold)
 	case "text":
 		t := str("text")
+		n := 0
 		for _, r := range t {
-			var k string
-			switch r {
-			case ' ':
-				k = "space"
-			case '\n':
-				k = "enter"
-			default:
-				k = string(r)
-			}
-			code, err := keyCode(k)
+			code, shift, err := textKey(r)
 			if err != nil {
-				return nil, true, fmt.Errorf("cannot type %q: %w", r, err)
+				return nil, true, fmt.Errorf("cannot type %q at position %d (%d typed): %w", r, n, n, err)
 			}
-			if err := d.press(ctx, l, code, "press", 60*time.Millisecond); err != nil {
-				return nil, true, err
+			if err := d.typeKey(ctx, l, code, shift); err != nil {
+				return nil, true, fmt.Errorf("typing %q at position %d: %w", r, n, err)
 			}
-			if err := sleep(ctx, 60*time.Millisecond); err != nil {
-				return nil, true, err
-			}
+			n++
 		}
-		return map[string]any{"typed": len(t)}, true, nil
+		return map[string]any{"typed": n}, true, nil
 	case "touch":
 		x, err := a.Uint("x", 16)
 		if err != nil {

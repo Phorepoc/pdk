@@ -8,8 +8,6 @@ R4 browserng.exe _ZN4User4ExitEi
 R4 browserng.exe _ZN4User9InvariantEv
 R4 browserng.exe _ZN7UserSvr9DllSetTlsEiiPv
 R4 browserng.exe _ZN8UserHeap15SetupThreadHeapEiR24SStdEpocThreadCreateInfo
-R5 comsdbgsvr.dll _Z9OstPrintfRK13TTraceContext11TRefByValueIK6TDesC8Ez
-R5 comsdbgsvr.dll _Z9OstPrintfRK13TTraceContextPKcz
 R6 glxthumbnailcreator.dll _ZN17CTNEVideoClipInfo4NewLERK7TDesC16R25MTNEVideoClipInfoObserver
 R1 hitchcock.dll m3gAddChild
 R1 hitchcock.dll m3gAddRef
@@ -61,7 +59,6 @@ R2 hssmgmtimpl.dll _ZN19HssScanListIterator4NextEv
 R2 hssmgmtimpl.dll _ZN19HssScanListIterator5FirstEv
 R2 hssmgmtimpl.dll _ZNK19HssScanListIterator6IsDoneEv
 R2 hssmgmtimpl.dll _ZNK19HssScanListIterator7CurrentEv
-R7 imut.dll _Z6gPanic16TImutErrorReason
 R3 mcsmenu.dll _ZN4Java13CJavaRegistry4NewLEv
 R3 mcsmenu.dll _ZN4Java13CJavaRegistry5NewLCEv
 R3 mcsmenu.dll _ZNK4Java13CJavaRegistry14RegistryEntryLERK4TUid

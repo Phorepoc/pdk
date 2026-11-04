@@ -52,13 +52,13 @@ Link stubs, excluding the exception-runtime names, over every image the componen
 | | x32 (PC) before | x32 now | arm (PinePhone) before | arm now |
 |---|---|---|---|---|
 | images with a record | 1627 | 1659 | 1696 | 1729 (+ the board's own) |
-| link-stub call sites | 1078 in 968 images | **69 in 11 images** | 2150 in 1033 images | **74 in 10 images** |
+| link-stub call sites | 1078 in 968 images | **66 in 9 images** | 2150 in 1033 images | **71 in 8 images** |
 | exception-runtime names (kind 1, counted apart) | 0 | 0 | 5049 | 5069 (ceiling) |
 
 What went: `__stack_chk_fail` (963 x32 images), `abort`, `__gnu_Unwind_Find_exidx` (~1000 arm images) and `_impure_ptr`
 (18) now resolve to real definitions in the image (`rt_names.cpp`, `xu_rtnames.cpp`: see "Runtime names" below); the 25
 audio message-handler libraries, `redircli`, `drmrightsinfo` and its implementation, `3gpextparser`,
-`mobilitypolicyprovider` are built from their sources; the WBXML dictionaries (`xmlinterface`, `provisioningparser`) are
+`mobilitypolicyprovider` and `ostuser` (its GET_PC intrinsic is RVCT-only: a shim header) are built from their sources, and `imut` is built whole (its registry `drop` of 11 source files is gone: 220 of 235 ordinals real, was 41); the WBXML dictionaries (`xmlinterface`, `provisioningparser`) are
 exported as C objects; `snprintf` is exported by JavaScriptCore with C linkage; `nan` (WebKit's trio) has a definition;
 the va_list-by-reference export of `RFileLogger::WriteFormat` matches on x32; the null `rcse`'s `.def` spelt
 `RPointerArray` with the wrong length (`R12`), so the one lookup its clients call was served by the stub.
@@ -122,9 +122,7 @@ reason table like this one.
 * **R2** WLAN hotspot management client (`HssScan*`, `RHssInterface`): not in the released sources; WLAN is not on the PC board.
 * **R3** JRT registry client (`Java::CJavaRegistry*`, `mcsmenu`, `mcsmenuhandler`): `javaregistryclient` is not in the released sources.
 * **R4** BrowserNG's own start-up (`browserng.exe`): the stock browser is not shipped.
-* **R5** OST user-side trace (`OstPrintf`, `comsdbgsvr`): `ostuser` builds from `kernelhwsrv/debug/ost` once its RVCT `__return_address()` intrinsic is replaced.
 * **R6** Thumbnail engine (`CTNEVideoClipInfo`): `tneengine` does not compile yet (the MP4 parser header).
-* **R7** `imut`: `imutdll.cpp` is dropped from the build.
 * **R8** WLAN hardware init (`CWlanHwInit`, `wlmserversrv`): the board that has WLAN supplies it, a board without answers "not present".
 * **R9** `eikcoctl`: one `CTextListItemDrawer` method the Avkon lift does not carry.
 * **R10** (stand-in, no link stub) `rcse`, see above.
