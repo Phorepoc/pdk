@@ -22,12 +22,18 @@
 #   jobs:
 #     package:
 #       uses: Phorepoc/pdk/.github/workflows/package.yml@main
+#       with: { version: "${{ needs.version.outputs.version }}" }   # optional: the SIS carries the release's version
 #       permissions: { contents: read, packages: read }
 
 name: package
 
 on:
   workflow_call:
+    inputs:
+      version:
+        description: "The version this build will be released under (v1.2.3), or empty; the recipes see it as PHOREPOC_PACKAGE_VERSION (1.2.3)"
+        type: string
+        default: ""
 
 jobs:
   conf:
@@ -105,7 +111,9 @@ jobs:
           phe component build -arch "$PHOREPOC_ARCH" ${{ matrix.components }}
 
       - name: The SIS files (recipes/sis.sh)
+        env: { RELEASE_VERSION: "${{ inputs.version }}" }
         run: |
+          export PHOREPOC_PACKAGE_VERSION="${RELEASE_VERSION#v}"
           phe image recipe sis
           sudo chown -R "$(id -u):$(id -g)" build
           mkdir -p out && cp build/sis/*.sis out/ && ls -l out
