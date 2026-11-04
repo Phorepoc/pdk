@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import json
 import os
+import linkstubs as LS                          # noqa: E402  (HERE is already on sys.path)
 import re
 import struct
 import subprocess
@@ -410,6 +411,7 @@ def main() -> int:
     with open(out_path, "wb") as fh:
         fh.write(img)
     e32image.write_pcrel_sidecar(out_path, ext)
+    LS.write_linkstubs(out_path, missing)
 
     # --- self-checks -------------------------------------------------------------------------
     bad_reloc, folded = check_relocs(ext)

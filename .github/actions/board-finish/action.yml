@@ -68,6 +68,14 @@ runs:
         done
         phe component stale | tail -n 1
 
+    # The stub ratchet (tools/stub_audit.py, docs/stub-audit.md): no new link stub in any image. A core build checks the
+    # components alone (--core: the boards' own images are not there to find); a board checks everything it ships,
+    # after its image recipe has built the core libraries and the kernel-side images
+    - name: Stub audit (core build)
+      if: inputs.core_arch != ''
+      shell: bash
+      run: python3 pdk/tools/stub_audit.py check --arch "$PHOREPOC_ARCH" --core
+
     - name: Own the build folder (the container wrote it as root)
       if: always()
       shell: bash
@@ -92,6 +100,11 @@ runs:
       if: inputs.images == 'true' && inputs.core_arch == ''
       shell: bash
       run: phe image release -b "${{ inputs.board }}" -o "$PWD/out"
+
+    - name: Stub audit (every image the board ships)
+      if: inputs.images == 'true' && inputs.core_arch == ''
+      shell: bash
+      run: python3 pdk/tools/stub_audit.py check --arch "$PHOREPOC_ARCH"
 
     - name: Checksums + provenance
       if: inputs.images == 'true' && inputs.core_arch == ''

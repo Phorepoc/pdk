@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import concurrent.futures as cf
 import os
+import linkstubs as LS                          # noqa: E402  (HERE is already on sys.path)
 import struct
 import subprocess
 import sys
@@ -268,6 +269,8 @@ def main() -> int:
                     data_reloc_types=ext.data_reloc_types)
     with open(out_path, "wb") as fh:
         fh.write(img)
+
+    LS.write_linkstubs(out_path, [])
     print(f"\nWrote {out_path} ({len(img)} bytes)")
     result = check_image(img)
     print(format_result(result))

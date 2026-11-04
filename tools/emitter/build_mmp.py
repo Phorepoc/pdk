@@ -66,6 +66,18 @@ STUB = BE.STUB_NAME
 RT = os.path.join(OS_ROOT, "toolchain", "dll_rt")
 GCCHELP = os.path.join(BE.B, "common", "gcchelp.cpp")
 EE = os.path.join(OS_ROOT, "toolchain", "efile_exe")
+# runtime names the GCC archives reference that no provider exports: rt_names.cpp defines them (-DRT_<value>)
+RT_NAMES = {"abort": "abort", "__gnu_Unwind_Find_exidx": "find_exidx"}
+
+
+def _without_member(archive: str, member: str, out: str) -> str:
+    """A copy of an ar archive without one member (libsupc++'s vterminate.o)."""
+    shutil.copyfile(archive, out)
+    if member in subprocess.run([AR, "t", out], check=True, capture_output=True, text=True).stdout.split():
+        subprocess.run([AR, "d", out, member], check=True)
+    return out
+
+
 STRINGTABLE_PL = os.path.join(MMP.BASE, "oss.FCL.sf.os.ossrv", "lowlevellibsandfws", "apputils",
                               "stringtools", "stringtable.pl")
 JOBS = int(os.environ.get("MMP_JOBS", "8"))
@@ -826,6 +838,24 @@ def build(key: str, rsc_only: bool = False) -> int:
     resolve, dll_order = provider_maps(comp.get("libs", []) + m.libs + newlib + (DEVICE_RUNTIME_LIBS if device else [])
                                        + (["libc.lib"] if comp.get("cxx_eh") else []),
                                        device)
+    # The runtime names the GCC archives reference (rt_names.cpp): when no provider exports one, the image carries the
+    # real function instead of a link stub. The link is repeated with that object (which imports from euser in turn).
+    if not (device and not ehdll):
+        rtn = [n for n in missing if n in RT_NAMES and n not in resolve]
+        if "_impure_ptr" in missing and "_impure_ptr" not in resolve:
+            rtn.append("vterminate")       # the one libsupc++ member that reads newlib's `stderr`
+        if rtn:
+            defs = sorted({RT_NAMES.get(n, n) for n in rtn})
+            rt_o = os.path.join(work, "rt_names_" + "_".join(defs) + ".o")
+            _src, rc, out = _compile_one(os.path.join(RT, "rt_names.cpp"), rt_o, [f"-DRT_{d}" for d in defs], env)
+            if rc:
+                print(out[-800:])
+                raise SystemExit(f"{key}: rt_names.cpp failed")
+            if "vterminate" in defs:
+                _SUPCXX_TRIMMED = _without_member(_libsupcxx(), "vterminate.o", os.path.join(work, "libsupc++_nov.a"))
+            objs = objs + [rt_o]
+            link(objs, elf1, True)
+            missing = sorted(BE._nm("--undefined-only", elf1) - {""})
     imports = {n: resolve[n] for n in missing if n in resolve and resolve[n][0] != rom}
     # typeinfo (_ZTI/_ZTS) is never imported: RVCT-era .defs rarely freeze it and a
     # provider built without RTTI would export garbage. Each unresolved _ZTI<X> is
@@ -907,7 +937,7 @@ def build(key: str, rsc_only: bool = False) -> int:
             print("      " + l)
         return 1
 
-    export_offsets, real = [], 0
+    export_offsets, real, unimpl_ords = [], 0, []
     if defmap:
         stub_off = ext.symbols[STUB] - ext.code_base
         ex_set = set(exportable)
@@ -917,6 +947,8 @@ def build(key: str, rsc_only: bool = False) -> int:
                 export_offsets.append(ext.symbols[n] - ext.code_base); real += 1
             else:
                 export_offsets.append(stub_off)
+                if n:
+                    unimpl_ords.append(("ABSENT" if n in defmap.absent else "GAP", ordn, n))
     import_list = devlink.import_blocks(ext, imports, dll_order=dll_order)
     if data_imps:
         blocks = {d: list(e) for d, e in import_list}
@@ -982,6 +1014,10 @@ def build(key: str, rsc_only: bool = False) -> int:
     # sidecar for tools/stub_audit.py: every name this image calls that no provider exports (one per line)
     with open(out_path + ".linkstubs", "w", newline="\n") as fh:
         fh.write("".join(n + "\n" for n in sorted(stub_names)))
+    # sidecar for tools/unimpl_exports.py: the .def ordinals this image serves with the unimplemented-export stub --
+    # ABSENT (retired in the release the .def comes from: fine) or GAP (a real export nothing provides)
+    with open(out_path + ".unimpl", "w", newline="\n") as fh:
+        fh.write("".join(f"{k} {o} {n}\n" for k, o, n in unimpl_ords))
     compile_registration(key, m, rom)
     if device or sis:
         # for a stock loader: its F32 loader's checks, and the exception descriptor its unwinder needs

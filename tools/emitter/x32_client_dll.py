@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import os
+import linkstubs as LS                          # noqa: E402  (HERE is already on sys.path)
 import struct
 import sys
 from dataclasses import dataclass, field
@@ -174,6 +175,7 @@ def build(cfg: Cfg, out_path: str) -> int:
     with open(out_path, "wb") as fh:
         fh.write(img)
     e32image.write_pcrel_sidecar(out_path, ext)
+    LS.write_linkstubs(out_path, unprovided)
 
     # --- self-checks ---------------------------------------------------------------------
     bad_reloc, folded = EU.check_relocs(ext)

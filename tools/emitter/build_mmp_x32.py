@@ -85,6 +85,8 @@ STRINGTABLE_PL = os.path.join(MMP.BASE, "oss.FCL.sf.os.ossrv", "lowlevellibsandf
 
 PORT = os.path.join(OS_ROOT, "toolchain", "x32")                    # port_prelude.h, x64user/ ... (core: the x32 runtime)
 XU = os.path.join(PORT, "x64user")
+# runtime names the toolchain's archives reference that no provider exports: xu_rtnames.cpp defines them (-DRT_<value>)
+RT_NAMES = {"__stack_chk_fail": "stack_chk_fail", "abort": "abort", "nan": "nan"}
 # the board's variant.mmh (board-specific mmps such as the key map #include it)
 MMP_DEFS = ("-I", os.path.join(OS_ROOT, "board"))
 # PHOREPOC_S4=1 (Symbian^4): a SEPARATE output root -- work files and images go to BUILD/s4, while providers
@@ -196,7 +198,9 @@ def x86_name(name: str) -> str:
     # RVCT mangles an extern "C" FUNCTION TYPE with a 'Y' after the 'F' (Itanium's optional marker); GCC
     # never emits it -- Qt's qHBNewFace(void*, HB_GetFontTableFunc) is `...PvPFY8HB_Error...` in the frozen .def,
     # `...PvPF8HB_Error...` here, so neither the export nor QtGui's import ever matched (EUSRNIMP)
-    return re.sub(r"(?<=[PR])FY", "F", name.replace(*VA_ALIAS))
+    # a va_list taken BY REFERENCE (RFileLogger::WriteFormat(..., VA_LIST& aList)): ARM's `RSt9__va_list` is amd64's
+    # reference to the one-element array, `RA1_13__va_list_tag` (the by-value form decays to a pointer, VA_ALIAS)
+    return re.sub(r"(?<=[PR])FY", "F", name.replace("RSt9__va_list", "RA1_13__va_list_tag").replace(*VA_ALIAS))
 
 
 LD = "ld" if os.environ.get("X32_LD") == "bfd" or not shutil.which("ld.lld") else "ld.lld"
@@ -659,6 +663,18 @@ def build(key: str) -> int:
     if not any(l.lower().startswith("euser.") for l in libs):
         libs = libs + ["euser.lib"]
     resolve, dll_order, data_names, sidecars = provider_maps(libs)
+    # The runtime names the toolchain's archives reference (xu_rtnames.cpp): when no provider exports one, the image
+    # carries the real function instead of a link stub. The link is repeated with that object (it imports User::Panic).
+    rtn = sorted({RT_NAMES[n] for n in missing if n in RT_NAMES and n not in resolve})
+    if rtn:
+        rt_o = os.path.join(work, "rt_names_" + "_".join(rtn) + ".o")
+        _s, rc, out = compile_one(os.path.join(XU, "xu_rtnames.cpp"), rt_o, rt_flags + [f"-DRT_{d}" for d in rtn])
+        if rc:
+            print(out[-800:])
+            raise SystemExit(f"{key}: xu_rtnames.cpp failed")
+        all_objs = all_objs + [rt_o]
+        link([], elf1, True)
+        missing = sorted(nm("--undefined-only", elf1) - {""})
     imports = {n: resolve[n] for n in missing if n in resolve and resolve[n][0] != rom}
     # A typeinfo a provider really exports (euser's 44 _ZTI*: CBase, CActive ... compiled -frtti, base chains intact) is
     # IMPORTED like any other data symbol, so a throw / catch / dynamic_cast in this image meets the one real object.
@@ -723,7 +739,7 @@ def build(key: str) -> int:
         return 1
 
     stub_off = ext.symbols[STUB] - ext.code_base
-    export_offsets, real = [], 0
+    export_offsets, real, unimpl_ords = [], 0, []
     if defmap:
         for ordn in range(1, defmap.max_ordinal + 1):
             n = served.get(ordn)
@@ -732,6 +748,9 @@ def build(key: str) -> int:
                 real += 1
             else:
                 export_offsets.append(stub_off)
+                dn = defmap.name(ordn)
+                if dn:
+                    unimpl_ords.append(("ABSENT" if dn in defmap.absent else "GAP", ordn, dn))
     import_list = devlink.import_blocks(ext, imports, dll_order=dll_order, arch="x32")
     if data_imps:
         blocks = {d: list(e) for d, e in import_list}
@@ -825,6 +844,10 @@ def build(key: str) -> int:
     # sidecar for tools/stub_audit.py: every name this image calls that no provider exports (one per line)
     with open(out + ".linkstubs", "w", newline="\n") as fh:
         fh.write("".join(n + "\n" for n in sorted(stub_names)))
+    # sidecar for tools/unimpl_exports.py: the .def ordinals this image serves with the unimplemented-export stub --
+    # ABSENT (retired in the release the .def comes from: fine) or GAP (a real export nothing provides)
+    with open(out + ".unimpl", "w", newline="\n") as fh:
+        fh.write("".join(f"{k} {o} {n}\n" for k, o, n in unimpl_ords))
     if comp.get("sis"):
         # a SIS image is LOADED FROM RAM: the real F32 loader's checks must pass, or it answers KErrCorrupt
         from loadercheck import check_loader

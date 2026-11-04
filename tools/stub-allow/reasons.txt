@@ -1,0 +1,13 @@
+# Why a link stub is still allowed: id | symbol regex (first match wins) | what is missing and the way out | tracking [| flags]
+# Every line of <arch>.allow names one of these. Flag `board`: some board's adaptation provides the name, so the line is not
+# reported as unneeded by a board that does (docs/stub-audit.md). The way out of each is the rule of docs/stub-audit.md:
+# build the real source; or write the real implementation; or a real "not present" adaptation for absent hardware.
+R1 | ^m3g | M3G (JSR-184) engine, `m3gcore`: no source in any release -- write it | docs/stub-audit.md, reason R1
+R2 | HssScan|RHssInterface | WLAN hotspot management client (hssmgmt / RHssInterface): the library is not in the released sources; WLAN is not shipped on this board | docs/stub-audit.md, reason R2
+R3 | 4Java | JRT registry client (Java::CJavaRegistry*): `javaregistryclient` is not in the released sources -- write it | docs/stub-audit.md, reason R3
+R4 | ^(_Z7E32Mainv|_ZN4User|_ZN7UserSvr|_ZN8UserHeap) | BrowserNG's own EXE start-up (E32Main and the euser start-up calls): the stock browser is not shipped, it is not linked against the start-up library | docs/stub-audit.md, reason R4
+R5 | OstPrintf | OST user-side trace library (ostuser): builds from kernelhwsrv/debug/ost once its RVCT `__return_address` is replaced | docs/stub-audit.md, reason R5
+R6 | CTNEVideoClipInfo | Thumbnail engine (tneengine): the MP4 parser header does not compile (CParser) | docs/stub-audit.md, reason R6
+R7 | gPanic | imut: `imutdll.cpp` is left out of the build (registry `drop`) | docs/stub-audit.md, reason R7
+R8 | CWlanHwInit | the licensee's WLAN hardware-init plug-in: a board with WLAN supplies it (adaptation `wlanhwinit`), a board without says "not present" | docs/stub-audit.md, reason R8 | board
+R9 | CTextListItemDrawer | eikcoctl: a CTextListItemDrawer method the Avkon lift does not carry yet (registry `drop`) | docs/stub-audit.md, reason R9
