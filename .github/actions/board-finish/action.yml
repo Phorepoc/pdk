@@ -149,7 +149,7 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
       # what changed in every pinned repository since the previous release (Conventional Commits), then the commits
-      run: python3 pdk/tools/ci/release_notes.py --repo "${{ github.repository }}" --version "${{ inputs.version }}" --built-from out/built-from.txt --out notes.md
+      run: python3 pdk/tools/ci/release_notes.py --repo "${{ github.repository }}" --version "${{ inputs.version }}" --built-from out/built-from.txt --extra "$GITHUB_WORKSPACE/.github/release-notes.md" --out notes.md
 
     - uses: actions/upload-artifact@v4
       if: inputs.images == 'true' && inputs.core_arch == '' && inputs.version != ''
@@ -172,7 +172,7 @@ runs:
         draft=; [ "$DRAFT" = true ] && draft=--draft
         if ! gh release view "$tag" -R "${{ github.repository }}" >/dev/null 2>&1; then
           python3 pdk/tools/ci/release_notes.py --repo "${{ github.repository }}" --version "$tag" \
-            --built-from out/built-from.txt --out notes.md
+            --built-from out/built-from.txt --extra "$GITHUB_WORKSPACE/.github/release-notes.md" --out notes.md
           gh release create "$tag" -R "${{ github.repository }}" --target "${{ github.sha }}" --title "$tag" \
             --notes-file notes.md $draft
         fi

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """release_notes.py -- the "What changed" part of a release's notes.
 
-    release_notes.py --repo <owner/name> [--version <vX.Y.Z>] --built-from <built-from.txt> [--out notes.md]
+    release_notes.py --repo <owner/name> [--version <vX.Y.Z>] --built-from <built-from.txt> [--extra notes.md] [--out notes.md]
 
 A release is built from the commits listed in built-from.txt (one "<repository> <commit>" per line, every repository
 the image or package is made of). This finds the newest earlier release of the same repository, reads its
@@ -16,6 +16,7 @@ With no earlier release (or none that has a built-from.txt) the notes say that t
 table follows, as before.
 """
 import argparse
+import os
 import json
 import re
 import subprocess
@@ -112,9 +113,10 @@ def section(owner, name, old, new):
     return out
 
 
-def notes(repo, version, pins):
+def notes(repo, version, pins, extra=""):
     owner = repo.split("/")[0]
-    out = ["## What changed", ""]
+    # the board's own text (how to run the images): first, before the list of changes
+    out = ([extra.strip(), ""] if extra.strip() else []) + ["## What changed", ""]
     try:
         prev, old_pins = previous_release(repo, version)
     except RuntimeError as e:  # the notes never stop a release
@@ -146,13 +148,18 @@ def main():
     ap.add_argument("--repo", required=True, help="owner/name of the repository being released")
     ap.add_argument("--version", default="", help="the tag this release gets (left out: it does not exist yet)")
     ap.add_argument("--built-from", required=True, help="the release's built-from.txt")
+    ap.add_argument("--extra", help="a Markdown file of the board's own text, put before the changes (.github/release-notes.md)")
     ap.add_argument("--out", help="write the notes here (default: stdout)")
     a = ap.parse_args()
     with open(a.built_from, encoding="utf-8") as f:
         pins = read_built_from(f.read())
     if not pins:
         sys.exit("release_notes: no '<repository> <commit>' lines in %s" % a.built_from)
-    text = notes(a.repo, a.version, pins)
+    extra = ""
+    if a.extra and os.path.isfile(a.extra):
+        with open(a.extra, encoding="utf-8") as f:
+            extra = f.read()
+    text = notes(a.repo, a.version, pins, extra)
     if a.out:
         with open(a.out, "w", encoding="utf-8", newline="\n") as f:
             f.write(text)
