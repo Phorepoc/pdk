@@ -15,6 +15,7 @@
 #   IMAGE=ghcr.io/phorepoc/web         the toolchain image (default ghcr.io/phorepoc/base:latest)
 #   REPOS_x32="cxxrt"                  repositories it needs on top of core, per architecture (built at main)
 #   COMPONENTS_arm="phevdecsw pheffmpeg"  what to build, providers first (also those of REPOS the package needs)
+#   ENV="PHOREPOC_QT48=1"              build settings the steps see (KEY=value words; phe passes the known ones to the toolchain)
 #
 # The files come back as the artifact "package-files" (the SIS files, SHA256SUMS, built-from.txt, notes.md); the
 # caller's own workflow makes the release (a cross-repository workflow cannot: see board-image.yml).
@@ -42,13 +43,14 @@ jobs:
       matrix: ${{ steps.c.outputs.matrix }}
       image: ${{ steps.c.outputs.image }}
       name: ${{ steps.c.outputs.name }}
+      env: ${{ steps.c.outputs.env }}
     steps:
       - uses: actions/checkout@v4
       - id: c
         name: package.conf
         run: |
           [ -f package.conf ] || { echo "::error::no package.conf in ${{ github.repository }}"; exit 1; }
-          NAME= ARCHES= IMAGE=; . ./package.conf
+          NAME= ARCHES= IMAGE= ENV=; . ./package.conf
           [ -n "$NAME" ] && [ -n "$ARCHES" ] || { echo "::error::package.conf: NAME and ARCHES are required"; exit 1; }
           m=$(for a in $ARCHES; do
                 eval "r=\${REPOS_$a:-}; c=\${COMPONENTS_$a:-}"
@@ -56,7 +58,7 @@ jobs:
                 jq -nc --arg a "$a" --arg r "$r" --arg c "$c" '{arch: $a, repos: $r, components: $c}'
               done | jq -sc '{include: .}')
           echo "$m"
-          { echo "matrix=$m"; echo "name=$NAME"; echo "image=${IMAGE:-ghcr.io/phorepoc/base:latest}"; } >> "$GITHUB_OUTPUT"
+          { echo "matrix=$m"; echo "name=$NAME"; echo "image=${IMAGE:-ghcr.io/phorepoc/base:latest}"; echo "env=$ENV"; } >> "$GITHUB_OUTPUT"
 
   build:
     needs: conf
@@ -85,6 +87,14 @@ jobs:
           done
           [ -f build/.srcstamp ] || echo "no published core layer: a full (cold) build"
           python3 pdk/tools/ci/srcstamp.py apply build ${{ steps.setup.outputs.list }}
+
+      - name: Build settings from package.conf (ENV)
+        env: { PKG_ENV: "${{ needs.conf.outputs.env }}" }
+        run: |
+          for kv in $PKG_ENV; do
+            echo "$kv" | grep -q -E '^[A-Z][A-Z0-9_]*=[^ ]*$' || { echo "::error::package.conf ENV: not KEY=value: $kv"; exit 1; }
+            echo "$kv" >> "$GITHUB_ENV"; echo "$kv"
+          done
 
       - name: Exports + header case links
         run: |
