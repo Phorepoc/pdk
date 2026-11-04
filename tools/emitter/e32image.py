@@ -546,7 +546,9 @@ def build_dll(code: bytes, exports: list[int], *,
         # size word inside counts only real content, so trailing pad is ignored.
         import_section += b"\x00" * (_align4(len(import_section)) - len(import_section))
     else:
-        import_section = struct.pack("<I", 0)  # size word only; no DLL blocks
+        # no imports: no import section and iImportOffset 0, as elf2e32 writes it (a size word of 0 claims a section
+        # smaller than its own size word, and the loader refuses the image with KErrCorrupt)
+        import_section = b""
     cursor = import_offset + len(import_section)
 
     # Data section (.data initialised bytes; .bss is bss_size zero-fill at run
@@ -593,7 +595,7 @@ def build_dll(code: bytes, exports: list[int], *,
     hdr.text_size = len(code_padded) if text_len is None else text_len   # no IAT -> text == code (less exports)
     hdr.entry_point = entry_point
     hdr.dll_ref_table_count = dll_ref_table_count
-    hdr.import_offset = import_offset
+    hdr.import_offset = import_offset if imports else 0
     hdr.data_base = data_base
     hdr.data_offset = data_offset
     hdr.data_size = len(data)             # initialised .data size (unpadded)
