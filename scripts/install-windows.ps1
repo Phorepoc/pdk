@@ -9,7 +9,7 @@
 #   restarting it if it dies; logs to %LOCALAPPDATA%\phonelab\phonelab.log
 # -Uninstall removes the rule and the task.
 param([int]$Port = 8737, [switch]$NoBuild, [switch]$Uninstall, [switch]$TaskOnly, [string]$Config = '', [string]$PhonelabExe = '')
-# -PhonelabExe: use this phonelab.exe (from a release archive) instead of building one: no clone and no Go needed. The release
+# -PhonelabExe: use the release's phonelab.exe (and its phonelabw.exe twin, no console, for the task) instead of building one: no clone and no Go needed. The release
 #   archive carries no phonelab.toml: without -Config the built-in defaults apply (one phlink phone, port 8737).
 # -Config: a phonelab.toml of your own (devices, workspace, token); default: the repository's phonelab.toml
 # -TaskOnly: rebuild + re-register the logon task only (no admin needed; the firewall rules stay as they are)
@@ -28,7 +28,12 @@ if ($Uninstall) {
 }
 $server = Join-Path $PSScriptRoot '..' | Resolve-Path
 $exe = Join-Path $server 'phonelab.exe'
-if ($PhonelabExe) { $exe = (Resolve-Path $PhonelabExe).Path; $NoBuild = $true }
+if ($PhonelabExe) {
+	$exe = (Resolve-Path $PhonelabExe).Path; $NoBuild = $true
+	# the release carries a console-less twin, phonelabw.exe: the logon task runs that one (closing a console window would kill the service)
+	$w = Join-Path (Split-Path $exe) 'phonelabw.exe'
+	if (Test-Path $w) { $exe = $w } else { Write-Warning "no phonelabw.exe next to ${exe}: the task will show a console window; do not close it" }
+}
 if (-not $NoBuild) {
 	Push-Location $server
 	# -H windowsgui: no console window (closing one would kill the service); it logs with -log instead

@@ -79,9 +79,15 @@ jobs:
               GOOS=$os GOARCH=$arch CGO_ENABLED=$CGO CC="$cc" go build -trimpath \
                 -ldflags "-s -w -X main.version=$VERSION" -o "stage/$p$ext" "./cmd/$p"
             done
+            # Windows: phonelabw.exe = the same service with no console (windowsgui; logs only via -log), what the logon task runs;
+            # phonelab.exe keeps its console for interactive debugging
+            if [ "$os" = windows ]; then
+              GOOS=$os GOARCH=$arch CGO_ENABLED=$CGO go build -trimpath \
+                -ldflags "-s -w -H windowsgui -X main.version=$VERSION" -o stage/phonelabw.exe ./cmd/phonelab
+            fi
             name="pdk-$VERSION-$os-$arch"
             if [ "$os" = windows ]; then
-              (cd stage && zip -q "../dist/$name.zip" phe.exe phonelab.exe)
+              (cd stage && zip -q "../dist/$name.zip" phe.exe phonelab.exe phonelabw.exe)
             else
               tar -czf "dist/$name.tar.gz" -C stage phe phonelab
             fi

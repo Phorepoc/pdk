@@ -81,7 +81,7 @@ Open <http://localhost:8737>; MCP clients use `http://localhost:8737/mcp`. The i
 [docker/99-phonelab.rules](docker/99-phonelab.rules) (copy it to `/etc/udev/rules.d/`). To build the image from a clone
 instead: `docker compose -f docker/compose.yaml -f docker/compose.build.yaml up -d --build`.
 
-**Windows, native** (Docker Desktop cannot see COM ports). Unpack `phonelab.exe` from the release archive, then, once, in
+**Windows, native** (Docker Desktop cannot see COM ports). Unpack the release archive (`phonelab.exe` is for running by hand with a console; `phonelabw.exe` is the same service without a console, what the logon task starts), then, once, in
 an administrator PowerShell, with [scripts/install-windows.ps1](scripts/install-windows.ps1) from this repository:
 
 ```powershell
