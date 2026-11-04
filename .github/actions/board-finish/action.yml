@@ -170,7 +170,11 @@ runs:
       run: |
         tag="${VERSION:-$GITHUB_REF_NAME}"
         draft=; [ "$DRAFT" = true ] && draft=--draft
-        if ! gh release view "$tag" -R "${{ github.repository }}" >/dev/null 2>&1; then
+        # an existing release is only topped up by a run of its own commit, never overwritten from another one
+        if gh release view "$tag" -R "${{ github.repository }}" >/dev/null 2>&1; then
+          at=$(gh api "repos/${{ github.repository }}/commits/$tag" -q .sha)
+          [ "$at" = "${{ github.sha }}" ] || { echo "::error::$tag is already released from $at, not ${{ github.sha }}: nothing uploaded"; exit 1; }
+        else
           python3 pdk/tools/ci/release_notes.py --repo "${{ github.repository }}" --version "$tag" \
             --built-from out/built-from.txt --extra "$GITHUB_WORKSPACE/.github/release-notes.md" --out notes.md
           gh release create "$tag" -R "${{ github.repository }}" --target "${{ github.sha }}" --title "$tag" \
