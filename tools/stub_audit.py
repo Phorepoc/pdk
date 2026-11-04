@@ -6,6 +6,7 @@
     python3 tools/stub_audit.py report [--arch x32|arm] [--rom ARGS]
     python3 tools/stub_audit.py check  [--arch x32|arm] [--rom ARGS] [--core]   # CI: fails on a new stub (exit 1)
     python3 tools/stub_audit.py allow  [--arch x32|arm] [--rom ARGS]     # prints the allowlist for what is there now
+    python3 tools/stub_audit.py dropped [--arch x32|arm]                 # the sources the registry leaves out of a build
 
 No stub has a place in an image (docs/stub-audit.md). A "link stub" is a name an image calls that no provider exports:
 the emitter (build_mmp.py / build_mmp_x32.py) links it to `__unimpl_export`, which panics the caller. Every image the
@@ -16,6 +17,8 @@ The check compares the records with tools/stub-allow/<arch>.allow:
   * an allowlist line that no record has any more fails too (delete it: the list only ever shrinks);
   * an allowlist line must name a reason of stub-allow/reasons.txt (each with its tracking line in docs/stub-audit.md);
   * an image without a record fails (an image the audit cannot see);
+  * (kind 5) a source the registry's drop=/nosrc leaves out of a build needs a line in stub-allow/dropped.allow with a
+    reason of dropped-reasons.txt; a line no registry entry drops any more fails too;
   * the C++ exception-handling runtime names (never called: nothing unwinds through them) fail the build unless the
     architecture'"'"'s allowlist says `#eh allowed` (arm: until its images import them from drtaeabi, docs/stub-audit.md).
 --rom ARGS limits the audit to the images a ROM stages (Sys\\Bin\\X=<built file> lines of its args file).
@@ -27,6 +30,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
+import paths  # noqa: E402
 from paths import BUILD  # noqa: E402
 
 ALLOW_DIR = os.path.join(HERE, "stub-allow")
@@ -144,6 +148,79 @@ def current(arch, rom_args=None):
     return real, eh, norec, len(recs) + len(norec)
 
 
+def registry_drops(arch):
+    """{(component, source)}: what the registry leaves out of an `arch` build (drop= / x32_drop= / nosrc `*`)."""
+    sys.path.insert(0, paths.REGISTRY)
+    for r in paths.ADAPTATION_REGISTRIES:
+        sys.path.insert(0, r)
+    import components as C
+    out = set()
+    for key, comp in C.COMPONENTS.items():
+        if arch == "x32" and comp.get("x32_real"):
+            continue
+        if comp.get("nosrc"):
+            out.add((key, "*"))
+        for d in comp.get("drop", []) + (comp.get("x32_drop", []) if arch == "x32" else []):
+            if not comp.get("nosrc"):
+                out.add((key, d.lower()))
+    return out
+
+
+def load_dropped():
+    """({(component, source): reason}, {reason ids})."""
+    entries, reasons = {}, set()
+    path = os.path.join(ALLOW_DIR, "dropped.allow")
+    if os.path.exists(path):
+        for line in open(path, encoding="utf-8"):
+            if line.strip() and not line.startswith("#"):
+                rid, comp, src = line.split()
+                entries[(comp, src)] = rid
+    path = os.path.join(ALLOW_DIR, "dropped-reasons.txt")
+    if os.path.exists(path):
+        for line in open(path, encoding="utf-8"):
+            if line.strip() and not line.startswith("#"):
+                reasons.add(line.split(" | ")[0].strip())
+    return entries, reasons
+
+
+def check_dropped(arch, core=False):
+    """kind 5. Returns the number of failure groups."""
+    allow, reasons = load_dropped()
+    try:
+        now = registry_drops(arch)
+        both = now | registry_drops("arm" if arch == "x32" else "x32")
+    except Exception as e:          # the registry did not load: the audit cannot see the drops
+        print(f"stub_audit: cannot read the registry's dropped sources: {e}")
+        return 1
+    bad = 0
+    new = sorted(now - set(allow))
+    if new:
+        bad += 1
+        print(f"stub_audit: {len(new)} source(s) the registry leaves out of the {arch} build have no line in stub-allow/dropped.allow:")
+        for c, s in new[:60]:
+            print(f"  {c} {s}")
+        print("  Build the release's file, or say what replaces it and why (dropped-reasons.txt).")
+    gone = [] if core else sorted(set(allow) - both)
+    if gone:
+        bad += 1
+        print(f"stub_audit: {len(gone)} dropped.allow line(s) name a source no registry entry leaves out any more -- delete them:")
+        for c, s in gone[:60]:
+            print(f"  {allow[(c, s)]} {c} {s}")
+    unknown = sorted({r for r in allow.values() if r not in reasons})
+    if unknown:
+        bad += 1
+        print(f"stub_audit: dropped.allow lines with no reason in dropped-reasons.txt: {', '.join(unknown)}")
+    print(f"stub_audit {arch}: {len(now)} dropped sources ({len(allow)} listed) -- " + ("FAILED" if bad else "ok"))
+    return bad
+
+
+def cmd_dropped(arch, rom_args):
+    allow, _ = load_dropped()
+    for c, s in sorted(registry_drops(arch)):
+        print(f"{allow.get((c, s), 'D?')} {c} {s}")
+    return 0
+
+
 def cmd_report(arch, rom_args):
     recs, norec = records(arch, rom_args)
     total = eh = 0
@@ -216,12 +293,13 @@ def cmd_check(arch, rom_args, core=False):
         print(f"stub_audit: {eh} exception-runtime link stubs in the {arch} images, and stub-allow/{arch}.allow has no '#eh allowed' line")
     print(f"stub_audit {arch}: {nimg} images, {len(real)} link stubs ({len(allow)} allowed), {eh} EH runtime -- "
           + ("FAILED" if bad else "ok"))
+    bad += check_dropped(arch, core)
     return 1 if bad else 0
 
 
 def main():
     args = sys.argv[1:]
-    cmd = args.pop(0) if args and args[0] in ("report", "check", "allow") else "report"
+    cmd = args.pop(0) if args and args[0] in ("report", "check", "allow", "dropped") else "report"
     arch = os.environ.get("PHOREPOC_ARCH", "x32")
     rom, core = None, False
     while args:
@@ -236,7 +314,7 @@ def main():
             sys.exit(__doc__)
     if cmd == "check":
         return cmd_check(arch, rom, core)
-    return {"report": cmd_report, "allow": cmd_allow}[cmd](arch, rom)
+    return {"report": cmd_report, "allow": cmd_allow, "dropped": cmd_dropped}[cmd](arch, rom)
 
 
 if __name__ == "__main__":

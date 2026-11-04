@@ -35,6 +35,8 @@ def main() -> int:
             write(os.path.join(img, name + ".meta"), "stub=0x0")
             write(os.path.join(img, name + ".linkstubs"), stubs)
         SA.BUILD = build
+        drops = set()
+        SA.registry_drops = lambda arch: set(drops)       # the registry's dropped sources (kind 5)
 
         def run(**kw):
             return SA.cmd_check("arm", None, **kw)
@@ -52,6 +54,21 @@ def main() -> int:
         write(os.path.join(allow_dir, "arm.allow"), "#eh allowed\nR1 a.dll m3gThing\n")
         os.remove(os.path.join(img, "c.dll.linkstubs"))
         assert run() == 1, "an image without a record must fail"
+        # kind 5: a dropped source needs a line with a known reason; a line nothing drops any more fails (board builds)
+        write(os.path.join(img, "c.dll.linkstubs"), "")
+        write(os.path.join(allow_dir, "arm.allow"), "#eh allowed\nR1 a.dll m3gThing\n")
+        write(os.path.join(allow_dir, "dropped-reasons.txt"), "D1 | a patched copy | not a stub | docs\n")
+        write(os.path.join(allow_dir, "dropped.allow"), "D1 foo bar.cpp\n")
+        drops.add(("foo", "bar.cpp"))
+        assert run() == 0, "a listed dropped source must pass"
+        drops.add(("foo", "new.cpp"))
+        assert run() == 1, "a dropped source with no line must fail"
+        drops.discard(("foo", "new.cpp"))
+        write(os.path.join(allow_dir, "dropped.allow"), "D9 foo bar.cpp\n")
+        assert run() == 1, "a dropped line with an unknown reason must fail"
+        write(os.path.join(allow_dir, "dropped.allow"), "D1 foo bar.cpp\nD1 foo old.cpp\n")
+        assert run() == 1, "a dropped line nothing drops any more must fail on a board build"
+        assert run(core=True) == 0, "...but not on a core build"
     print("stub_audit_test: ok")
     return 0
 

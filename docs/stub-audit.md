@@ -108,12 +108,25 @@ files in the ROM and the settings database: R10), `mcssathandler` (source left o
 modem needs the real TSY), `wapisecuritysettingsui` (stub UI), `iaupdateapi` (kept by decision: the update service is
 decided after going public).
 
-### Kind 5: dropped sources
+### Kind 5: dropped sources (checked)
 
-The registry's `drop=[...]` leaves source files of the real mmp out of a build: 89 components (`cone`, `avkon`,
-`eikcoctl`, `apparc`, `wserv`, `libc`, `msgs`, `imut`, `javascriptcore` ... ), 4 `nosrc` components (`sgresource`,
-`surfaceupdateclient`, `alfclient`, `alfdecoderserverclient`) and 1 `x32_mmp` substitution (`drmhelper`). Many drops are
-replaced by a board source (`extra=`); the rest are gaps. The list is in `stub-audit-replaced-sources.md` (generated); it is not yet covered by a check -- the next step is a reason per line, as for the link stubs.
+The registry's `drop=[...]` leaves source files of the real mmp out of a build: 87 components, 4 `nosrc` components
+(`sgresource`, `surfaceupdateclient`, `alfclient`, `alfdecoderserverclient`) and 1 `x32_mmp` substitution (`drmhelper`).
+Every (component, source) now has a line in `tools/stub-allow/dropped.allow` with a reason of `dropped-reasons.txt`, and
+`stub_audit.py check` fails on a drop with no line (a new one) and on a line nothing drops any more (the list only
+shrinks). `stub_audit.py dropped` prints what the registry drops now. The reasons come from a measurement, not a guess:
+for each dropped file the replacement was compared with the release's file (share of the release's lines present in the
+replacement, or an `#include` of the release's file):
+
+| reason | meaning | lines |
+|---|---|---|
+| D1 | a patched copy of the release's file (port, board adaptation, fix, trace) or a wrapper that includes it, >= 75% the release's lines: the release's code runs | 141 |
+| D2 | the release's own alternative (CMLA stub, RealAudio-off variant: the real source was never released) | 3 |
+| D3, D4 | the sisx recogniser's ROM patch constant; ARM `.cia` assembler replaced by C++ on x32 | 3 |
+| D16, D18 | our implementation of what the release stubs (frame table, HWRM plug-ins, start-up adaptation); rasteriser tuning | 7 |
+| D10 - D15 | the work list: ALF/graphics null clients (4), C32 null on ARM (12 files), the SAT menu handler (1), the licensee TSY mock (1), the power-save and SVG-T parts never released (2), the emergency-call stem (1) | 21 |
+
+The list per component is in `stub-audit-replaced-sources.md`.
 
 ### The allowlist's reasons (the work list)
 
