@@ -1,6 +1,5 @@
 # Link stubs allowed in the x32 images: reason, image, name. The list only ever shrinks
 # (tools/stub_audit.py check; reasons: stub-allow/reasons.txt, tracked in docs/stub-audit.md).
-#ceiling eh 0
 R4 browserng.exe _Z7E32Mainv
 R1 hitchcock.dll m3gAddChild
 R1 hitchcock.dll m3gAddRef

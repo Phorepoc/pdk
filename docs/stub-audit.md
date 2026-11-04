@@ -15,7 +15,7 @@ a build. This page is the inventory, the rule for replacing each kind, and the C
 | 5 | **Dropped sources**: `drop=[...]` in a registry entry leaves source files of the real mmp out of the build | the registry | listed below |
 
 The exception-handling runtime names a C++ image references for unwinding (`__cxa_begin_cleanup`, `__cxa_type_match`,
-`__exidx_start` ...) are kind 1 as well; they are counted apart (`#ceiling eh N` in the allowlist) because nothing
+`__exidx_start` ...) are kind 1 as well; they are counted apart (`#eh allowed` in the allowlist) because nothing
 unwinds through them.
 
 ## The rule per item
@@ -36,7 +36,7 @@ the image recipe (`.github/actions/board-finish`). It fails when
 * an image has no `.linkstubs` record (every image the emitter writes has one; the core libraries and the kernel-side
   images built by their own scripts write theirs too; the kernel links with unresolved names as errors, so it has no
   stub mechanism to record);
-* the exception-runtime count goes over (or, on a board, under) its ceiling.
+* an exception-runtime name appears and the architecture has no `#eh allowed` line (x32 has none: it has no such stub).
 
 `python3 tools/stub_audit.py allow --arch x32` prints the allowlist for what is built now; `report` lists every stub
 per image. `python3 tools/unimpl_exports.py --arch x32 --names` lists the GAP ordinals (kind 3).
@@ -53,7 +53,7 @@ Link stubs, excluding the exception-runtime names, over every image the componen
 |---|---|---|---|---|
 | images with a record | 1627 | 1659 | 1696 | 1729 (+ the board's own) |
 | link-stub call sites | 1078 in 968 images | **52 in 5 images** | 2150 in 1033 images | **58 in 5 images** |
-| exception-runtime names (kind 1, counted apart) | 0 | 0 | 5049 | 5069 (ceiling) |
+| exception-runtime names (kind 1, counted apart) | 0 | 0 | 5049 | 5074 (allowed) |
 
 What went: `__stack_chk_fail` (963 x32 images), `abort`, `__gnu_Unwind_Find_exidx` (~1000 arm images) and `_impure_ptr`
 (18) now resolve to real definitions in the image (`rt_names.cpp`, `xu_rtnames.cpp`: see "Runtime names" below); the 25
@@ -78,7 +78,7 @@ links the real definition when no provider has the name, and keeps a provider's 
 
 The arm exception-runtime names (`__cxa_begin_cleanup`, `__cxa_type_match`, `__exidx_start` ...) are still stubs in
 every C++ image that is not an exception-handling image: the real system imports them from `drtaeabi`. Making every
-image import it changes the import table of ~1000 images, which wants a phone run first -- ceiling `eh` in
+image import it changes the import table of ~1000 images, which wants a phone run first -- `#eh allowed` in
 `stub-allow/arm.allow`, to be lowered to 0 by that change.
 
 ### Kind 3 (unimplemented exports), classified against the `.def`

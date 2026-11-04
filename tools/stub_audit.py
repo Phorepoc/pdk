@@ -16,8 +16,8 @@ The check compares the records with tools/stub-allow/<arch>.allow:
   * an allowlist line that no record has any more fails too (delete it: the list only ever shrinks);
   * an allowlist line must name a reason of stub-allow/reasons.txt (each with its tracking line in docs/stub-audit.md);
   * an image without a record fails (an image the audit cannot see);
-  * the C++ exception-handling runtime names (never called: nothing unwinds through them) are a counted ceiling per
-    architecture, `#ceiling eh N` in the allowlist; the count may only go down.
+  * the C++ exception-handling runtime names (never called: nothing unwinds through them) fail the build unless the
+    architecture'"'"'s allowlist says `#eh allowed` (arm: until its images import them from drtaeabi, docs/stub-audit.md).
 --rom ARGS limits the audit to the images a ROM stages (Sys\\Bin\\X=<built file> lines of its args file).
 """
 import os
@@ -114,21 +114,21 @@ def load_reasons():
 
 
 def load_allow(arch):
-    """({(image, name): reason id}, eh ceiling or None)."""
-    entries, ceiling = {}, None
+    """({(image, name): reason id}, whether the exception-runtime names are allowed)."""
+    entries, eh_ok = {}, False
     path = os.path.join(ALLOW_DIR, arch + ".allow")
     if not os.path.exists(path):
-        return entries, ceiling
+        return entries, eh_ok
     for line in open(path, encoding="utf-8"):
         line = line.rstrip("\n")
-        if line.startswith("#ceiling eh "):
-            ceiling = int(line.split()[2])
+        if line.startswith("#eh allowed"):
+            eh_ok = True
             continue
         if not line.strip() or line.startswith("#"):
             continue
         rid, image, name = line.split()
         entries[(image, name)] = rid
-    return entries, ceiling
+    return entries, eh_ok
 
 
 def current(arch, rom_args=None):
@@ -176,7 +176,8 @@ def cmd_allow(arch, rom_args):
     real, eh, _, _ = current(arch, rom_args)
     print(f"# Link stubs allowed in the {arch} images: reason, image, name. The list only ever shrinks")
     print("# (tools/stub_audit.py check; reasons: stub-allow/reasons.txt, tracked in docs/stub-audit.md).")
-    print(f"#ceiling eh {eh}")
+    if eh:
+        print("#eh allowed")
     for image, n in sorted(real):
         rid = next((r for r, (rx, _t, _k, _f) in reasons.items() if rx.search(n)), "R0")
         print(f"{rid} {image} {n}")
@@ -185,7 +186,7 @@ def cmd_allow(arch, rom_args):
 
 def cmd_check(arch, rom_args, core=False):
     reasons = load_reasons()
-    allow, ceiling = load_allow(arch)
+    allow, eh_ok = load_allow(arch)
     real, eh, norec, nimg = current(arch, rom_args)
     bad = 0
     new = sorted(real - set(allow))
@@ -210,14 +211,9 @@ def cmd_check(arch, rom_args, core=False):
     if norec:
         bad += 1
         print(f"stub_audit: {len(norec)} image(s) without a link-stub record (.linkstubs): {', '.join(norec[:20])}")
-    if ceiling is None:
+    if eh and not eh_ok:
         bad += 1
-        print(f"stub_audit: stub-allow/{arch}.allow has no '#ceiling eh N' line")
-    elif eh > ceiling:
-        bad += 1
-        print(f"stub_audit: {eh} exception-runtime link stubs, over the ceiling {ceiling}")
-    elif eh < ceiling and not core:     # (a notice, not a failure: boards differ in what they add; the ceiling follows the best build)
-        print(f"stub_audit: {eh} exception-runtime link stubs, under the ceiling {ceiling}: lower '#ceiling eh' to {eh}")
+        print(f"stub_audit: {eh} exception-runtime link stubs in the {arch} images, and stub-allow/{arch}.allow has no '#eh allowed' line")
     print(f"stub_audit {arch}: {nimg} images, {len(real)} link stubs ({len(allow)} allowed), {eh} EH runtime -- "
           + ("FAILED" if bad else "ok"))
     return 1 if bad else 0

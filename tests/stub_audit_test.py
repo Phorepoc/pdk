@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Checks the stub ratchet (tools/stub_audit.py check): a new link stub, a stale allowlist line, an image without a
-# record and an exception-runtime count over its ceiling each fail; the allowed state passes.
+# record and exception-runtime stubs that are not allowed each fail; the allowed state passes.
 # Run: python3 pdk/tests/stub_audit_test.py
 import os
 import sys
@@ -28,7 +28,7 @@ def main() -> int:
         SA.ALLOW_DIR = allow_dir
         write(os.path.join(allow_dir, "reasons.txt"), "R1 | ^m3g | a reason | docs/stub-audit.md#r1\n"
                                                        "R2 | ^board | a board provides it | docs/stub-audit.md#r2 | board\n")
-        write(os.path.join(allow_dir, "arm.allow"), "#ceiling eh 2\nR1 a.dll m3gThing\nR2 b.dll boardThing\n")
+        write(os.path.join(allow_dir, "arm.allow"), "#eh allowed\nR1 a.dll m3gThing\nR2 b.dll boardThing\n")
         img = os.path.join(build, "arm", "img")
         for name, stubs in (("a.dll", "m3gThing\n__cxa_begin_cleanup\n"), ("b.dll", "__exidx_end\n"), ("c.dll", "")):
             write(os.path.join(img, name), "x")
@@ -44,12 +44,12 @@ def main() -> int:
         write(os.path.join(img, "c.dll.linkstubs"), "brandNewStub\n")
         assert run() == 1, "a new link stub must fail"
         write(os.path.join(img, "c.dll.linkstubs"), "")
-        write(os.path.join(allow_dir, "arm.allow"), "#ceiling eh 2\nR1 a.dll m3gThing\nR1 d.dll m3gGone\n")
+        write(os.path.join(allow_dir, "arm.allow"), "#eh allowed\nR1 a.dll m3gThing\nR1 d.dll m3gGone\n")
         assert run() == 1, "an allowlist line nothing needs must fail on a board build"
         assert run(core=True) == 0, "...but not on a core build"
         write(os.path.join(allow_dir, "arm.allow"), "#ceiling eh 1\nR1 a.dll m3gThing\n")
-        assert run(core=True) == 1, "exception-runtime stubs over the ceiling must fail"
-        write(os.path.join(allow_dir, "arm.allow"), "#ceiling eh 2\nR1 a.dll m3gThing\n")
+        assert run(core=True) == 1, "exception-runtime stubs without '#eh allowed' must fail"
+        write(os.path.join(allow_dir, "arm.allow"), "#eh allowed\nR1 a.dll m3gThing\n")
         os.remove(os.path.join(img, "c.dll.linkstubs"))
         assert run() == 1, "an image without a record must fail"
     print("stub_audit_test: ok")
