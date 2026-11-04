@@ -45,7 +45,10 @@ ADAPTATIONS = [os.path.abspath(a) for a in os.environ.get("PHOREPOC_ADAPTATIONS"
 # a registry entry's `needs`: the repository it builds against (phebrowser: webengine). --all leaves it out unless that
 # checkout is one of the build's adaptations; naming the key still builds it
 def has_layer(name: str) -> bool:
-    return any(os.path.basename(a) == name for a in ADAPTATIONS)
+    # in the toolchain container each adaptation is mounted as /adapt/N: PHOREPOC_ADAPTATION_NAMES (the host folders' names,
+    # same order, set by phe) says which repository it is; otherwise the folder name itself
+    names = [n for n in os.environ.get("PHOREPOC_ADAPTATION_NAMES", "").split(":") if n]
+    return name in names or any(os.path.basename(a) == name for a in ADAPTATIONS)
 
 
 ADAPTATION_REGISTRIES = [os.path.join(a, "registry") for a in ADAPTATIONS if os.path.isdir(os.path.join(a, "registry"))]
