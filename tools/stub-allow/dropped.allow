@@ -142,6 +142,7 @@ D1 smilmediarenderer smilplayermediafactory.cpp
 D14 smilmediarenderer smilsvgrenderer.cpp
 D1 spdctrl speeddialprivate.cpp
 D16 startupadaptationstub startupadaptationstub.cpp
+D16 phgl symgpu_null.cpp
 D1 stmgesturefw stateengine.cpp
 D1 stmgesturefw statemachine.cpp
 D10 surfaceupdateclient *
