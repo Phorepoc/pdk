@@ -49,7 +49,7 @@ Each remaining allowlist line has one of these; the number is in `tools/stub-all
 
 Link stubs, excluding the exception-runtime names, over every image the component build writes:
 
-| | x32 (PC) before | x32 now | arm (PinePhone) before | arm now |
+| | x32 before | x32 now | arm before | arm now |
 |---|---|---|---|---|
 | images with a record | 1627 | 1659 | 1696 | 1729 (+ the board's own) |
 | link-stub call sites | 1078 in 968 images | **52 in 5 images** | 2150 in 1033 images | **58 in 5 images** |
@@ -113,13 +113,12 @@ decided after going public).
 The registry's `drop=[...]` leaves source files of the real mmp out of a build: 89 components (`cone`, `avkon`,
 `eikcoctl`, `apparc`, `wserv`, `libc`, `msgs`, `imut`, `javascriptcore` ... ), 4 `nosrc` components (`sgresource`,
 `surfaceupdateclient`, `alfclient`, `alfdecoderserverclient`) and 1 `x32_mmp` substitution (`drmhelper`). Many drops are
-replaced by a board source (`extra=`); the rest are gaps. They are not yet covered by a check; the next step is a per-drop
-reason table like this one.
+replaced by a board source (`extra=`); the rest are gaps. The list is in `stub-audit-replaced-sources.md` (generated); it is not yet covered by a check -- the next step is a reason per line, as for the link stubs.
 
 ### The allowlist's reasons (the work list)
 
 * **R1** M3G engine (`m3gcore`, 38 names, `hitchcock`): in no release; write it.
 * **R3** JRT registry client (`Java::CJavaRegistry*`, `mcsmenu`, `mcsmenuhandler`): `javaregistryclient` is not in the released sources.
 * **R4** BrowserNG's own start-up (`browserng.exe`): the stock browser is not shipped.
-* **R8** WLAN hardware init (`CWlanHwInit`, `wlmserversrv`): by design the board supplies it -- adaptation-pinephone (the chip), adaptation-pc (no chip: no data, KErrNotFound for the MAC address). Only a core layer built alone shows the stub, hence the `board` flag.
+* **R8** WLAN hardware init (`CWlanHwInit`, `wlmserversrv`): by design the board supplies it -- the board with a WLAN chip answers its data and MAC address; the board without one answers no data and KErrNotFound. Only a core layer built alone shows the stub, hence the `board` flag.
 * **R10** (stand-in, no link stub) `rcse`, see above.
