@@ -214,7 +214,7 @@ DATA_EXPORTS: set[str] = set()      # every DATA-flagged export seen in a provid
 # build_mmp_x32.py). aknlayout.lib: its users' only import is CdlEngine::GetFunction (cdlengine.dll).
 LIB_ALIASES = {"aknlayout": "cdlengine", "mpm": "mpmclient"}
 if os.environ.get("PHOREPOC_QT48") == "1":      # Qt 4.8.7: qtcore.lib -> the qt48_core component ...
-    LIB_ALIASES.update({m: "qt48_" + m[2:] for m in ("qtcore", "qtgui", "qtnetwork", "qtsvg", "qtsql", "qtxml", "qtscript", "qtdeclarative", "qtmultimediakit", "qtxmlpatterns")})
+    LIB_ALIASES.update({m: "qt48_" + m[2:] for m in ("qtcore", "qtgui", "qtnetwork", "qtsvg", "qtsql", "qtxml", "qtscript", "qtdeclarative", "qtmultimediakit", "qtxmlpatterns", "qtopengl", "qtopenvg", "qtmultimedia")})
     LIB_ALIASES["phonon"] = "qt48_phonon"   # (the MMF backend plug-in links phonon.dll)
     LIB_ALIASES["qtmain"] = "qt48_main"     # the STATICLIBRARY every Qt program links (E32Main -> main())
 
