@@ -8,7 +8,6 @@ R4 browserng.exe _ZN4User4ExitEi
 R4 browserng.exe _ZN4User9InvariantEv
 R4 browserng.exe _ZN7UserSvr9DllSetTlsEiiPv
 R4 browserng.exe _ZN8UserHeap15SetupThreadHeapEiR24SStdEpocThreadCreateInfo
-R6 glxthumbnailcreator.dll _ZN17CTNEVideoClipInfo4NewLERK7TDesC16R25MTNEVideoClipInfoObserver
 R1 hitchcock.dll m3gAddChild
 R1 hitchcock.dll m3gAddRef
 R1 hitchcock.dll m3gAlignNode

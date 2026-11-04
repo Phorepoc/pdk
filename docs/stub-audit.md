@@ -52,13 +52,13 @@ Link stubs, excluding the exception-runtime names, over every image the componen
 | | x32 (PC) before | x32 now | arm (PinePhone) before | arm now |
 |---|---|---|---|---|
 | images with a record | 1627 | 1659 | 1696 | 1729 (+ the board's own) |
-| link-stub call sites | 1078 in 968 images | **52 in 5 images** | 2150 in 1033 images | **59 in 6 images** |
+| link-stub call sites | 1078 in 968 images | **52 in 5 images** | 2150 in 1033 images | **58 in 5 images** |
 | exception-runtime names (kind 1, counted apart) | 0 | 0 | 5049 | 5069 (ceiling) |
 
 What went: `__stack_chk_fail` (963 x32 images), `abort`, `__gnu_Unwind_Find_exidx` (~1000 arm images) and `_impure_ptr`
 (18) now resolve to real definitions in the image (`rt_names.cpp`, `xu_rtnames.cpp`: see "Runtime names" below); the 25
 audio message-handler libraries, `redircli`, `drmrightsinfo` and its implementation, `3gpextparser`,
-`mobilitypolicyprovider` and `ostuser` (its GET_PC intrinsic is RVCT-only: a shim header) are built from their sources, the hotspot framework's `hssscanlist` static library is built (HssScan*, RHssInterface), and `imut` is built whole (its registry `drop` of 11 source files is gone: 220 of 235 ordinals real, was 41); the WBXML dictionaries (`xmlinterface`, `provisioningparser`) are
+`mobilitypolicyprovider` and `ostuser` (its GET_PC intrinsic is RVCT-only: a shim header) are built from their sources, the hotspot framework's `hssscanlist` static library is built (HssScan*, RHssInterface), `tneengine` is built (the XML header's include guard hid its base class), and `imut` is built whole (its registry `drop` of 11 source files is gone: 220 of 235 ordinals real, was 41); the WBXML dictionaries (`xmlinterface`, `provisioningparser`) are
 exported as C objects; `snprintf` is exported by JavaScriptCore with C linkage; `nan` (WebKit's trio) has a definition;
 the va_list-by-reference export of `RFileLogger::WriteFormat` matches on x32; the null `rcse`'s `.def` spelt
 `RPointerArray` with the wrong length (`R12`), so the one lookup its clients call was served by the stub.
@@ -121,6 +121,5 @@ reason table like this one.
 * **R1** M3G engine (`m3gcore`, 38 names, `hitchcock`): in no release; write it.
 * **R3** JRT registry client (`Java::CJavaRegistry*`, `mcsmenu`, `mcsmenuhandler`): `javaregistryclient` is not in the released sources.
 * **R4** BrowserNG's own start-up (`browserng.exe`): the stock browser is not shipped.
-* **R6** Thumbnail engine (`CTNEVideoClipInfo`): `tneengine` does not compile yet (the MP4 parser header).
 * **R8** WLAN hardware init (`CWlanHwInit`, `wlmserversrv`): by design the board supplies it -- adaptation-pinephone (the chip), adaptation-pc (no chip: no data, KErrNotFound for the MAC address). Only a core layer built alone shows the stub, hence the `board` flag.
 * **R10** (stand-in, no link stub) `rcse`, see above.
