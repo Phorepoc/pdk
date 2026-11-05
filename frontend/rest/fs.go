@@ -113,13 +113,23 @@ func (s *Server) fsRead(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", path.Base(p)))
 	var off int64
 	for {
-		m, err := s.fsCall(r.Context(), ss, "fs_read", device.Args{"path": p, "offset": off, "len": fsChunk})
+		// a chunk that fails is asked for again (the phone link drops a request now and then); one that keeps failing
+		// after the first bytes went out aborts the response, so the client sees a broken transfer, not a short file
+		var m map[string]any
+		var err error
+		for try := 0; try < 3; try++ {
+			if m, err = s.fsCall(r.Context(), ss, "fs_read", device.Args{"path": p, "offset": off, "len": fsChunk}); err == nil ||
+				r.Context().Err() != nil {
+				break
+			}
+		}
 		if err != nil {
 			if off == 0 {
 				w.Header().Del("Content-Disposition")
 				writeErr(w, 422, err)
+				return
 			}
-			return
+			panic(http.ErrAbortHandler)
 		}
 		b, _ := base64.StdEncoding.DecodeString(fmt.Sprint(m["data_b64"]))
 		_, _ = w.Write(b)
