@@ -19,7 +19,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import SYMBIAN, BUILD, EPOC32_ROOT, resolve  # noqa: E402
+from paths import SYMBIAN, BUILD, EPOC32_ROOT, has_layer, resolve  # noqa: E402
 import components as C  # noqa: E402
 
 ICON_GEN = os.path.join(BUILD, "icon-gen")
@@ -28,12 +28,17 @@ BLOCK = re.compile(r"START\s+EXTENSION\s+\S*mifconv\b(.*?)^\s*END\b", re.I | re.
 TARGET = re.compile(r"OPTION\s+TARGETFILE\s+(\S+)", re.I)
 
 
-def group_dirs() -> dict[str, list[str]]:
-    """bld.inf dir -> the .mif targets it declares, for every registered component"""
+def gated(comp) -> bool:
+    """a component whose layer this build lacks (needs=): no image of it is built or shipped, nor its icons"""
+    return isinstance(comp, dict) and bool(comp.get("needs")) and not has_layer(comp["needs"])
+
+
+def group_dirs(want_gated: bool = False) -> dict[str, list[str]]:
+    """bld.inf dir -> the .mif targets it declares, for every registered component (want_gated: for the gated ones only)"""
     out: dict[str, list[str]] = {}
     for comp in C.COMPONENTS.values():
         mmp = comp.get("mmp") if isinstance(comp, dict) else None
-        if not mmp:
+        if not mmp or gated(comp) != want_gated:
             continue
         # mif_dirs: bld.inf dirs OUTSIDE the component's own group (Photos: photosgallery/icons holds glx_aif.mif, the app icon)
         for xd in (comp.get("mif_dirs") or []):
@@ -93,6 +98,20 @@ def main() -> None:
         text = open(os.path.join(d, inf), encoding="utf-8", errors="replace").read()
         dirs.setdefault(d, [t.lower() for blk in BLOCK.findall(text) for t in TARGET.findall(blk)
                             if t.lower().endswith(".mif")])
+    # the icons only gated components declare: a restored build cache keeps them in icon-gen, and the ROM stages all of it
+    keep = {t for ts in dirs.values() for t in ts}
+    stale = {t for ts in group_dirs(want_gated=True).values() for t in ts}
+    for comp in C.COMPONENTS.values():   # and the .mbm files a gated mmp's START BITMAP blocks make (WebCore's webkit.mbm)
+        mmp = comp.get("mmp") if gated(comp) else None
+        path = mmp and (mmp if os.path.isabs(mmp) else resolve(mmp) if mmp.startswith("baseline/") else os.path.join(SYMBIAN, "symbian-2010", mmp))
+        if path and os.path.isfile(path):
+            stale |= {b.lower() for b in re.findall(r"START\s+BITMAP\s+(\S+)", open(path, errors="replace").read(), re.I)}
+    stale = sorted(stale - keep)
+    for t in stale:
+        for f in [x for x in (os.listdir(ICON_GEN) if os.path.isdir(ICON_GEN) else []) if x.lower() in (t, t[:-4] + ".mbm")]:
+            os.remove(os.path.join(ICON_GEN, f))
+            have.discard(f.lower())
+            print(f"mif_all: removed {f} (its component's layer is not in this build)")
     want = lambda d: "--all" in sys.argv or not dirs[d] or any(t not in have for t in dirs[d])   # noqa: E731
     todo = [d for d in listed if want(d)]
     todo += sorted(d for d in dirs if d not in listed and want(d))
