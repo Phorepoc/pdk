@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS prefs (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `
 
 type Store struct {
-	db  *sql.DB
+	db  *sql.DB // the writer
+	rd  *sql.DB // readers
 	dir string
 }
 
@@ -59,16 +60,28 @@ func Open(dir string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(1) // one writer; reads are short
+	db.SetMaxOpenConns(1) // one writer
 	if _, err := db.Exec(schema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("schema: %w", err)
 	}
-	return &Store{db: db, dir: dir}, nil
+	// reads get their own connections: WAL lets them run beside the writer, so a slow search (a grep over every boot of
+	// a 10 GB log) no longer holds the only connection -- that stalled line ingestion until the bus dropped the phone's
+	// output and every op timed out (2026-11-05)
+	rd, err := sql.Open("sqlite", filepath.Join(dir, "phonelab.db")+"?_pragma=busy_timeout(5000)&_pragma=query_only(1)")
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	rd.SetMaxOpenConns(4)
+	return &Store{db: db, rd: rd, dir: dir}, nil
 }
 
-func (s *Store) Close() error { return s.db.Close() }
-func (s *Store) Dir() string  { return s.dir }
+func (s *Store) Close() error {
+	s.rd.Close()
+	return s.db.Close()
+}
+func (s *Store) Dir() string { return s.dir }
 
 func ms(t time.Time) int64 { return t.UnixMilli() }
 
@@ -96,7 +109,7 @@ func (s *Store) NewBoot(dev string, t time.Time) (int64, error) {
 // LastBoot returns the newest boot id of dev (0 if none) so a restarted service keeps appending to it.
 func (s *Store) LastBoot(dev string) (int64, error) {
 	var id sql.NullInt64
-	err := s.db.QueryRow(`SELECT MAX(id) FROM boots WHERE device=?`, dev).Scan(&id)
+	err := s.rd.QueryRow(`SELECT MAX(id) FROM boots WHERE device=?`, dev).Scan(&id)
 	return id.Int64, err
 }
 
@@ -112,7 +125,7 @@ func (s *Store) Boots(dev string, before int64, limit int) ([]Boot, error) {
 	if before <= 0 {
 		before = 1 << 62
 	}
-	rows, err := s.db.Query(`SELECT b.id, b.device, b.started, b.slot, b.outcome, b.pinned,
+	rows, err := s.rd.Query(`SELECT b.id, b.device, b.started, b.slot, b.outcome, b.pinned,
 		(SELECT COUNT(*) FROM lines l WHERE l.boot=b.id),
 		(SELECT COUNT(*) FROM events e WHERE e.boot=b.id AND e.kind IN ('fault','panic'))
 		FROM boots b WHERE b.device=? AND b.id<? ORDER BY b.id DESC LIMIT ?`, dev, before, clamp(limit, 50, 1000))
@@ -218,7 +231,7 @@ func (s *Store) Lines(q LineQuery) ([]Line, error) {
 		order = "ASC"
 	}
 	args = append(args, clamp(q.Limit, 500, 10000))
-	rows, err := s.db.Query(`SELECT id, device, boot, ts, text FROM lines WHERE `+strings.Join(where, " AND ")+
+	rows, err := s.rd.Query(`SELECT id, device, boot, ts, text FROM lines WHERE `+strings.Join(where, " AND ")+
 		` ORDER BY id `+order+` LIMIT ?`, args...)
 	if err != nil {
 		return nil, err
@@ -301,7 +314,7 @@ func (s *Store) Events(q EventQuery) ([]Event, error) {
 		where = append(where, "("+strings.Join(or, " OR ")+")")
 	}
 	args = append(args, clamp(q.Limit, 200, 5000))
-	rows, err := s.db.Query(`SELECT id, device, boot, ts, kind, data FROM events WHERE `+strings.Join(where, " AND ")+
+	rows, err := s.rd.Query(`SELECT id, device, boot, ts, kind, data FROM events WHERE `+strings.Join(where, " AND ")+
 		` ORDER BY id DESC LIMIT ?`, args...)
 	if err != nil {
 		return nil, err
@@ -350,7 +363,7 @@ func (s *Store) Ops(dev string, before int64, limit int) ([]Op, error) {
 	if before <= 0 {
 		before = 1 << 62
 	}
-	rows, err := s.db.Query(`SELECT id, device, ts, caller, op, args, result, error, ms FROM ops
+	rows, err := s.rd.Query(`SELECT id, device, ts, caller, op, args, result, error, ms FROM ops
 		WHERE device=? AND id<? ORDER BY id DESC LIMIT ?`, dev, before, clamp(limit, 100, 2000))
 	if err != nil {
 		return nil, err
@@ -447,7 +460,7 @@ func (s *Store) OpenBlob(sha string) (io.ReadCloser, int64, error) {
 func (s *Store) GetBlob(sha string) (Blob, error) {
 	var b Blob
 	var m string
-	err := s.db.QueryRow(`SELECT sha, kind, name, size, ts, device, boot, meta, pinned FROM blobs WHERE sha=?`, sha).
+	err := s.rd.QueryRow(`SELECT sha, kind, name, size, ts, device, boot, meta, pinned FROM blobs WHERE sha=?`, sha).
 		Scan(&b.SHA, &b.Kind, &b.Name, &b.Size, &b.TS, &b.Device, &b.Boot, &m, &b.Pinned)
 	b.Meta = json.RawMessage(m)
 	return b, err
@@ -461,7 +474,7 @@ func (s *Store) Blobs(kind string, limit int) ([]Blob, error) {
 		args = append(args, kind)
 	}
 	args = append(args, clamp(limit, 100, 2000))
-	rows, err := s.db.Query(q+` ORDER BY ts DESC LIMIT ?`, args...)
+	rows, err := s.rd.Query(q+` ORDER BY ts DESC LIMIT ?`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -520,7 +533,7 @@ func (s *Store) Prune(maxAge time.Duration) (int64, error) {
 
 func (s *Store) GetPref(k string) (string, error) {
 	var v string
-	err := s.db.QueryRow(`SELECT value FROM prefs WHERE key=?`, k).Scan(&v)
+	err := s.rd.QueryRow(`SELECT value FROM prefs WHERE key=?`, k).Scan(&v)
 	if err == sql.ErrNoRows {
 		return "", nil
 	}
