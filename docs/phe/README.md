@@ -42,6 +42,7 @@ What goes onto a device: the ROM, its data, installable packages.
 | [`phe image icons`](phe-image-icons.md) | Build every component's icon files (.mif) |
 | [`phe image zdata`](phe-image-zdata.md) | Collect the Z: data the packages export |
 | [`phe image sis`](phe-image-sis.md) | Package components as an installable SIS file |
+| [`phe image addon`](phe-image-addon.md) | Pack built components as an add-on archive for an existing image build |
 | [`phe image compare`](phe-image-compare.md) | Byte-compare images with another build |
 
 ## Boards
@@ -181,6 +182,9 @@ Given as -O name=value, as many as needed (phe image rom -b myboard -O net=1 -O 
 
   rom-data=<dest>=<src> ...
       Extra Z: files, dest relative to Z:\.
+
+  addon=<archive>,...
+      Add-on archives (phe image addon) whose files go into the ROM, as built for this architecture.
 
   cenrep=<path>/<uid>.txt ...
       Central repository files that override the built ones.

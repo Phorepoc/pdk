@@ -549,6 +549,37 @@ func commands(app *cli.App) []*cli.Command {
 			},
 		},
 		{
+			Group: "image", Name: "addon", Operands: "<component>...",
+			Summary: "Pack built components as an add-on archive for an existing image build",
+			Description: "Packs the components' built files -- the binary, its registration, the registry's rom_data -- into " +
+				"<name>-<arch>-addon.tar.gz, laid out by image path (sys/bin/..., resource/..., private/...) with a manifest " +
+				"(ADDON.txt: the architecture and the pdk and core commits it was built against). An image build adds it " +
+				"with \"phe image rom -O addon=<archive>\"; the build must be of the same architecture. The first " +
+				"component names the archive unless -name is given.",
+			Flags: func(fs *flag.FlagSet) {
+				fs.String("arch", "x32", "the `architecture` of the images to pack: x32 or arm")
+				fs.String("name", "", "the add-on's `name` (default: the first component)")
+				fs.String("o", "", "the archive `file`, in the build (default: <build>/addon/<name>-<arch>-addon.tar.gz)")
+				boardFlag(fs)
+			},
+			Examples: []cli.Example{
+				{What: "Pack Catalogue for ARM images:", Cmd: "image addon -arch arm catalogue"},
+			},
+			Run: func(fs *flag.FlagSet, args []string) error {
+				if len(args) == 0 {
+					return cli.Usagef("which components?")
+				}
+				pa := []string{"pack", "--arch", str(fs, "arch")}
+				if n := str(fs, "name"); n != "" {
+					pa = append(pa, "--name", n)
+				}
+				if o := str(fs, "o"); o != "" {
+					pa = append(pa, "--out", o)
+				}
+				return python(fs, "tools/addon.py", append(pa, args...)...)
+			},
+		},
+		{
 			Group: "image", Name: "compare", Operands: "[<a> <b>]",
 			Summary: "Byte-compare images with another build",
 			Description: "Without operands, compares the images built here with a reference build row by row " +

@@ -31,6 +31,44 @@ X32 = os.path.join(BUILD, "x32img")
 ARM_IMG = os.path.join(BUILD, "arm", "img")
 
 
+def component_files(keys, arm, sis=True):
+    r"""The files an image carries for these components: ([(bytes, target, caps)], first component's UID3, its caps).
+    Targets are Windows paths on the install drive (!:\sys\bin\x.exe); with sis=False the ROM paths themselves (sys\bin\x.exe,
+    an application registration stays in private\10003a3f\apps). Shared with tools/addon.py: an add-on archive and a SIS
+    place a component's files the same way."""
+    root = "!:\\" if sis else ""
+    files = []
+    uid3 = caps = None
+    for key in keys:
+        comp = C.COMPONENTS[key]
+        m = MMP.parse(os.path.join(MMP.BASE, comp.get("x32_mmp", comp["mmp"])))
+        rom = C.rom_name(key, m.targettype)
+        img = open(os.path.join(ARM_IMG if arm else X32, rom), "rb").read()
+        img_caps = struct.unpack_from("<I", img, 0x88)[0]  # E32ImageHeaderV SSecurityInfo.iCaps, first word
+        if key == keys[0]:
+            uid3, caps = struct.unpack_from("<I", img, 8)[0], img_caps
+        files.append((img, root + "sys\\bin\\" + rom, img_caps))
+        if m.targettype == "plugin":
+            # an ECOM plug-in is found through its registration resource (compile_registration: BUILD/plugins/<stem>.rsc), which
+            # the ROM carries in \resource\plugins; installed, it goes to the same folder of the install drive
+            reg = os.path.join(BUILD, "plugins", os.path.splitext(rom)[0] + ".rsc")
+            if not os.path.isfile(reg):
+                sys.exit(f"make_sis: {key} is an ECOM plug-in but {reg} (its registration) was not built: run the resource step first")
+            files.append((open(reg, "rb").read(), root + "resource\\plugins\\" + os.path.basename(reg), None))
+        lines = list(comp.get("rom_data", []))
+        man = os.path.join(BUILD, "romfiles", rom + ".romfiles")
+        if os.path.isfile(man):
+            lines += open(man).read().split()
+        for line in lines:
+            target, _, host = line.partition("=")
+            t = target.replace("/", "\\")
+            if sis and t.lower().startswith("private\\10003a3f\\apps\\"):
+                t = "private\\10003a3f\\import\\apps\\" + t.split("\\")[-1]
+            hp = host if os.path.isabs(host) else (os.path.join(BUILD, host) if os.path.isfile(os.path.join(BUILD, host)) else resolve(host))
+            files.append((open(hp, "rb").read(), root + t, None))
+    return files, uid3, caps
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("keys", nargs="+", help="components; the first names the package (an app + its DLLs)")
@@ -49,34 +87,7 @@ def main() -> int:
                     help="an extra data file (licence text, notices): host path = target path on the device (!:/resource/Qt/LICENSE.LGPL; / becomes a backslash)")
     ap.add_argument("--type", choices=["sa", "sp", "pu"], default="sa", help="SIS install type: sa (full), sp (patch), pu (partial upgrade of an installed package)")
     a = ap.parse_args()
-    files = []
-    for key in a.keys:
-        comp = C.COMPONENTS[key]
-        m = MMP.parse(os.path.join(MMP.BASE, comp.get("x32_mmp", comp["mmp"])))
-        rom = C.rom_name(key, m.targettype)
-        img = open(os.path.join(ARM_IMG if a.arm else X32, rom), "rb").read()
-        img_caps = struct.unpack_from("<I", img, 0x88)[0]  # E32ImageHeaderV SSecurityInfo.iCaps, first word
-        if key == a.keys[0]:
-            uid3, caps = struct.unpack_from("<I", img, 8)[0], img_caps
-        files.append((img, "!:\\sys\\bin\\" + rom, img_caps))
-        if m.targettype == "plugin":
-            # an ECOM plug-in is found through its registration resource (compile_registration: BUILD/plugins/<stem>.rsc), which
-            # the ROM carries in \resource\plugins; installed, it goes to the same folder of the install drive
-            reg = os.path.join(BUILD, "plugins", os.path.splitext(rom)[0] + ".rsc")
-            if not os.path.isfile(reg):
-                sys.exit(f"make_sis: {key} is an ECOM plug-in but {reg} (its registration) was not built: run the resource step first")
-            files.append((open(reg, "rb").read(), "!:\\resource\\plugins\\" + os.path.basename(reg), None))
-        lines = list(comp.get("rom_data", []))
-        man = os.path.join(BUILD, "romfiles", rom + ".romfiles")
-        if os.path.isfile(man):
-            lines += open(man).read().split()
-        for line in lines:
-            target, _, host = line.partition("=")
-            t = target.replace("/", "\\")
-            if t.lower().startswith("private\\10003a3f\\apps\\"):
-                t = "private\\10003a3f\\import\\apps\\" + t.split("\\")[-1]
-            hp = host if os.path.isabs(host) else (os.path.join(BUILD, host) if os.path.isfile(os.path.join(BUILD, host)) else resolve(host))
-            files.append((open(hp, "rb").read(), "!:\\" + t, None))
+    files, uid3, caps = component_files(a.keys, a.arm)
     for spec in a.file:
         host, _, target = spec.partition("=")
         files.append((open(host, "rb").read(), target.replace("/", chr(92)), None))

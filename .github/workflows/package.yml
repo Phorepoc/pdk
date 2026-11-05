@@ -16,8 +16,13 @@
 #   REPOS_x32="cxxrt"                  repositories it needs on top of core, per architecture (built at main)
 #   COMPONENTS_arm="phevdecsw pheffmpeg"  what to build, providers first (also those of REPOS the package needs)
 #   ENV="PHOREPOC_QT48=1"              build settings the steps see (KEY=value words; phe passes the known ones to the toolchain)
+#   ADDON=0                            no add-on archives (default: one per architecture, below)
 #
-# The files come back as the artifact "package-files" (the SIS files, SHA256SUMS, built-from.txt, notes.md); the
+# Besides the SIS files every architecture gets an add-on archive, <NAME>-<arch>-addon.tar.gz (`phe image addon` over the same
+# COMPONENTS_<arch>): the built files laid out by image path, for adding to an existing build of an image with
+# `phe image rom -O addon=<archive>` (tools/addon.py).
+#
+# The files come back as the artifact "package-files" (the SIS files, the add-on archives, SHA256SUMS, built-from.txt, notes.md); the
 # caller's own workflow makes the release (a cross-repository workflow cannot: see board-image.yml).
 #
 #   jobs:
@@ -44,13 +49,14 @@ jobs:
       image: ${{ steps.c.outputs.image }}
       name: ${{ steps.c.outputs.name }}
       env: ${{ steps.c.outputs.env }}
+      addon: ${{ steps.c.outputs.addon }}
     steps:
       - uses: actions/checkout@v4
       - id: c
         name: package.conf
         run: |
           [ -f package.conf ] || { echo "::error::no package.conf in ${{ github.repository }}"; exit 1; }
-          NAME= ARCHES= IMAGE= ENV=; . ./package.conf
+          NAME= ARCHES= IMAGE= ENV= ADDON=1; . ./package.conf
           [ -n "$NAME" ] && [ -n "$ARCHES" ] || { echo "::error::package.conf: NAME and ARCHES are required"; exit 1; }
           m=$(for a in $ARCHES; do
                 eval "r=\${REPOS_$a:-}; c=\${COMPONENTS_$a:-}"
@@ -58,7 +64,7 @@ jobs:
                 jq -nc --arg a "$a" --arg r "$r" --arg c "$c" '{arch: $a, repos: $r, components: $c}'
               done | jq -sc '{include: .}')
           echo "$m"
-          { echo "matrix=$m"; echo "name=$NAME"; echo "image=${IMAGE:-ghcr.io/phorepoc/base:latest}"; echo "env=$ENV"; } >> "$GITHUB_OUTPUT"
+          { echo "matrix=$m"; echo "name=$NAME"; echo "image=${IMAGE:-ghcr.io/phorepoc/base:latest}"; echo "env=$ENV"; echo "addon=$ADDON"; } >> "$GITHUB_OUTPUT"
 
   build:
     needs: conf
@@ -126,7 +132,14 @@ jobs:
           export PHOREPOC_PACKAGE_VERSION="${RELEASE_VERSION#v}"
           phe image recipe sis
           sudo chown -R "$(id -u):$(id -g)" build
-          mkdir -p out && cp build/sis/*.sis out/ && ls -l out
+          mkdir -p out && cp build/sis/*.sis out/
+
+      - name: The add-on archive (phe image addon)
+        if: needs.conf.outputs.addon != '0'
+        run: |
+          phe image addon -arch "$PHOREPOC_ARCH" -name "${{ needs.conf.outputs.name }}" ${{ matrix.components }}
+          sudo chown -R "$(id -u):$(id -g)" build
+          cp build/addon/*-addon.tar.gz out/ && ls -l out
 
       - uses: actions/upload-artifact@v4
         with:
@@ -150,9 +163,10 @@ jobs:
         run: |
           mkdir -p out
           cp parts/*/out/*.sis out/
+          cp parts/*/out/*-addon.tar.gz out/ 2>/dev/null || echo "no add-on archives"
           # every architecture built from the same commits; the first one's list stands for all
           cp "$(ls parts/*/built-from.txt | head -n 1)" out/built-from.txt
-          (cd out && sha256sum *.sis > SHA256SUMS && cat SHA256SUMS)
+          (cd out && sha256sum $(ls *.sis *-addon.tar.gz 2>/dev/null) > SHA256SUMS && cat SHA256SUMS)
           # what changed since the previous release (the newest one: this one is made after), by the pdk it was built with
           pdk=$(awk '$1 == "pdk" { print $2 }' out/built-from.txt)
           for ref in "$pdk" main; do   # (a pdk older than release_notes.py: the current one)

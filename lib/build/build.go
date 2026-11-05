@@ -25,7 +25,7 @@ const DefaultImage = "ghcr.io/phorepoc/base:latest"
 var passThrough = []string{
 	"NET", "NET_TEST", "NTP_SERVER", "FONTS", "UI_RENDERER", "SHELLS", "ALF", "NGA", "NGA_KEEP", "FAST",
 	"PHOREPOC_ARCH", "PHOREPOC_BOARD", "LEAVE_TRACE", "SCHED_TRACE", "MIF_ALL", "IBY_DATA", "ROM_ARCH", "ROM_TAIL", "ROM_EXCLUDE", "SSM_TEST",
-	"SECONDARY_IMAGE", "PHOREPOC_S4", "PHOREPOC_QT48", "PHETTY", "CENREP_EXTRA", "ROM_DATA_EXTRA", "UTC_OFFSET",
+	"SECONDARY_IMAGE", "PHOREPOC_S4", "PHOREPOC_QT48", "PHETTY", "CENREP_EXTRA", "ROM_DATA_EXTRA", "ROM_ADDON", "UTC_OFFSET",
 	"WEBFONTS", "THEMES", "X32_LD", "X32_DEFS", "X32_LIBS", "X32_INCLUDE", "X32_FULLERR", "PRUNE_UNRESOLVED", "ROM_HEAP_LIMITS",
 	"TRACE", "SCREEN", "SCALE", "DBG", "KCLEAN", "ARM_VFP", "ARM_CPU_FLAGS", "ALF_TRACE", "ALF_TIMING", "ALF_LOG", "ALF_RC",
 	"PHOREPOC_PACKAGE_VERSION", "OBJCACHE_EXPLAIN",
@@ -373,6 +373,7 @@ var ImageOptions = []ImageOption{
 	{"rom-tail", "ROM_TAIL", "<component>,...", "put these images last in the ROM (a delta push then sends only them)"},
 	{"rom-exclude", "ROM_EXCLUDE", "<component>,...", "leave these out of the ROM (they ship as SIS packages)"},
 	{"rom-data", "ROM_DATA_EXTRA", "<dest>=<src> ...", "extra Z: files, dest relative to Z:\\"},
+	{"addon", "ROM_ADDON", "<archive>,...", "add-on archives (phe image addon) whose files go into the ROM, as built for this architecture"},
 	{"cenrep", "CENREP_EXTRA", "<path>/<uid>.txt ...", "central repository files that override the built ones"},
 	{"rom-heap-limits", "ROM_HEAP_LIMITS", "0|1", "the Phorepoc heap and stack table; 0 = each image's own values"},
 	{"secondary", "SECONDARY_IMAGE", "<image>", "the first user process the kernel starts (default efile.exe)"},

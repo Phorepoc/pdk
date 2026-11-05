@@ -373,6 +373,11 @@ if [ -n "${BOOT:-}" ]; then
     done
     # ROM_DATA_EXTRA="dest=src ..." : extra Z: files, dest relative to Z:\ (e.g. 'hello.js=/path/hello.js' for jsc)
     for kv in ${ROM_DATA_EXTRA:-}; do printf -- '--data\n%s\n' "$kv"; done
+    # ROM_ADDON="a.tar.gz,b.tar.gz" : add-on archives (tools/addon.py pack): their files, laid out by image path, go in as data
+    if [ -n "${ROM_ADDON:-}" ]; then
+      IFS=, read -r -a ADDONS <<< "$ROM_ADDON"
+      python3 "$TOOLS/addon.py" rom-args --arch "${ROM_ARCH:-x32}" --into "$BUILD/addon" "${ADDONS[@]}" || exit 1
+    fi
     # platform version marker: VersionInfo::GetVersion (platformver.dll) reads the version from the NAME of
     # z:\system\install\Symbianv<major>.<minor>.sis; with none it returns KErrNotSupported (-5) and apps that check it
     # exit with that. 5.4 = the S60 platform version this ROM identifies as.
