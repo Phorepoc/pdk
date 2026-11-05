@@ -34,6 +34,18 @@ assert head["name"] == "demo" and head["arch"] == "arm" and head["format"] == "1
 assert [i for i, _ in listed] == sorted(files)
 assert all(arc == "files/" + img for img, arc in listed)
 
+# provenance in the toolchain container: the layers are /adapt/<n> mounts named by PHOREPOC_ADAPTATION_NAMES, and a
+# checkout owned by another user still gives its commit (the first CI archives said "0=unknown", "pdk=unknown")
+layer = os.path.join(tmp, "layer")
+os.makedirs(layer)
+subprocess.run(["git", "init", "-q", layer], check=True)
+subprocess.run(["git", "-C", layer, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "x"], check=True)
+want = subprocess.run(["git", "-C", layer, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+os.environ["PHOREPOC_ADAPTATIONS"], os.environ["PHOREPOC_ADAPTATION_NAMES"] = layer, "catalogue"
+assert ("catalogue", want) in ad.built_against(), ad.built_against()
+os.environ["PHOREPOC_ADAPTATIONS"] = ""
+os.environ.pop("PHOREPOC_ADAPTATION_NAMES")
+
 
 def run(*args):
     return subprocess.run([sys.executable, TOOL, *args], capture_output=True, text=True)

@@ -47,8 +47,10 @@ MANIFEST = "ADDON.txt"
 
 def commit(path):
     """git HEAD of a checkout, or 'unknown'."""
+    # (in the toolchain container the checkouts belong to another user: without safe.directory git refuses them)
     try:
-        return subprocess.run(["git", "-C", path, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+        return subprocess.run(["git", "-c", "safe.directory=*", "-C", path, "rev-parse", "HEAD"],
+                              capture_output=True, text=True, check=True).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return "unknown"
 
@@ -60,9 +62,12 @@ def built_against():
     out.append(("pdk", commit(pdk)))
     if os.environ.get("PHOREPOC_CORE"):
         out.append(("core", commit(os.environ["PHOREPOC_CORE"])))
-    for a in os.environ.get("PHOREPOC_ADAPTATIONS", "").split(os.pathsep):
-        if a:
-            out.append((os.path.basename(os.path.normpath(a)), commit(a)))
+    # in the container the layers are mounted as /adapt/0, /adapt/1 ...: their names come in PHOREPOC_ADAPTATION_NAMES
+    paths = [a for a in os.environ.get("PHOREPOC_ADAPTATIONS", "").split(os.pathsep) if a]
+    names = [n for n in os.environ.get("PHOREPOC_ADAPTATION_NAMES", "").split(":") if n]
+    for i, a in enumerate(paths):
+        name = names[i] if len(names) == len(paths) else os.path.basename(os.path.normpath(a))
+        out.append((name, commit(a)))
     return out
 
 
