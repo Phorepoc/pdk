@@ -134,7 +134,6 @@ D1 sflibopenvgrefimpl_alf riminiegl.cpp
 D18 sflibopenvgrefimpl_alf ripath.cpp
 D1 sflibopenvgrefimpl_alf ripixelpipe.cpp
 D1 sflibopenvgrefimpl_alf rirasterizer.cpp
-D10 sgresource *
 D1 sisregistryclient securityinfo.cpp
 D1 smcm smsclnt.cpp
 D1 smcm smuthdr.cpp

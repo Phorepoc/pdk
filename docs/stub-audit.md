@@ -97,8 +97,8 @@ Already the real thing or our implementation: `frametable` (`src/frametable`), `
 `StartupAdaptationStub.cpp`: the board's power and reset), `hwrmstubplugins` (our light and vibra plug-ins),
 `messagehandlerfactory` and `custominterfaceproxyfactory` (the reference factories are real code; the message handlers
 they link were the missing part, now built), `wifiprotclient` / `wifiprotplugin` (the real client and plug-in),
-`gfxtransadapter`, `alfclient`/`alfdecoderserverclient`/`goommonitor` (`*_real` on the GPU boards), `sgresource`,
-`surfaceupdateclient`.
+`gfxtransadapter`, `alfclient`/`alfdecoderserverclient`/`goommonitor` (`*_real` on the GPU boards),
+`surfaceupdateclient`; `sgresource` is the real one on every board since the x86 kernel carries the sgdevice LDD.
 
 Still stand-ins, with the way out: `hbcore` (null; the real Orbit core is registered in `components_s4.py` for the Qt
 configuration), `commondsy` (null CDSY controller), `rcse` (null VoIP profile registry; the real engine is RCL_3
@@ -110,8 +110,8 @@ decided after going public).
 
 ### Kind 5: dropped sources (checked)
 
-The registry's `drop=[...]` leaves source files of the real mmp out of a build: 87 components, 4 `nosrc` components
-(`sgresource`, `surfaceupdateclient`, `alfclient`, `alfdecoderserverclient`) and 1 `x32_mmp` substitution (`drmhelper`).
+The registry's `drop=[...]` leaves source files of the real mmp out of a build: 87 components, 3 `nosrc` components
+(`surfaceupdateclient`, `alfclient`, `alfdecoderserverclient`) and 1 `x32_mmp` substitution (`drmhelper`).
 Every (component, source) now has a line in `tools/stub-allow/dropped.allow` with a reason of `dropped-reasons.txt`, and
 `stub_audit.py check` fails on a drop with no line (a new one) and on a line nothing drops any more (the list only
 shrinks). `stub_audit.py dropped` prints what the registry drops now. The reasons come from a measurement, not a guess:
@@ -154,7 +154,7 @@ The list per component is in `stub-audit-replaced-sources.md`.
   API headers in `jrt_plat/java_registry_api`); the tree's `java_stubs` copy only leaves `KErrNotSupported`. It needs `javastorage`,
   `javafileutils`, `javasecurity`, `javasizehelperclient`, all in the tree, built from hand-written mmps (the release's are qmake `.pro`).
   About 5 small components, ~a day; a phone with no Java apps answers an empty registry (verify in `javaregistry.cpp`).
-* **Kind 5 work list (D10-D16):** retire the null ALF / sgresource / surfaceupdateclient variants (make the `*_real` / `*_nga` the
+* **Kind 5 work list (D10-D16):** retire the null ALF / surfaceupdateclient variants (sgresource: done) (make the `*_real` / `*_nga` the
   only ones; touches the ROM-args scripts of every board); real C32 on ARM (D11, wants a phone run); the SAT menu handler (D12) needs the
   SAT server running without a SIM, which is the same real "no modem" adaptation as D13 (licensee TSY / simatktsy).
 * **R10 rcse:** the real engine is in `sf.app.iptelephony/richcallsettingsengine/rcse2`; still held (SIP framework, CenRep, boot test).
