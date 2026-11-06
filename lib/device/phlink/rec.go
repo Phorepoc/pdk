@@ -3,7 +3,7 @@
 
 package phlink
 
-// Screen recording: the phone's recorder server pherec.exe (adaptation-a64 src/pherec, reached through phfs.exe) encodes
+// Screen recording: the phone's recorder server pherec.exe (the SoC repository's src/pherec, reached through phfs.exe) encodes
 // the screen as the user sees it (360x720) into a byte ring with the H.264 encoder plug-in from Catalogue (pherecenc.dll:
 // not in the image, H.264 is patent-encumbered); rec_read polls the ring like a tty. The byte stream is a run of
 // records: {"PREC", frame u32, time us u64 (since the start), flags u32 (1 = IDR, 2 = end), mean luma u16, white
@@ -35,7 +35,7 @@ const (
 func recOps() []device.OpSpec {
 	return []device.OpSpec{
 		{Name: "rec_start", Capability: "record",
-			Description: "Low level (use record_start): start phfs.exe's screen recorder (A64 VE H.264, 360x720).",
+			Description: "Low level (use record_start): start phfs.exe's screen recorder (H.264).",
 			Params:      []device.Param{{Name: "fps", Type: "int", Description: "1..60 (default 30)"}, {Name: "qp", Type: "int", Description: "10..46 (default 28)"}}},
 		{Name: "rec_read", Capability: "record",
 			Description: "Low level (use record_stop): the recorder's bytes from sequence number from. Returns {state, seq, next, bytes}.",
@@ -66,7 +66,7 @@ func (d *Driver) execRec(ctx context.Context, l device.Link, op string, a device
 		}
 		if op == "rec_start" && strings.HasPrefix(err.Error(), "phone: not found") {
 			// H.264 is patent-encumbered: the encoder is not in the image but a Catalogue package (pherecenc.dll)
-			return nil, true, fmt.Errorf("the phone has no H.264 encoder: install the screen recorder package from Catalogue (screenrec-a64: pherecenc.dll)")
+			return nil, true, fmt.Errorf("the phone has no H.264 encoder: install the screen recorder package from Catalogue (the encoder plug-in pherecenc.dll)")
 		}
 		return nil, true, err
 	}

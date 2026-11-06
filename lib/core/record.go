@@ -27,7 +27,7 @@ const (
 
 var recordOps = []device.OpSpec{
 	{Name: "record_start", Capability: "record",
-		Description: "Start recording the screen as video (the phone: A64 hardware H.264, 360x720, only changed pictures; " +
+		Description: "Start recording the screen as video (hardware H.264 where the phone has it, only changed pictures; " +
 			"needs the screen recorder package installed from Catalogue: the encoder is not in the image). Other ops (key, touch, input, " +
 			"screenshot) run while it records. Stop with record_stop.",
 		Params: []device.Param{
