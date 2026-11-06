@@ -12,6 +12,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -39,6 +40,39 @@ var recordOps = []device.OpSpec{
 			"time, IDR, mean luma, white permille, bytes) and returns their sha256s, the device's statistics and a summary " +
 			"with the mostly-white pictures and how long each stayed on screen."},
 	{Name: "record_status", Capability: "record", Description: "Whether a recording runs, and how much it has collected."},
+	{Name: "record_peek", Capability: "record",
+		Description: "The running recording's collected bytes from offset from (the live video view; no phone traffic). " +
+			"Without from: from the last IDR record, so a viewer can decode at once. Returns bytes, from, next, recording.",
+		Params: []device.Param{
+			{Name: "from", Type: "int", Description: "byte offset into the recording (default: the last IDR record)"},
+		}},
+}
+
+// peekMax: one record_peek reply's bytes at most (a viewer catching up asks again)
+const peekMax = 2 << 20
+
+// lastIDR: the offset of the last complete IDR record in a recorder stream (FinishRecording's record layout), or 0
+func lastIDR(b []byte) int {
+	last := 0
+	for p := 0; p+32 <= len(b); {
+		if !bytes.Equal(b[p:p+4], []byte("PREC")) {
+			n := bytes.Index(b[p+1:], []byte("PREC"))
+			if n < 0 {
+				break
+			}
+			p += n + 1
+			continue
+		}
+		n := int(binary.LittleEndian.Uint32(b[p+24:]))
+		if p+32+n > len(b) {
+			break
+		}
+		if binary.LittleEndian.Uint32(b[p+16:])&1 != 0 {
+			last = p
+		}
+		p += 32 + n
+	}
+	return last
 }
 
 type recording struct {
@@ -96,6 +130,31 @@ func (s *Session) record(ctx context.Context, op string, a device.Args) (any, er
 	cur := recBySs[s]
 	recMu.Unlock()
 	switch op {
+	case "record_peek":
+		if cur == nil {
+			return map[string]any{"recording": false, "bytes": []byte{}, "from": 0, "next": 0}, nil
+		}
+		cur.mu.Lock()
+		defer cur.mu.Unlock()
+		b := cur.buf.Bytes()
+		from := lastIDR(b)
+		if a.Has("from") {
+			f, err := a.UintOr("from", 32, 0)
+			if err != nil {
+				return nil, err
+			}
+			from = int(f)
+		}
+		if from > len(b) {
+			from = len(b)
+		}
+		end := len(b)
+		if end-from > peekMax {
+			end = from + peekMax
+		}
+		out := make([]byte, end-from)
+		copy(out, b[from:end])
+		return map[string]any{"recording": cur.cancel != nil, "bytes": out, "from": from, "next": end}, nil
 	case "record_status":
 		if cur == nil {
 			return map[string]any{"recording": false}, nil

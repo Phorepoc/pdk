@@ -12,11 +12,14 @@
         <div ref="area" class="col screen-area" :class="{ scroll: r.zoom !== 'fit' }">
           <div ref="focusEl" tabindex="0" class="preview-focus" @keydown="onKey">
             <div class="preview-wrap">
-              <img v-if="url" ref="img" :src="url" alt="phone screen" draggable="false" class="preview-img"
+              <canvas v-show="videoOn" ref="canvas" class="preview-img" :style="imgStyle"
+                      @pointerdown="pDown" @pointermove="pMove" @pointerup="pUp" @pointercancel="pCancel" @contextmenu.prevent />
+              <img v-if="url && !videoOn" ref="img" :src="url" alt="phone screen" draggable="false" class="preview-img"
                    :style="imgStyle" @load="onImgLoad"
                    @pointerdown="pDown" @pointermove="pMove" @pointerup="pUp" @pointercancel="pCancel" @contextmenu.prevent />
-              <div v-if="marker && url" class="touch-marker" :style="{ left: marker.px + '%', top: marker.py + '%' }" />
-              <div v-if="!url" class="text-grey q-pa-lg">waiting for the first frame...</div>
+              <div v-if="marker && (url || videoOn)" class="touch-marker" :style="{ left: marker.px + '%', top: marker.py + '%' }" />
+              <div v-if="!url && !videoOn" class="text-grey q-pa-lg">waiting for the first frame...</div>
+              <div v-if="videoOn && !frameInfo" class="text-grey q-pa-lg">waiting for the first video picture...</div>
             </div>
           </div>
         </div>
@@ -37,9 +40,14 @@
                data-test="record" @click="toggleRecord">
           <q-tooltip>{{ recording ? 'Stop recording (saved to Screenshots, Videos)' : 'Record the screen as video (H.264)' }}</q-tooltip>
         </q-btn>
+        <q-btn v-if="canVideo" flat dense size="sm" :icon="videoOn ? 'videocam' : 'videocam_off'" :color="videoOn ? 'primary' : undefined"
+               :loading="videoBusy" data-test="toggle-video" @click="toggleVideo">
+          <q-tooltip>{{ videoOn ? videoTipOn : videoTipOff }}</q-tooltip>
+        </q-btn>
         <span v-if="recording" class="text-caption text-negative">REC {{ recSeconds }}s</span>
         <span class="text-caption ellipsis col" data-test="stats">
-          <template v-if="frameInfo">{{ frameInfo.w }}x{{ frameInfo.h }} | {{ frameInfo.seconds.toFixed(2) }}s | {{ (frameInfo.wire / 1024).toFixed(1) }} KB ({{ frameInfo.tiles }} tiles) | {{ fps.toFixed(1) }} fps</template>
+          <template v-if="frameInfo && videoOn">{{ frameInfo.w }}x{{ frameInfo.h }} | video | {{ fps.toFixed(1) }} fps<span v-if="lastWhite > 500" class="text-warning"> | white {{ (lastWhite / 10).toFixed(0) }}%</span></template>
+          <template v-else-if="frameInfo">{{ frameInfo.w }}x{{ frameInfo.h }} | {{ frameInfo.seconds.toFixed(2) }}s | {{ (frameInfo.wire / 1024).toFixed(1) }} KB ({{ frameInfo.tiles }} tiles) | {{ fps.toFixed(1) }} fps</template>
           <span v-if="busyCount" class="text-warning"> | link busy ({{ busyCount }})</span>
           <span v-if="note" class="text-warning"> | {{ note }}</span>
           <span v-if="errMsg" class="text-negative"> | {{ errMsg }}</span>
@@ -62,6 +70,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { api, type FrameResponse } from '@/api/client';
 import { FramePoller, Gesture, mapKeyboardKey } from '@/api/remote';
+import { LiveVideo, liveVideoSupported } from '@/api/livevideo';
 import { useIdeStore } from '@/ide/layout';
 import { useDevicesStore } from '@/stores/devices';
 import { useRemoteStore } from '@/stores/remote';
@@ -82,6 +91,7 @@ const errMsg = ref('');
 const note = ref('');
 const marker = ref<{ px: number; py: number } | null>(null);
 const img = ref<HTMLImageElement | null>(null);
+const canvas = ref<HTMLCanvasElement | null>(null);
 const focusEl = ref<HTMLElement | null>(null);
 
 const imgStyle = computed<Record<string, string>>(() => {
@@ -133,6 +143,7 @@ function onImgLoad(): void {
 
 function togglePause(): void {
   r.paused = !r.paused;
+  if (videoOn.value) { if (r.paused) video.stop(); else video.start(); return; }
   if (r.paused) poller.pause(); else poller.start();
 }
 
@@ -163,6 +174,8 @@ async function toggleRecord(): Promise<void> {
     } else {
       clearInterval(recTimer);
       recording.value = false;
+      videoOwnsRecording = false;
+      if (videoOn.value) { video.stop(); videoOn.value = false; frameInfo.value = null; if (!r.paused) poller.start(); }
       const res = (await api.op(id.value, 'record_stop', {})) as { summary?: { frames?: number; duration_ms?: number } } | undefined;
       const s = res?.summary;
       note.value = s ? `recorded ${s.frames ?? 0} frames, ${((s.duration_ms ?? 0) / 1000).toFixed(1)}s (Screenshots, Videos)` : 'recorded';
@@ -173,16 +186,87 @@ async function toggleRecord(): Promise<void> {
   } finally { recBusy.value = false; }
 }
 
+// ------------------------------------------------------------ live video (record_start + record_peek, decoded by WebCodecs)
+// The recorder encodes the screen as the user sees it (360x720), the composite view's picture: touch maps as view 2.
+const canVideo = computed(() => canRecord.value && devices.hasOp(id.value, 'record_peek') && liveVideoSupported());
+const videoOn = ref(false);
+const videoBusy = ref(false);
+const lastWhite = ref(0);
+const videoTipOn = 'Live view: video (H.264 from the phone encoder) - click for screenshots';
+const videoTipOff = 'Live view: screenshots - click for video (records the session, saved to Videos when switched off)';
+let videoOwnsRecording = false;
+
+const video = new LiveVideo({
+  peek: async (from) => (await api.op(id.value, 'record_peek', from === undefined ? {} : { from }, 'live')) as
+    { bytes?: string; next?: number; recording?: boolean } | undefined,
+  canvas: () => canvas.value,
+  onFrame: (w, h, white) => {
+    errMsg.value = '';
+    frameInfo.value = { w, h, seconds: 0, wire: 0, tiles: 0 };
+    r.frameSize = { w, h };
+    lastWhite.value = white;
+    const t = performance.now();
+    if (lastFrameAt) { const x = 1000 / (t - lastFrameAt); fps.value = fps.value ? fps.value * 0.9 + x * 0.1 : x; }
+    lastFrameAt = t;
+  },
+  onError: (m) => { errMsg.value = `video: ${m}`; },
+  onEnded: () => { void leaveVideo('the recording stopped, back to screenshots'); },
+});
+
+async function enterVideo(): Promise<void> {
+  if (!recording.value) {
+    await api.op(id.value, 'record_start', {});
+    videoOwnsRecording = true;
+    recording.value = true;
+    recSeconds.value = 0;
+    recTimer = setInterval(() => { recSeconds.value++; }, 1000);
+  }
+  poller.pause();
+  frameInfo.value = null;
+  lastFrameAt = 0;
+  fps.value = 0;
+  videoOn.value = true;
+  video.start();
+}
+
+async function leaveVideo(why = ''): Promise<void> {
+  video.stop();
+  videoOn.value = false;
+  frameInfo.value = null;
+  lastFrameAt = 0;
+  fps.value = 0;
+  if (videoOwnsRecording && recording.value) {
+    videoOwnsRecording = false;
+    clearInterval(recTimer);
+    recording.value = false;
+    const res = (await api.op(id.value, 'record_stop', {})) as { summary?: { frames?: number; duration_ms?: number } } | undefined;
+    const s = res?.summary;
+    note.value = s ? `video session saved: ${s.frames ?? 0} frames, ${((s.duration_ms ?? 0) / 1000).toFixed(1)}s (Videos)` : 'video session saved';
+  } else if (why) note.value = why;
+  videoOwnsRecording = false;
+  if (supported.value && !r.paused) poller.start();
+}
+
+async function toggleVideo(): Promise<void> {
+  videoBusy.value = true;
+  try {
+    if (videoOn.value) await leaveVideo(); else await enterVideo();
+  } catch (e) {
+    errMsg.value = `video: ${(e as Error).message}`;
+    if (videoOn.value) await leaveVideo().catch(() => {});
+  } finally { videoBusy.value = false; }
+}
+
 // ------------------------------------------------------------ input
-const gesture = new Gesture({ which: () => r.which, send: r.send, dragMode: () => r.dragMode });
+const gesture = new Gesture({ which: () => (videoOn.value ? 2 : r.which), send: r.send, dragMode: () => r.dragMode });
 
 function imgPoint(e: PointerEvent): { x: number; y: number } | null {
-  const el = img.value;
+  const el: HTMLImageElement | HTMLCanvasElement | null = videoOn.value ? canvas.value : img.value;
   if (!el) return null;
   const b = el.getBoundingClientRect();
   if (!b.width || !b.height) return null;
-  const w = el.naturalWidth || frameInfo.value?.w || b.width;
-  const h = el.naturalHeight || frameInfo.value?.h || b.height;
+  const w = (el instanceof HTMLCanvasElement ? el.width : el.naturalWidth) || frameInfo.value?.w || b.width;
+  const h = (el instanceof HTMLCanvasElement ? el.height : el.naturalHeight) || frameInfo.value?.h || b.height;
   return { x: Math.min(w - 1, Math.max(0, ((e.clientX - b.left) / b.width) * w)), y: Math.min(h - 1, Math.max(0, ((e.clientY - b.top) / b.height) * h)) };
 }
 function syncMarker(): void {
@@ -229,11 +313,15 @@ onMounted(() => {
   r.onPoke(() => poller.poke(), () => { if (poller.active) { snapNext = true; poller.poke(); } });
   if (supported.value && !r.paused) poller.start();
 });
-watch(supported, (s) => { if (s && !r.paused) poller.start(); else poller.pause(); });
-watch(id, () => { if (url.value) { toRevoke.push(url.value); url.value = ''; } frameInfo.value = null; poller.poke(); });
+watch(supported, (s) => { if (s && !r.paused && !videoOn.value) poller.start(); else poller.pause(); });
+watch(id, () => {
+  if (videoOn.value) { video.stop(); videoOn.value = false; videoOwnsRecording = false; } if (url.value) { toRevoke.push(url.value); url.value = ''; } frameInfo.value = null; poller.poke(); });
 onBeforeUnmount(() => {
   r.onPoke(null);
   clearInterval(recTimer);
+  video.stop();
+  // a session the video view started is stopped (and stored) with the view, not left recording on the phone
+  if (videoOwnsRecording && recording.value) void api.op(id.value, 'record_stop', {}).catch(() => {});
   poller.pause();
   if (url.value) URL.revokeObjectURL(url.value);
   for (const u of toRevoke) URL.revokeObjectURL(u);
