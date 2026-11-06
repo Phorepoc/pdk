@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Live view against a RUNNING PhoneLab with a phone (not part of `npm test`): input-to-picture latency and the pictures
-// actually shown, for each source. Run: PHONELAB_URL=http://127.0.0.1:8737 PHONELAB_DEVICE=pinephone npx playwright test
+// actually shown, for each source. Run: PHONELAB_URL=http://127.0.0.1:8737 PHONELAB_DEVICE=<device id> npx playwright test
 // (Edge or Chrome: Playwright's own Chromium has no H.264.)
 import { expect, test, type Page } from '@playwright/test';
 
 const URL0 = process.env.PHONELAB_URL ?? 'http://127.0.0.1:8737';
-const DEV = process.env.PHONELAB_DEVICE ?? 'pinephone';
+const DEV = process.env.PHONELAB_DEVICE ?? ''; // the device id (PhoneLab's devices list)
 
 interface Result { latencyMs: number; distinct2s: number; presented2s: number }
 
@@ -65,6 +65,7 @@ async function measure(page: Page, source: 'shots' | 'video', interval: number):
 }
 
 test('live view: screenshots vs video', async ({ browser }) => {
+  test.skip(!DEV, 'set PHONELAB_DEVICE to a device id');
   test.setTimeout(120000);
   const res: Record<string, Result> = {};
   for (const [name, src, iv] of [['shots 0.2s', 'shots', 0.2], ['video', 'video', 1]] as const) {

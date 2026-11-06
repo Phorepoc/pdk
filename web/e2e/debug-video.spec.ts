@@ -5,9 +5,10 @@
 import { test } from '@playwright/test';
 
 const URL0 = process.env.PHONELAB_URL ?? 'http://127.0.0.1:8737';
-const DEV = process.env.PHONELAB_DEVICE ?? 'pinephone';
+const DEV = process.env.PHONELAB_DEVICE ?? ''; // the device id (PhoneLab's devices list)
 
 test('debug video state', async ({ page }) => {
+  test.skip(!DEV, 'set PHONELAB_DEVICE to a device id');
   test.setTimeout(60000);
   page.on('console', (m) => console.log('console:', m.type(), m.text()));
   const cdp = await page.context().newCDPSession(page);
