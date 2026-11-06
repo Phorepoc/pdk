@@ -500,6 +500,6 @@ python3 "$TOOLS/rombuild.py" --section 0x80400000 $SHELL_XIP $DATA \
    --builtin-device 'Sys\Bin\enet.ldd=ldd:1' --builtin-device 'Sys\Bin\ethernet.pdd=pdd:2' \
    --builtin-device 'Sys\Bin\esoundsc.ldd=ldd:3' --builtin-device 'Sys\Bin\soundsc.pdd=pdd:4' \
    --builtin-device 'Sys\Bin\ecamerasc.ldd=ldd:5' --builtin-device 'Sys\Bin\camerasc.pdd=pdd:6' \
-   --builtin-device 'Sys\Bin\sgdevice.ldd=ldd:7' \
+   --builtin-device 'Sys\Bin\sgdevice.ldd=ldd:7' --builtin-device 'Sys\Bin\pipelib.ldd=ldd:8' \
    --secondary-name "${SECONDARY_IMAGE:-efile.exe}" \
    "$BUILD/rom/romsect.bin"
