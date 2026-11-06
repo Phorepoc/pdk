@@ -97,6 +97,13 @@ type KeepAliver interface {
 	KeepAlive() (every time.Duration, line func() []byte)
 }
 
+// Recorder is optionally implemented by a driver whose device records its screen: ops rec_start {fps, qp}, rec_read
+// {from} -> {state (1 = recording), seq, bytes} and rec_stop -> {stats}. The core's record_start / record_stop poll it
+// and hand the collected bytes to FinishRecording, which returns the video (an MP4), a per-frame index and a summary.
+type Recorder interface {
+	FinishRecording(stream []byte) (video []byte, index any, summary map[string]any, err error)
+}
+
 // Factory builds a driver from its config section.
 type Factory func(cfg map[string]any) (Driver, error)
 

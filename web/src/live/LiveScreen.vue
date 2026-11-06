@@ -33,6 +33,11 @@
           <q-tooltip>{{ r.paused ? 'Resume' : 'Pause' }}</q-tooltip>
         </q-btn>
         <q-btn flat dense size="sm" icon="photo_camera" @click="r.snapshot()"><q-tooltip>Snapshot (saved to Screenshots)</q-tooltip></q-btn>
+        <q-btn v-if="canRecord" flat dense size="sm" :icon="recording ? 'stop' : 'fiber_manual_record'" color="negative" :loading="recBusy"
+               data-test="record" @click="toggleRecord">
+          <q-tooltip>{{ recording ? 'Stop recording (saved to Screenshots, Videos)' : 'Record the screen as video (H.264)' }}</q-tooltip>
+        </q-btn>
+        <span v-if="recording" class="text-caption text-negative">REC {{ recSeconds }}s</span>
         <span class="text-caption ellipsis col" data-test="stats">
           <template v-if="frameInfo">{{ frameInfo.w }}x{{ frameInfo.h }} | {{ frameInfo.seconds.toFixed(2) }}s | {{ (frameInfo.wire / 1024).toFixed(1) }} KB ({{ frameInfo.tiles }} tiles) | {{ fps.toFixed(1) }} fps</template>
           <span v-if="busyCount" class="text-warning"> | link busy ({{ busyCount }})</span>
@@ -139,6 +144,35 @@ function openControls(): void {
 
 watch(() => r.which, () => { lastFrameAt = 0; poller.poke(); });
 
+// ------------------------------------------------------------ video recording (record_start / record_stop)
+const canRecord = computed(() => devices.hasOp(id.value, 'record_start'));
+const recording = ref(false);
+const recBusy = ref(false);
+const recSeconds = ref(0);
+let recTimer: ReturnType<typeof setInterval> | undefined;
+
+async function toggleRecord(): Promise<void> {
+  recBusy.value = true;
+  try {
+    if (!recording.value) {
+      await api.op(id.value, 'record_start', {});
+      recording.value = true;
+      recSeconds.value = 0;
+      recTimer = setInterval(() => { recSeconds.value++; }, 1000);
+      note.value = '';
+    } else {
+      clearInterval(recTimer);
+      recording.value = false;
+      const res = (await api.op(id.value, 'record_stop', {})) as { summary?: { frames?: number; duration_ms?: number } } | undefined;
+      const s = res?.summary;
+      note.value = s ? `recorded ${s.frames ?? 0} frames, ${((s.duration_ms ?? 0) / 1000).toFixed(1)}s (Screenshots, Videos)` : 'recorded';
+    }
+  } catch (e) {
+    errMsg.value = `record: ${(e as Error).message}`;
+    if (recording.value) { clearInterval(recTimer); recording.value = false; }
+  } finally { recBusy.value = false; }
+}
+
 // ------------------------------------------------------------ input
 const gesture = new Gesture({ which: () => r.which, send: r.send, dragMode: () => r.dragMode });
 
@@ -199,6 +233,7 @@ watch(supported, (s) => { if (s && !r.paused) poller.start(); else poller.pause(
 watch(id, () => { if (url.value) { toRevoke.push(url.value); url.value = ''; } frameInfo.value = null; poller.poke(); });
 onBeforeUnmount(() => {
   r.onPoke(null);
+  clearInterval(recTimer);
   poller.pause();
   if (url.value) URL.revokeObjectURL(url.value);
   for (const u of toRevoke) URL.revokeObjectURL(u);

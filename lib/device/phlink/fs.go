@@ -90,11 +90,12 @@ func fsOps() []device.OpSpec {
 
 // symbianErr names the codes a file request can fail with.
 func symbianErr(code int32) string {
-	names := map[int32]string{
-		-1: "not found", -2: "general error", -4: "out of memory", -5: "not supported", -6: "bad argument",
-		-9: "bad name", -11: "in use", -12: "access denied", -14: "access denied", -15: "path not found", -16: "already exists",
-		-18: "phfs.exe is not running on the phone (is it in the image?)", -21: "access denied", -22: "disk full", -29: "aborted",
-		-40: "too big", -46: "permission denied", -47: "request too big",
+	names := map[int32]string{ // e32err.h
+		-1: "not found", -2: "general error", -3: "cancelled", -4: "out of memory", -5: "not supported", -6: "bad argument",
+		-9: "overflow", -11: "already exists", -12: "path not found", -13: "died", -14: "in use",
+		-15: "server terminated", -16: "server busy", -18: "phfs.exe is not running on the phone (is it in the image?)",
+		-20: "corrupt", -21: "access denied", -22: "locked", -25: "end of file", -26: "disk full", -28: "bad name",
+		-33: "timed out", -39: "aborted", -40: "too big", -43: "directory full", -46: "permission denied",
 	}
 	if n, ok := names[code]; ok {
 		return fmt.Sprintf("%s (%d)", n, code)

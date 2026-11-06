@@ -8,6 +8,8 @@
         <div class="text-h6">Remote</div>
         <div class="row q-gutter-sm q-mt-xs items-center">
           <q-btn v-if="hasOp('screenshot')" color="primary" no-caps icon="photo_camera" label="Take screenshot" :loading="shooting" @click="shoot" />
+          <q-btn v-if="hasOp('record_start')" color="negative" no-caps :outline="!recording" :icon="recording ? 'stop' : 'fiber_manual_record'"
+                 :label="recording ? 'Stop recording' : 'Record video'" :loading="recBusy" data-test="record" @click="toggleRecord" />
           <template v-if="hasOp('key')">
             <q-input v-model="key" dense outlined label="key" style="width: 110px" />
             <q-select v-model="keyAction" :options="['press', 'down', 'up']" dense outlined style="width: 110px" />
@@ -23,6 +25,21 @@
         </div>
       </q-card-section>
     </q-card>
+
+    <template v-if="videos.length">
+      <div class="text-subtitle1 q-mb-sm">Videos</div>
+      <div class="row q-col-gutter-sm q-mb-md">
+        <div v-for="v in videos" :key="v.sha" class="col-12 col-sm-6 col-md-4 col-lg-3">
+          <q-card flat bordered>
+            <video :src="api.blobUrl(v.sha)" controls preload="metadata" style="width: 100%; max-height: 480px; background: #000" />
+            <q-card-section class="q-pa-xs text-caption">
+              {{ fmtTs(v.ts) }} | boot {{ v.boot }} | {{ videoInfo(v) }}
+              <q-btn flat dense round size="sm" icon="download" :href="api.blobUrl(v.sha, true)" aria-label="download" />
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+    </template>
 
     <div class="text-subtitle1 q-mb-sm">Screenshots</div>
     <div v-if="error" class="text-negative">{{ error }}</div>
@@ -54,6 +71,9 @@ import { fmtTs } from '@/utils';
 
 const devices = useDevicesStore();
 const shots = ref<Blob[]>([]);
+const videos = ref<Blob[]>([]);
+const recording = ref(false);
+const recBusy = ref(false);
 const error = ref('');
 const img = ref<HTMLImageElement | null>(null);
 const shooting = ref(false);
@@ -68,7 +88,11 @@ const remote = computed(() => hasOp('screenshot') || hasOp('key') || hasOp('touc
 const latest = computed(() => shots.value[0]);
 
 async function load(): Promise<void> {
-  try { shots.value = (await api.blobs('screenshot', 100)).sort((a, b) => b.ts - a.ts); error.value = ''; }
+  try {
+    shots.value = (await api.blobs('screenshot', 100)).sort((a, b) => b.ts - a.ts);
+    videos.value = (await api.blobs('video', 50)).sort((a, b) => b.ts - a.ts);
+    error.value = '';
+  }
   catch (e) { error.value = (e as Error).message; }
 }
 
@@ -82,6 +106,24 @@ async function remoteCall(op: string, args: Record<string, unknown>): Promise<un
 async function shoot(): Promise<void> {
   shooting.value = true;
   try { await remoteCall('screenshot', {}); await load(); } finally { shooting.value = false; }
+}
+async function toggleRecord(): Promise<void> {
+  recBusy.value = true;
+  try {
+    if (!recording.value) {
+      if (await remoteCall('record_start', {}) !== undefined) { recording.value = true; remoteMsg.value = 'recording...'; }
+    } else {
+      recording.value = false;
+      const res = (await remoteCall('record_stop', {})) as { summary?: { frames?: number; duration_ms?: number } } | undefined;
+      if (res) remoteMsg.value = `recorded ${res.summary?.frames ?? 0} frames, ${((res.summary?.duration_ms ?? 0) / 1000).toFixed(1)}s`;
+      await load();
+    }
+  } finally { recBusy.value = false; }
+}
+function videoInfo(v: Blob): string {
+  const s = (v.meta?.summary ?? {}) as { frames?: number; duration_ms?: number; white_pictures?: unknown[] };
+  const w = s.white_pictures?.length ? `, ${s.white_pictures.length} white` : '';
+  return `${s.frames ?? '?'} frames, ${((s.duration_ms ?? 0) / 1000).toFixed(1)}s${w}`;
 }
 async function sendKey(): Promise<void> {
   const r = await remoteCall('key', { key: key.value, action: keyAction.value });

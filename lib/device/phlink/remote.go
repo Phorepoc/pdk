@@ -450,6 +450,9 @@ func (d *Driver) execRemote(ctx context.Context, l device.Link, op string, a dev
 		v, err := a.UintOr(k, 32, def)
 		return time.Duration(min(v, 10000)) * time.Millisecond, err
 	}
+	if res, ok, err := d.execRec(ctx, l, op, a); ok {
+		return res, true, err
+	}
 	if res, ok, err := d.execFS(ctx, l, op, a); ok {
 		return res, true, err
 	}

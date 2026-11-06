@@ -40,7 +40,9 @@ type Driver struct{ live liveState }
 
 func (*Driver) Name() string { return "phlink" }
 
-func (*Driver) Ops() []device.OpSpec { return append(append(baseOps(), remoteOps()...), fsOps()...) }
+func (*Driver) Ops() []device.OpSpec {
+	return append(append(append(baseOps(), remoteOps()...), fsOps()...), recOps()...)
+}
 
 func baseOps() []device.OpSpec {
 	return []device.OpSpec{
