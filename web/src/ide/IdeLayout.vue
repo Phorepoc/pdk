@@ -8,7 +8,7 @@
       <span class="title" style="flex: none; margin-right: 12px">PhoneLab</span>
       <q-select
         v-if="devices.list.length > 1" v-model="settings.device" :options="devices.list.map((d) => d.id)"
-        dense borderless dark options-dark style="min-width: 110px"
+        dense options-dense borderless dark options-dark class="dev-select"
       />
       <span v-else class="text-caption" style="font-weight: normal">{{ devices.currentId }}</span>
       <div style="flex: 1" />

@@ -87,3 +87,10 @@
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: #4e5157; border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
 }
+
+/* the device picker in the 32 px title bar: a dense q-select is 40 px tall, which put its arrow above the name */
+.ide .dev-select.q-field--dense .q-field__control,
+.ide .dev-select.q-field--dense .q-field__native,
+.ide .dev-select.q-field--dense .q-field__marginal { min-height: 32px; height: 32px; }
+.dev-select .q-field__native { padding: 0; }
+.dev-select .q-field__append { padding-left: 2px; }
