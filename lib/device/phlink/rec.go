@@ -158,3 +158,6 @@ func (*Driver) FinishRecording(stream []byte) (video []byte, index any, summary 
 		"mp4_bytes": len(video), "skipped_bytes": skipped, "white_pictures": flashes}
 	return video, frames, summary, nil
 }
+
+// RecordingSize is the recorder's picture size (the live video view's track).
+func (*Driver) RecordingSize() (w, h int) { return recW, recH }

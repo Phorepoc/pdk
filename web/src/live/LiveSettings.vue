@@ -3,9 +3,16 @@
 
 <template>
   <div class="live-settings" data-test="live-settings">
+    <div class="sect">Source</div>
+    <div class="seg" data-test="live-source">
+      <button class="ls" :class="{ on: !videoOn }" title="Screenshots, fetched at the refresh interval" @click="r.source = 'shots'">Screenshots</button>
+      <button class="ls" :class="{ on: videoOn }" :disabled="!canVideo" :title="videoTitle" @click="r.source = 'video'">Video</button>
+    </div>
+
     <div class="sect">Refresh</div>
     <div class="seg">
-      <button v-for="v in [0.2, 0.5, 1, 2, 5]" :key="v" class="ls" :class="{ on: r.intervalS === v }" @click="r.intervalS = v">{{ v }}s</button>
+      <button v-for="v in [0.2, 0.5, 1, 2, 5]" :key="v" class="ls" :class="{ on: r.intervalS === v }" :disabled="videoOn"
+              :title="videoOn ? 'Video shows every change as it happens' : undefined" @click="r.intervalS = v">{{ v }}s</button>
     </div>
 
     <div class="sect">Zoom</div>
@@ -52,10 +59,18 @@ import { computed, ref } from 'vue';
 import type { Which } from '@/api/remote';
 import { useDevicesStore } from '@/stores/devices';
 import { useRemoteStore } from '@/stores/remote';
+import { liveVideoSupported } from '@/api/livevideo';
 
 const r = useRemoteStore();
 const devices = useDevicesStore();
 const hasText = computed(() => devices.hasOp(r.id, 'text'));
+// the video source: the phone's encoder (the screen recorder package from Catalogue) played through the browser's <video>
+const hasEncoderOp = computed(() => devices.hasOp(r.id, 'live_video'));
+const canVideo = computed(() => hasEncoderOp.value && liveVideoSupported());
+const videoOn = computed(() => r.source === 'video' && canVideo.value);
+const videoTitle = computed(() => !hasEncoderOp.value ? 'This device has no screen encoder (install the screen recorder package from Catalogue)'
+  : !liveVideoSupported() ? 'This browser cannot play H.264 through Media Source Extensions'
+    : 'Video from the phone\'s encoder: every change as it happens, records nothing');
 const text = ref('');
 const zooms: { v: 'fit' | '1' | '2'; l: string }[] = [{ v: 'fit', l: 'Fit' }, { v: '1', l: '1x' }, { v: '2', l: '2x' }];
 const views: { v: Which; l: string; t: string }[] = [

@@ -50,7 +50,7 @@ func (s *Session) Ops() []device.OpSpec {
 
 // logOnly: built-in ops that read the store or wait for lines; they never touch the port, so they do not take the
 // op lock (they can watch an op in progress, e.g. wait_boot during a push)
-var logOnly = map[string]bool{"wait_for": true, "wait_boot": true, "boot_report": true, "diff_boots": true, "record_status": true, "record_peek": true}
+var logOnly = map[string]bool{"wait_for": true, "wait_boot": true, "boot_report": true, "diff_boots": true, "record_status": true, "live_video": true}
 
 // QuietCaller marks high-rate calls (the live view) that are not written to the op history when they succeed.
 const QuietCaller = "live"
@@ -105,7 +105,7 @@ func (s *Session) Exec(ctx context.Context, caller, op string, args device.Args)
 		res, err = nil, s.send(ctx, args)
 	case "wait_boot", "boot_report", "diff_boots", "input":
 		res, _, err = s.workflow(ctx, op, args)
-	case "record_start", "record_stop", "record_status", "record_peek":
+	case "record_start", "record_stop", "record_status", "live_video":
 		res, err = s.record(ctx, op, args)
 	default:
 		wc, cancel := context.WithTimeout(ctx, 30*time.Second)

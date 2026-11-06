@@ -23,15 +23,17 @@ export const useRemoteStore = defineStore('remote', () => {
   const zoom = ref<'fit' | '1' | '2'>((saved.zoom as 'fit' | '1' | '2') ?? 'fit');
   const which = ref<Which>((saved.which as Which) ?? 2);
   const dragMode = ref(!!saved.dragMode);
+  /** how the screen reaches the browser: screenshots (polled at intervalS) or the phone's video encoder */
+  const source = ref<'shots' | 'video'>(saved.source === 'video' ? 'video' : 'shots');
   /** the Live screen's collapsible drawers */
   const keypadOpen = ref(saved.keypadOpen !== false);
   const settingsOpen = ref(!!saved.settingsOpen);
   const frameSize = ref<{ w: number; h: number } | null>(null);
 
-  watch([intervalS, zoom, which, dragMode, keypadOpen, settingsOpen], () => {
+  watch([intervalS, zoom, which, dragMode, keypadOpen, settingsOpen, source], () => {
     try {
       localStorage.setItem(KEY, JSON.stringify({ intervalS: intervalS.value, zoom: zoom.value, which: which.value,
-        dragMode: dragMode.value, keypadOpen: keypadOpen.value, settingsOpen: settingsOpen.value }));
+        dragMode: dragMode.value, keypadOpen: keypadOpen.value, settingsOpen: settingsOpen.value, source: source.value }));
     } catch { /* ignore */ }
   });
 
@@ -69,5 +71,5 @@ export const useRemoteStore = defineStore('remote', () => {
     };
   }
 
-  return { id, paused, intervalS, store, zoom, which, dragMode, keypadOpen, settingsOpen, frameSize, onPoke, send, swipe, snapshot, hold };
+  return { id, paused, intervalS, store, zoom, which, dragMode, source, keypadOpen, settingsOpen, frameSize, onPoke, send, swipe, snapshot, hold };
 });
