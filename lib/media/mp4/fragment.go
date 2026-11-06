@@ -69,7 +69,35 @@ func Fragment(seq uint32, samples []Sample, lastUs int64) []byte {
 	if len(samples) == 0 {
 		return nil
 	}
-	ts := func(us int64) int64 { return (us*fragTimescale + 500000) / 1000000 }
+	durs := make([]uint32, len(samples))
+	for i, s := range samples {
+		d := fragTicks(lastUs)
+		if i+1 < len(samples) {
+			d = fragTicks(samples[i+1].TimeUs) - fragTicks(s.TimeUs)
+		}
+		durs[i] = uint32(max(d, 1))
+	}
+	return fragment(seq, samples, uint64(fragTicks(samples[0].TimeUs)), durs)
+}
+
+// FragmentAt is Fragment on a continuous timeline: the first sample decodes at baseTicks (90 kHz), every sample lasts
+// durTicks. A live view's player sees no gaps between fragments however irregularly the pictures came (a gap reads
+// as a discontinuity to Media Source Extensions, which then drop everything up to the next IDR).
+func FragmentAt(seq uint32, samples []Sample, baseTicks uint64, durTicks uint32) []byte {
+	if len(samples) == 0 {
+		return nil
+	}
+	durs := make([]uint32, len(samples))
+	for i := range durs {
+		durs[i] = durTicks
+	}
+	return fragment(seq, samples, baseTicks, durs)
+}
+
+func fragTicks(us int64) int64 { return (us*fragTimescale + 500000) / 1000000 }
+
+// fragment: samples from decode time base (90 kHz), each lasting its durs entry
+func fragment(seq uint32, samples []Sample, base uint64, durs []uint32) []byte {
 	var mdat bytes.Buffer
 	var entries []byte
 	for i, s := range samples {
@@ -81,22 +109,15 @@ func Fragment(seq uint32, samples []Sample, lastUs int64) []byte {
 			binary.Write(&mdat, binary.BigEndian, uint32(len(n)))
 			mdat.Write(n)
 		}
-		d := ts(lastUs)
-		if i+1 < len(samples) {
-			d = ts(samples[i+1].TimeUs) - ts(s.TimeUs)
-		}
-		if d <= 0 {
-			d = 1
-		}
 		flags := uint32(0x01010000) // depends on others, a non-sync sample
 		if s.Key {
 			flags = 0x02000000
 		}
-		entries = append(entries, cat(u32(uint32(d)), u32(uint32(mdat.Len()-n0)), u32(flags))...)
+		entries = append(entries, cat(u32(durs[i]), u32(uint32(mdat.Len()-n0)), u32(flags))...)
 	}
 	mfhd := fullBox("mfhd", 0, 0, u32(seq))
 	tfhd := fullBox("tfhd", 0, 0x020000, u32(1)) // default-base-is-moof
-	tfdt := fullBox("tfdt", 1, 0, binary.BigEndian.AppendUint64(nil, uint64(ts(samples[0].TimeUs))))
+	tfdt := fullBox("tfdt", 1, 0, binary.BigEndian.AppendUint64(nil, base))
 	build := func(dataOff uint32) []byte {
 		trun := fullBox("trun", 0, 0x000701, cat(u32(uint32(len(samples))), u32(dataOff), entries)) // offset, duration, size, flags
 		return box("moof", cat(mfhd, box("traf", cat(tfhd, tfdt, trun))))

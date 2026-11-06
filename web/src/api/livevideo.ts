@@ -3,9 +3,11 @@
 
 /** The live view's video transport: the phone's screen encoder as fragmented MP4 (op live_video), played by the
  *  browser's own <video> through Media Source Extensions -- works on plain http (no WebCodecs, no secure context).
- *  Records nothing: each live_video call only keeps the encoder running for a few more seconds. The SourceBuffer runs
- *  in "sequence" mode, so the recorder's changed-pictures-only timing never leaves gaps; latency is held under
- *  ~0.3 s by jumping to the newest picture. */
+ *  Records nothing: each live_video call only keeps the encoder running for a few more seconds. PhoneLab paces each
+ *  viewer to a constant 30 pictures a second (repeats of the last picture fill the encoder's gaps) on a continuous
+ *  timeline: a gap reads as a discontinuity to MSE, which then drops everything up to the next IDR, and media time
+ *  slower than the clock stalls the player. It keeps up by playing faster while behind -- never by seeking (a seek
+ *  decodes again from the last IDR). */
 
 export interface LiveVideoReply {
   init?: string; frag?: string; codec?: string; reset?: boolean; waiting?: boolean;
@@ -70,7 +72,7 @@ export class LiveVideo {
 
   private async tick(): Promise<void> {
     if (!this.running) return;
-    let delay = 120;
+    let delay = 60;
     try {
       const r = await this.o.call(this.next);
       if (!this.running) return;
@@ -99,7 +101,7 @@ export class LiveVideo {
       ms.addEventListener('sourceopen', () => {
         try {
           const sb = ms.addSourceBuffer(`video/mp4; codecs="${codec}"`);
-          sb.mode = 'sequence';
+          sb.mode = 'segments';
           sb.addEventListener('updateend', () => this.pump());
           this.sb = sb;
           this.queue.push(init);
@@ -122,11 +124,13 @@ export class LiveVideo {
   private pump(): void {
     const sb = this.sb, v = this.o.video();
     if (!sb || sb.updating || !v) return;
-    // keep the newest picture on screen: jump when playback fell behind, drop what lies well behind
+    // keep the newest picture on screen: play faster while behind; seek only when hopelessly behind
     const b = sb.buffered;
     if (b.length) {
       const end = b.end(b.length - 1);
-      if (end - v.currentTime > 0.3) v.currentTime = Math.max(b.start(b.length - 1), end - 0.03);
+      const behind = end - v.currentTime;
+      if (behind > 3) v.currentTime = end - 0.1;
+      else v.playbackRate = behind > 0.4 ? 1.5 : behind > 0.15 ? 1.1 : 1; // gently: a big jump runs dry and rebuffers
       if (v.paused) void v.play().catch(() => {});
       if (++this.appended % 300 === 0 && v.currentTime - b.start(0) > 20) { sb.remove(b.start(0), v.currentTime - 10); return; }
     }

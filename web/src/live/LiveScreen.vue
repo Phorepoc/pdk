@@ -148,8 +148,9 @@ function togglePause(): void {
 const canVideo = computed(() => devices.hasOp(id.value, 'live_video') && liveVideoSupported());
 const videoOn = computed(() => r.source === 'video' && canVideo.value);
 const lastWhite = ref(0);
+const viewer = Math.random().toString(36).slice(2); // this view's own paced timeline on the server
 const video = new LiveVideo({
-  call: async (from) => (await api.op(id.value, 'live_video', from === undefined ? {} : { from }, 'live')) as LiveVideoReply | undefined,
+  call: async (from) => (await api.op(id.value, 'live_video', from === undefined ? { viewer } : { from, viewer }, 'live')) as LiveVideoReply | undefined,
   video: () => vid.value,
   onFrame: (w, h, white) => {
     errMsg.value = '';

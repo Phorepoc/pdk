@@ -19,19 +19,22 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/Phorepoc/pdk/lib/device"
+	"github.com/Phorepoc/pdk/lib/media/h264"
 	"github.com/Phorepoc/pdk/lib/media/mp4"
 )
 
 const (
-	recPoll     = 200 * time.Millisecond
+	recPoll     = 50 * time.Millisecond // a live viewer waits for this too: short reads, the op lock is free between them
 	recMaxBytes = 256 << 20
 	liveLease   = 6 * time.Second
 	liveKeep    = 8 << 20 // a live-only session drops what lies before the last IDR once it holds this much
 	recHead     = 32
+	liveTick    = 3000 // 1/30 s at 90 kHz: each picture's length on a live viewer's timeline
 )
 
 var recordOps = []device.OpSpec{
@@ -51,10 +54,12 @@ var recordOps = []device.OpSpec{
 	{Name: "live_video", Capability: "record",
 		Description: "The live view's video transport (records nothing): starts the screen encoder if needed and keeps it " +
 			"running for a few seconds per call. Without from: init (an MP4 initialization segment) + a fragment from the last " +
-			"IDR; with from = the previous next: a fragment of the newer pictures. Returns codec, width, height, init, frag, next, " +
-			"reset (a new init follows), white (permille of the last picture), recording.",
+			"IDR; with from = the previous next: a fragment of the newer pictures, paced to 30 pictures a second (repeats of the " +
+			"last picture fill the gaps). Returns codec, width, height, init, frag, next, reset (a new init came), white " +
+			"(permille of the last picture), recording.",
 		Params: []device.Param{
 			{Name: "from", Type: "int", Description: "the previous reply's next (omit to start)"},
+			{Name: "viewer", Description: "an id of the viewer (its own 30-pictures-a-second timeline)"},
 		}},
 }
 
@@ -76,6 +81,7 @@ type recording struct {
 	storeFrom int64     // its first byte (an IDR record)
 	liveUntil time.Time // a live viewer's lease
 	fragSeq   uint32
+	viewers   map[string]*liveViewer
 }
 
 var (
@@ -161,11 +167,20 @@ func (r *recording) append(res any) (n int) {
 // startEncoder starts the device's encoder and its poller. locked = the caller holds the op lock (an op of its own).
 func (s *Session) startEncoder(ctx context.Context, fps, qp uint64, locked bool) (*recording, error) {
 	args := device.Args{"fps": fps, "qp": qp}
-	var err error
-	if locked {
-		_, err = s.Driver.Exec(ctx, &link{s: s, op: "rec_start"}, "rec_start", args)
-	} else {
-		_, err = s.Exec(ctx, QuietCaller, "rec_start", args)
+	run := func(op string, a device.Args) error {
+		if locked {
+			_, err := s.Driver.Exec(ctx, &link{s: s, op: op}, op, a)
+			return err
+		}
+		_, err := s.Exec(ctx, QuietCaller, op, a)
+		return err
+	}
+	err := run("rec_start", args)
+	if err != nil && strings.Contains(err.Error(), "(-14)") {
+		// KErrInUse: an encoder no session of this service drains (left by a PhoneLab that was restarted): this
+		// service owns the link, so stop that one and start again
+		_ = run("rec_stop", nil)
+		err = run("rec_start", args)
 	}
 	if err != nil {
 		return nil, err
@@ -331,15 +346,19 @@ func (s *Session) liveVideo(ctx context.Context, cur *recording, a device.Args) 
 	cur.liveUntil = time.Now().Add(liveLease)
 	end := cur.base + int64(len(cur.buf))
 	from := int64(-1)
+	var err error
 	if a.Has("from") {
-		f, err := a.UintOr("from", 63, 0)
+		var f uint64
+		f, err = a.UintOr("from", 63, 0)
 		if err != nil {
 			return nil, err
 		}
 		from = int64(f)
 	}
 	out := map[string]any{"recording": cur.store, "width": w, "height": h}
-	reset := from < cur.base || from > end // a new viewer, or one whose position was trimmed away
+	id, _ := a["viewer"].(string)
+	v := cur.viewers[id]
+	reset := v == nil || from < cur.base || from > end // a new viewer, or one whose position was trimmed away
 	if reset {
 		from = cur.base + int64(lastIDR(cur.buf))
 	}
@@ -356,6 +375,7 @@ func (s *Session) liveVideo(ctx context.Context, cur *recording, a device.Args) 
 		samples = append(samples, mp4.Sample{AnnexB: r.body, TimeUs: r.timeUs, Key: r.flags&1 != 0})
 		white = r.white
 	}
+	now := time.Now()
 	if reset {
 		if len(samples) == 0 {
 			out["waiting"] = true // no IDR yet: ask again without from
@@ -366,15 +386,84 @@ func (s *Session) liveVideo(ctx context.Context, cur *recording, a device.Args) 
 		if err != nil {
 			return nil, err
 		}
+		v = &liveViewer{start: now}
+		v.params, v.perr = h264.ParseParams(sps, pps)
+		if cur.viewers == nil {
+			cur.viewers = map[string]*liveViewer{}
+		}
+		cur.viewers[id] = v
 		out["init"], out["codec"], out["reset"] = init, mp4.Codec(sps), true
 	}
+	v.seen = now
+	for k, x := range cur.viewers { // viewers that went away
+		if now.Sub(x.seen) > 2*liveLease {
+			delete(cur.viewers, k)
+		}
+	}
+	samples = v.pace(samples, now)
 	if len(samples) > 0 {
 		cur.fragSeq++
-		out["frag"] = mp4.Fragment(cur.fragSeq, samples, 33333)
+		out["frag"] = mp4.FragmentAt(cur.fragSeq, samples, v.t, liveTick)
 		out["white"] = white
+		v.t += uint64(len(samples)) * liveTick
 	}
 	out["next"] = from + int64(used)
+	if v.perr != nil {
+		out["pace_error"] = v.perr.Error()
+	}
 	return out, nil
+}
+
+// liveViewer: one live view's timeline. The encoder sends only changed pictures; a Media Source Extensions player
+// needs media time that keeps up with the clock or it stalls and rebuffers. So each viewer gets a constant 30 pictures a
+// second: the real ones (frame_num renumbered) plus P pictures of skipped macroblocks that repeat the last one.
+type liveViewer struct {
+	start, seen time.Time
+	t           uint64 // the next picture's decode time (90 kHz)
+	pics        int64  // pictures sent
+	fn          uint32 // the next frame_num
+	params      h264.Params
+	perr        error // the stream cannot be paced (an encoder this package does not handle): real pictures only
+}
+
+func (v *liveViewer) pace(real []mp4.Sample, now time.Time) []mp4.Sample {
+	if v.perr != nil {
+		v.pics += int64(len(real))
+		return real
+	}
+	maxFn := uint32(1) << v.params.Log2MaxFrameNum
+	out := make([]mp4.Sample, 0, len(real)+8)
+	for _, s := range real {
+		if s.Key {
+			v.fn = 0
+		}
+		var au []byte
+		for _, nal := range mp4.NALs(s.AnnexB) {
+			n, err := h264.SetFrameNum(nal, v.params, v.fn%maxFn)
+			if err != nil {
+				v.perr = err
+				return append(out, real...)
+			}
+			au = append(append(au, 0, 0, 0, 1), n...)
+		}
+		s.AnnexB = au
+		out = append(out, s)
+		v.fn++
+	}
+	v.pics += int64(len(real))
+	target := int64(now.Sub(v.start) * 30 / time.Second)
+	if fill := target - v.pics; fill > 0 {
+		if fill > 30 { // more than a second short (a stalled poll): restart the clock rather than send a burst
+			v.start = now.Add(-time.Duration(v.pics) * time.Second / 30)
+			fill = 1
+		}
+		for k := int64(0); k < fill; k++ {
+			out = append(out, mp4.Sample{AnnexB: append([]byte{0, 0, 0, 1}, h264.SkipP(v.params, v.fn%maxFn)...)})
+			v.fn++
+		}
+		v.pics += fill
+	}
+	return out
 }
 
 // recordPoll drains the device's ring until record_stop cancels it, the device stopped on its own, or (no recording)
