@@ -26,6 +26,7 @@ D1 audiocodec audiocodec.cpp
 D1 avkon aknadaptivesearchgrid.cpp
 D1 avkon aknappui.cpp
 D15 avkon aknecs.cpp
+D1 backend fdesc.cpp
 D1 backend ftable.cpp
 D11 c32 cc_utl.cpp
 D11 c32 cs_glob.cpp
@@ -88,6 +89,7 @@ D1 javascriptcore snprintf.c
 D1 keyrouter keyrouter.cpp
 D1 libc getenv.c
 D4 libc jmp_marm.cia
+D1 libc ualloc.cpp
 D1 libc vfscanf.c
 D1 libpthread condvar.cpp
 D1 libpthread mutex.cpp
