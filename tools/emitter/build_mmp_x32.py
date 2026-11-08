@@ -763,9 +763,22 @@ def build(key: str) -> int:
                 # rombuild sign-extends it; the F32 loader (RAM-loaded images) would not -- none such yet
                 blocks.setdefault(dll, []).append((off, ordn, sa & 0xFFFF))
         import_list = [(d, sorted(blocks[d])) for d in dll_order if d in blocks]
-    # %rip-relative references to imported statics: the ROM prelinker aims them (the .pcrel sidecar's pcimp lines)
-    ext.pcimp = [(dll, ordn, off, addend) for n, (dll, ordn) in data_imps.items()
-                 for off, addend in ext.data_import_pcrel.get(n, [])]
+    # %rip-relative references to imported statics: the ROM prelinker aims them (the .pcrel sidecar's pcimp lines). A RAM-loaded
+    # (`sis`) image has no prelinker: these go in the import table like the others, flagged PC-RELATIVE by bit 15 of the ordinal
+    # field (the F32 loader's svElfDerivedFixupImportAddresses: location := export + addend - location's run address)
+    if comp.get("sis"):
+        blocks = {d: list(e) for d, e in import_list}
+        for n, (dll, ordn) in data_imps.items():
+            for off, addend in ext.data_import_pcrel.get(n, []):
+                sa = addend - 0x100000000 if addend >= 0x80000000 else addend
+                if not -0x8000 <= sa <= 0x7FFF or ordn >= 0x8000:
+                    raise SystemExit(f"{key}: PC-relative DATA import {n} ({ordn}, addend {sa}) does not fit the 16+15 bit fields")
+                blocks.setdefault(dll, []).append((off, ordn | 0x8000, sa & 0xFFFF))
+        import_list = [(d, sorted(blocks[d])) for d in dll_order if d in blocks]
+        ext.pcimp = []
+    else:
+        ext.pcimp = [(dll, ordn, off, addend) for n, (dll, ordn) in data_imps.items()
+                     for off, addend in ext.data_import_pcrel.get(n, [])]
     import_list = [(d, e) for d, e in import_list if e]
     n_imp = sum(len(e) for _, e in import_list)
 
