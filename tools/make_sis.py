@@ -29,6 +29,11 @@ import sis as SIS  # noqa: E402
 
 X32 = os.path.join(BUILD, "x32img")
 ARM_IMG = os.path.join(BUILD, "arm", "img")
+X32_S4 = os.path.join(BUILD, "qt48", "x32img")
+try:
+    S4_KEYS = set(__import__("components_s4").COMPONENTS) if os.environ.get("PHOREPOC_S4") == "1" else set()
+except ImportError:
+    S4_KEYS = set()
 
 
 def component_files(keys, arm, sis=True):
@@ -43,7 +48,9 @@ def component_files(keys, arm, sis=True):
         comp = C.COMPONENTS[key]
         m = MMP.parse(os.path.join(MMP.BASE, comp.get("x32_mmp", comp["mmp"])))
         rom = C.rom_name(key, m.targettype)
-        img = open(os.path.join(ARM_IMG if arm else X32, rom), "rb").read()
+        # the Symbian^4 set (components_s4, Qt 4.8) builds into its own root: BUILD/qt48/x32img
+        d = X32_S4 if (not arm and key in S4_KEYS) else (ARM_IMG if arm else X32)
+        img = open(os.path.join(d, rom), "rb").read()
         img_caps = struct.unpack_from("<I", img, 0x88)[0]  # E32ImageHeaderV SSecurityInfo.iCaps, first word
         if key == keys[0]:
             uid3, caps = struct.unpack_from("<I", img, 8)[0], img_caps
