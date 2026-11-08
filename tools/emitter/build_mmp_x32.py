@@ -826,18 +826,12 @@ def build(key: str) -> int:
         code_types.update({o: 0x4000 for o in ext.code_pcrel_data})
         # the REAL loader wants the export directory inside the code, each entry code-relocated
         kw["exports_in_code"] = True
-    # a RAM-loaded EXE with neither data nor bss (camenuserver: a 380-byte launcher) is given 4 bytes of bss: the kernel places the
-    # process's code, heap and stack chunks relative to its data chunk, and without one the code landed on KUserLocalDataBase,
-    # inside the heap (a stack/heap fault at once)
-    exe_bss, exe_dbase = ext.bss_size, ext.data_base
-    if m.is_exe and comp.get("sis") and not ext.data and not ext.bss_size:
-        exe_bss, exe_dbase = 4, (ext.code_base + len(ext.code) + 31) & ~31
     img = e32image.build_dll(
         ext.code, export_offsets, cpu=e32image.CPU_X86, uid2=uid2, uid3=uid3,
         entry_point=ext.symbols[entry] - ext.code_base, imports=import_list,
         code_relocs=sorted(code_types) if code_types else ext.code_relocs, code_reloc_types=code_types,
-        code_base=ext.code_base, data=ext.data, data_base=exe_dbase,
-        bss_size=exe_bss, data_relocs=ext.data_relocs,
+        code_base=ext.code_base, data=ext.data, data_base=ext.data_base,
+        bss_size=ext.bss_size, data_relocs=ext.data_relocs,
         data_reloc_types=ext.data_reloc_types,
         # every image carries ALL capabilities (the bring-up default); `sis`  = the mmp's CAPABILITY: SWI
         # compares the file description's capabilities with the image's, and grants only user capabilities
