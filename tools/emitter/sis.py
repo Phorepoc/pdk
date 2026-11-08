@@ -126,8 +126,36 @@ def _file_des(target: str, data: bytes, deflated: bytes, caps, index: int) -> by
     return _field(SISFileDes, body, typed=False)
 
 
+def _package_parts(files, *, app_uid: int, vendor: str, app_name: str, version=(1, 0, 0), install_type=None):
+    """(SISInfo..SISInstallBlock bytes, signature chains (none), data unit) of an unsigned package, for embedding."""
+    import datetime
+    import zlib
+    now = datetime.datetime.now()
+    info = _field(SISInfo,
+                  _field(SISUid, struct.pack("<I", app_uid))
+                  + _field(SISString, _u16str(vendor))
+                  + _array(SISString, [_field(SISString, _u16str(app_name), typed=False)])
+                  + _array(SISString, [_field(SISString, _u16str(vendor), typed=False)])
+                  + _field(SISVersion, struct.pack("<iii", *version))
+                  + _field(SISDateTime,
+                           _field(SISDate, struct.pack("<HBB", now.year, now.month - 1, now.day - 1))
+                           + _field(SISTime, struct.pack("<BBB", now.hour, now.minute, now.second)))
+                  + struct.pack("<BB", INSTALL_TYPE_INSTALLATION if install_type is None else install_type, 0))
+    options = _field(SISSupportedOptions, _array(SISSupportedOption, []))
+    langs = _field(SISSupportedLanguages, _array(SISLanguage, [_field(SISLanguage, struct.pack("<I", LANG_EN), typed=False)]))
+    prereq = _field(SISPrerequisites, _array(SISDependency, []) + _array(SISDependency, []))
+    props = _field(SISProperties, _array(SISProperty, []))
+    deflated = [zlib.compress(d, 9) for d, _, _ in files]
+    descs = [_file_des(t, d, z, c, i) for i, ((d, t, c), z) in enumerate(zip(files, deflated))]
+    block = _field(SISInstallBlock, _array(SISFileDes, descs) + _array(SISController, []) + _array(SISIf, []))
+    file_datas = [_field(SISFileData, _field(SISCompressed, struct.pack("<IQ", 1, len(d)) + z), typed=False)
+                  for (d, _, _), z in zip(files, deflated)]
+    unit = _field(SISDataUnit, _array(SISFileData, file_datas), typed=False)
+    return info + options + langs + prereq + props + block, b"", unit
+
+
 def build_package(files, *, app_uid: int, vendor: str, app_name: str,
-                  version=(1, 0, 0), signer=None, platform_uid=None, install_type=None, dependencies=()) -> bytes:
+                  version=(1, 0, 0), signer=None, platform_uid=None, install_type=None, dependencies=(), embedded=()) -> bytes:
     """A SISX package. `files` = [(data bytes, target path, caps or None)]; `signer` = (private key,
     certificate DER) from the `cryptography` package -> one SISSignatureCertificateChain.
 
@@ -136,7 +164,11 @@ def build_package(files, *, app_uid: int, vendor: str, app_name: str,
     SISInstallBlock (+ SISLogo) -- everything before the first signature chain; RSA PKCS#1 v1.5 over SHA-1
     (signatureverifier.cpp), the raw signature integer as the blob; the chain = the concatenated DER
     certificates. A self-signed chain validates as ESignatureSelfSigned, which the policy (swipolicy.ini)
-    accepts with user-grantable capabilities."""
+    accepts with user-grantable capabilities.
+
+    `embedded` = packages installed with this one (makesis `@"x.sis",(uid)`): dicts with the keyword arguments of an inner
+    build_package (files, app_uid, app_name, version, install_type ...; vendor defaults to this one). The inner controller goes
+    into this install block, its data unit after this package's; e.g. a TYPE=SP package of Central Repository files."""
     import datetime
     import zlib
     now = datetime.datetime.now()
@@ -173,8 +205,16 @@ def build_package(files, *, app_uid: int, vendor: str, app_name: str,
 
     deflated = [zlib.compress(d, 9) for d, _, _ in files]
     descs = [_file_des(t, d, z, c, i) for i, ((d, t, c), z) in enumerate(zip(files, deflated))]
+    inner_ctrls, inner_units = [], []
+    for k, spec in enumerate(embedded):
+        spec = dict(spec)
+        spec.setdefault("vendor", vendor)
+        spec.setdefault("version", (1, 0, 0))
+        sblock, schains, sunit = _package_parts(spec.pop("files"), **spec)
+        inner_ctrls.append(_field(SISController, sblock + schains + _field(SISDataIndex, struct.pack("<I", 1 + k)), typed=False))
+        inner_units.append(sunit)
     install_block = _field(SISInstallBlock,
-                           _array(SISFileDes, descs) + _array(SISController, []) + _array(SISIf, []))
+                           _array(SISFileDes, descs) + _array(SISController, inner_ctrls) + _array(SISIf, []))
     signed = info + supported_options + supported_langs + prerequisites + properties + install_block
 
     chains = b""
@@ -198,7 +238,7 @@ def build_package(files, *, app_uid: int, vendor: str, app_name: str,
     file_datas = [_field(SISFileData, _field(SISCompressed, struct.pack("<IQ", 1, len(d)) + z), typed=False)
                   for (d, _, _), z in zip(files, deflated)]
     data_unit = _field(SISDataUnit, _array(SISFileData, file_datas), typed=False)
-    data = _field(SISData, _array(SISDataUnit, [data_unit]))
+    data = _field(SISData, _array(SISDataUnit, [data_unit] + inner_units))
 
     # CRC-16-CCITT (poly 0x1021, init 0) over each whole field incl. header + padding; checksums first
     from e32image import crc16, uid_checksum

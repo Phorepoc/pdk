@@ -92,6 +92,9 @@ def main() -> int:
                     help="the package needs an installed package of this uid, version >= x (e.g. 0x2001E61C,4.7.3,Qt)")
     ap.add_argument("--file", action="append", default=[], metavar="HOST=TARGET",
                     help="an extra data file (licence text, notices): host path = target path on the device (!:/resource/Qt/LICENSE.LGPL; / becomes a backslash)")
+    ap.add_argument("--embed", action="append", default=[], metavar="UID,TYPE,MAJ.MIN.BUILD,NAME,HOST=TARGET[,HOST=TARGET...]",
+                    help="an embedded package (makesis @\"x.sis\",(uid)), e.g. 0x10202BE9,sp,1.0.0,Orbit settings,a.txt=c:/private/10202be9/a.txt: a TYPE=SP "
+                    "package of Central Repository files against its ROM stub (CenRepStub.sis)")
     ap.add_argument("--type", choices=["sa", "sp", "pu"], default="sa", help="SIS install type: sa (full), sp (patch), pu (partial upgrade of an installed package)")
     a = ap.parse_args()
     files, uid3, caps = component_files(a.keys, a.arm)
@@ -99,13 +102,19 @@ def main() -> int:
         host, _, target = spec.partition("=")
         files.append((open(host, "rb").read(), target.replace("/", chr(92)), None))
     uid = a.uid if a.uid is not None else uid3
+    embedded = []
+    for spec in a.embed:
+        parts = spec.split(",")
+        efiles = [(open(h, "rb").read(), t.replace("/", chr(92)), None) for h, _, t in (x.partition("=") for x in parts[4:])]
+        embedded.append(dict(files=efiles, app_uid=int(parts[0], 0), app_name=parts[3], version=tuple(int(x) for x in parts[2].split(".")),
+                             install_type={"sa": 0, "sp": 1, "pu": 2}[parts[1]]))
     signer = None if a.unsigned else SIS.make_dev_signer(os.path.join(BUILD, "dev-cert"))
     # ARM: Symbian^3's product UID, else the installer warns "not compatible"
     pkg = SIS.build_package(files, app_uid=uid, vendor=a.vendor, app_name=a.name or a.keys[0], signer=signer, version=tuple(int(x) for x in a.version.split(".")),
                             platform_uid=0x20022E6D if a.arm else None,
                             dependencies=[(int(d.split(",")[0], 0), tuple(int(x) for x in d.split(",")[1].split(".")), d.split(",", 2)[2])
                                           for d in a.depends],
-                            install_type={"sa": 0, "sp": 1, "pu": 2}[a.type])
+                            install_type={"sa": 0, "sp": 1, "pu": 2}[a.type], embedded=embedded)
     out = a.out or os.path.join(BUILD, "sis", a.keys[0] + ".sis")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "wb").write(pkg)

@@ -393,6 +393,10 @@ if [ -n "${BOOT:-}" ]; then
     # Smart Installer: a wrapped application's bootstrap starts ADM.exe (OURS, pheadm) once package 0x2002CCCE is registered
     python3 -c "import sys; sys.path.insert(0, sys.argv[2]); from sis import build_rom_stub; open(sys.argv[1],'wb').write(build_rom_stub(pkg_uid=0x2002CCCE, vendor='Phorepoc', name='Application installer', version=(1,0,0)))" "$BUILD/rom/adm_stub.sis" "$TOOLS/emitter" || exit 1
     printf -- '--data\nsystem\\install\\adm_stub.sis=%s\n' "$BUILD/rom/adm_stub.sis"
+    # Central Repository's release stub (mw.securitysrv StubSIS.iby: System\Install\CenRepStub.sis, package 0x10202be9 listing
+    # z:\sys\bin\centralrepositorysrv.exe): registers CenRep's SID, so a TYPE=SP package of repository files installs into
+    # c:\private\10202be9\ (SWI's protected-directory rule adds a base package's SIDs to the augmenting package's own)
+    printf -- '--data\nsystem\\install\\CenRepStub.sis=%s\n' "$SYMBIAN/symbian-rcl3/oss.FCL.sf.mw.securitysrv/pkiutilities/StubSIS/CenRepStub.sis"
     # PHOREPOC_QT48=1: Qt's ROM stub (qt.iby: System\Install\qt_stub.sis) -- registers package 0x2001E61C at 4.8.7 so
     # Qt apps' SIS dependency "Qt >= 4.7.x" is met
     if [ "${PHOREPOC_QT48:-}" = 1 ]; then
