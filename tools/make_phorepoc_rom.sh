@@ -397,6 +397,10 @@ if [ -n "${BOOT:-}" ]; then
     # z:\sys\bin\centralrepositorysrv.exe): registers CenRep's SID, so a TYPE=SP package of repository files installs into
     # c:\private\10202be9\ (SWI's protected-directory rule adds a base package's SIDs to the augmenting package's own)
     printf -- '--data\nsystem\\install\\CenRepStub.sis=%s\n' "$SYMBIAN/symbian-rcl3/oss.FCL.sf.mw.securitysrv/pkiutilities/StubSIS/CenRepStub.sis"
+    # the Software Component Registry's provisioned database (swiconfig's usif scr.db): SCR's helper copies it to c:\sys\install\scr\scr.db on
+    # first use (scrhelperserver.cpp CopyDbFromROMToSystemL, KScrDbRomPath z:\sys\install\scr\provisioned\scr.db). A ROM file, as in 2010: an installed package
+    # cannot write below \sys\install. Orbit's scrserver (USIF) dies with -12 (path not found) without it.
+    printf -- '--data\nsys\\install\\scr\\provisioned\\scr.db=%s\n' "$SYM10/oss.FCL.sf.mw.appinstall/installationservices/swiconfig/usif/scr/scr.db"
     # PHOREPOC_QT48=1: Qt's ROM stub (qt.iby: System\Install\qt_stub.sis) -- registers package 0x2001E61C at 4.8.7 so
     # Qt apps' SIS dependency "Qt >= 4.7.x" is met
     if [ "${PHOREPOC_QT48:-}" = 1 ]; then
