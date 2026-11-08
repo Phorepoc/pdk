@@ -401,8 +401,6 @@ if [ -n "${BOOT:-}" ]; then
     # first use (scrhelperserver.cpp CopyDbFromROMToSystemL, KScrDbRomPath z:\sys\install\scr\provisioned\scr.db). A ROM file, as in 2010: an installed package
     # cannot write below \sys\install. Orbit's scrserver (USIF) dies with -12 (path not found) without it.
     printf -- '--data\nsys\\install\\scr\\provisioned\\scr.db=%s\n' "$SYM10/oss.FCL.sf.mw.appinstall/installationservices/swiconfig/usif/scr/scr.db"
-    # Orbit's Hb reads the typeface metrics from z:\resource\fonts (hbtypefacexmlparser_p.h hard-codes the drive): ROM files, as in S^4
-    for n in nokia_sans nokia_sans_title_semibold ocr_a_extended series_60_sans series_60_sans_titlesmbd series_60_zdigi; do f="${PHOREPOC_HB_RESOURCES:-}/variant/typeface_metrics_$n.xml"; if [ -f "$f" ]; then printf -- '--data\nresource\\fonts\\typeface_metrics_%s.xml=%s\n' "$n" "$f"; fi; done
     # PHOREPOC_QT48=1: Qt's ROM stub (qt.iby: System\Install\qt_stub.sis) -- registers package 0x2001E61C at 4.8.7 so
     # Qt apps' SIS dependency "Qt >= 4.7.x" is met
     if [ "${PHOREPOC_QT48:-}" = 1 ]; then
