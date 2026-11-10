@@ -113,8 +113,8 @@ def _cap_override(zname):
 
 # EXE heap/stack limits: an mmp sets EPOCHEAPSIZE for the emulator only (#ifdef WINS: WSERV's 3 MB), a device
 # ROM raises it at rombuild time (iby HEAPMAX).  core/registry/rom_heap.tsv holds Phorepoc's own values (name, heap min,
-# heap max, stack; hex); every EXE gets max(its own, the table's), and an unlisted EXE's heap max is at least
-# 2 MB.  ROM_HEAP_LIMITS=0 = the image's own values.
+# heap max, stack; hex), a layer's registry/rom_heap.tsv overrides lines of it; every EXE gets max(its own, the
+# table's), and an unlisted EXE's heap max is at least 2 MB.  ROM_HEAP_LIMITS=0 = the image's own values.
 _LIMITS = None
 def _exe_limits(img):
     global _LIMITS
@@ -124,10 +124,17 @@ def _exe_limits(img):
     if _LIMITS is None:
         _LIMITS = {}
         t = os.path.join(os.environ.get("PHOREPOC_CORE") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "core"), "registry", "rom_heap.tsv")
-        for line in open(t, encoding="utf-8"):
-            if line.strip() and not line.startswith("#"):
-                n, a, b, c = line.split()
-                _LIMITS[n.lower()] = (int(a, 16), int(b, 16), int(c, 16))
+        # then each layer's own registry/rom_heap.tsv (PHOREPOC_ADAPTATIONS order, a later line wins): a board sizes its
+        # limits to its own RAM without changing the defaults the other boards get
+        tables = [t] + [os.path.join(a, "registry", "rom_heap.tsv")
+                        for a in os.environ.get("PHOREPOC_ADAPTATIONS", "").split(":") if a]
+        for t in tables:
+            if not os.path.isfile(t):
+                continue
+            for line in open(t, encoding="utf-8"):
+                if line.strip() and not line.startswith("#"):
+                    n, a, b, c = line.split()
+                    _LIMITS[n.lower()] = (int(a, 16), int(b, 16), int(c, 16))
     name = img.zname.replace("/", "\\").split("\\")[-1].lower()
     nmin, nmax, nstk = _LIMITS.get(name, (0, 0x200000, 0))
     return dict(stack_size=max(stk, nstk), heap_min=max(hmin, nmin), heap_max=max(hmax, nmax))
