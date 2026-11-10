@@ -51,6 +51,10 @@ def component_files(keys, arm, sis=True):
         rom = C.rom_name(key, m.targettype)
         # the Symbian^4 set (components_s4, Qt 4.8) builds into its own root: BUILD/qt48/x32img
         d = X32_S4 if (not arm and key in S4_KEYS) else (ARM_IMG if arm else X32)
+        if not arm and not comp.get("sis"):
+            # without sis=True the image keeps its %rip->static displacements for the ROM prelinker only: loaded from RAM, its
+            # first write to a static lands next to the code (build_mmp_x32.py KX32PcRelRelocType)
+            sys.exit(f"make_sis: {key} has no sis=True in its registry entry: its x32 image cannot be loaded from RAM")
         img = open(os.path.join(d, rom), "rb").read()
         if not arm and os.environ.get("ALLCAPS") != "1" and len(img) >= 0x90:
             # x32 images are built with every capability; the ROM builder stamps the mmp's (x32_rom_args.py caps.tsv). An installed
