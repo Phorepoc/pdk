@@ -207,7 +207,7 @@ if [ -n "${BOOT:-}" ]; then
   # (AknExtendedFader/rom), which has the nHD panel landscape-native, hence its 270/0
   [ "${ROM_ARCH:-}" = arm ] && FADER_INI=("SCR_WIDTH1 360" "SCR_HEIGHT1 640" "SCR_ROTATION1 0" "SCR_TWIP_WIDTH1 2235" "SCR_TWIP_HEIGHT1 3973"
                                     "S60_SCR_STYLE_NAME1 QHDTOUCH" "SCR_WIDTH2 640" "SCR_HEIGHT2 360" "SCR_ROTATION2 90" "SCR_TWIP_WIDTH2 3973"
-                                    "SCR_TWIP_HEIGHT2 2235" "S60_SCR_SOFTKEY_LOCATION2 right" "S60_SCR_STYLE_NAME2 QHDTOUCH"
+                                    "SCR_TWIP_HEIGHT2 2235" "S60_SCR_SOFTKEY_LOCATION1 bottom" "S60_SCR_SOFTKEY_LOCATION2 bottom" "S60_SCR_STYLE_NAME2 QHDTOUCH"
                                     "S60_HWSTATE_KEYCODE0 EKeyDeviceB" "S60_HWSTATE_SCREENMODE0 1" "S60_HWSTATE_ALT_SCREENMODE0 2"
                                     "S60_HWSTATE_KEYCODE1 EKeyDeviceA" "S60_HWSTATE_SCREENMODE1 2" "S60_HWSTATE_ALT_SCREENMODE1 1" "${FADER_INI[@]}")
   # the board's own window-server lines (os/board/wsini.txt, one wsini line per row, # = comment): the screen modes of a board whose
