@@ -26,6 +26,7 @@ from paths import BUILD, resolve  # noqa: E402
 import components as C  # noqa: E402
 import mmp as MMP  # noqa: E402
 import sis as SIS  # noqa: E402
+import e32image as E32  # noqa: E402
 
 X32 = os.path.join(BUILD, "x32img")
 ARM_IMG = os.path.join(BUILD, "arm", "img")
@@ -51,6 +52,14 @@ def component_files(keys, arm, sis=True):
         # the Symbian^4 set (components_s4, Qt 4.8) builds into its own root: BUILD/qt48/x32img
         d = X32_S4 if (not arm and key in S4_KEYS) else (ARM_IMG if arm else X32)
         img = open(os.path.join(d, rom), "rb").read()
+        if not arm and os.environ.get("ALLCAPS") != "1" and len(img) >= 0x90:
+            # x32 images are built with every capability; the ROM builder stamps the mmp's (x32_rom_args.py caps.tsv). An installed
+            # image gets the same: its header and the SIS file description must both say the mmp's CAPABILITY, or SWI refuses the
+            # file ("Executable capabilities do not match header capabilities", -30475)
+            img = bytearray(img)
+            struct.pack_into("<II", img, 0x88, m.cap_bits() & 0xFFFFFFFF, 0)
+            E32.set_header_crc(img)
+            img = bytes(img)
         img_caps = struct.unpack_from("<I", img, 0x88)[0]  # E32ImageHeaderV SSecurityInfo.iCaps, first word
         if key == keys[0]:
             uid3, caps = struct.unpack_from("<I", img, 8)[0], img_caps
