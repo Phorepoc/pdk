@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Phorepoc/pdk/lib/device"
@@ -36,7 +37,41 @@ func init() {
 // SlotBMax mirrors the device's slot-B size limit.
 const SlotBMax = 1024 << 20
 
-type Driver struct{ live liveState }
+type Driver struct {
+	live liveState
+	scr  screenState
+}
+
+// screenState is what the phone's log says about the display, for the touch op: a tap on a blanked screen wakes it
+// (the lights controller consumes the pointer down, so the app sees a stray up), and in landscape the OS pixel space
+// is the portrait panel rotated (wserv: x,y -> y,359-x).
+type screenState struct {
+	off       atomic.Bool
+	landscape atomic.Bool
+}
+
+var (
+	reScreenOff  = regexp.MustCompile(`\[EKERN\]\[power\] screen OFF done`)
+	reScreenOn   = regexp.MustCompile(`\[EKERN\]\[disp\] HAL display state ON`)
+	reLayoutRect = regexp.MustCompile(`layout switch\): application rect (\d+)x(\d+)`)
+)
+
+func (d *Driver) noteScreen(line string) {
+	switch {
+	case reBoot.MatchString(line):
+		d.scr.off.Store(false)
+		d.scr.landscape.Store(false)
+	case reScreenOff.MatchString(line):
+		d.scr.off.Store(true)
+	case reScreenOn.MatchString(line):
+		d.scr.off.Store(false)
+	}
+	if m := reLayoutRect.FindStringSubmatch(line); m != nil {
+		w, _ := strconv.Atoi(m[1])
+		h, _ := strconv.Atoi(m[2])
+		d.scr.landscape.Store(w > h)
+	}
+}
 
 func (*Driver) Name() string { return "phlink" }
 
@@ -101,7 +136,8 @@ func (*Driver) BootStart(line string) bool { return reBoot.MatchString(line) }
 
 func hexU(s string) uint64 { v, _ := strconv.ParseUint(s, 16, 64); return v }
 
-func (*Driver) Classify(line string) []device.Event {
+func (d *Driver) Classify(line string) []device.Event {
+	d.noteScreen(line)
 	var ev []device.Event
 	add := func(kind string, data map[string]any) { ev = append(ev, device.Event{Kind: kind, Data: data}) }
 	switch {

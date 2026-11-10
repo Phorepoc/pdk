@@ -75,7 +75,7 @@ script one) and the live screen as a video (`device shot` in a loop; the web pag
 | `rearm`, `reboot` | another slot B trial / a watchdog reset |
 | `peek`, `poke`, `dump` | physical memory and registers |
 | `screenshot` {which, store, live} | the OS screen, the panel layer or both, as PNG |
-| `key`, `text`, `touch`, `swipe` | input (scan codes; pointer in screen pixels) |
+| `key`, `text`, `touch`, `swipe` | input (scan codes; pointer in screen pixels of the current orientation, tracked from the phone log; `raw=true` = portrait OS pixels; a touch on a blanked screen first wakes it with the power key) |
 | `fs_list`, `fs_read`, `fs_write`, `fs_delete` | the phone's file system |
 | `tty_list`, `tty_new`, `tty_read`, `tty_write`, `tty_resize`, `tty_kill` | the phone's shells (the phetty daemon) |
 | `profile`, `hotspots`, `threads` | CPU per thread, RAM per process, sampled program counters, thread states |

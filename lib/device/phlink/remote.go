@@ -103,22 +103,24 @@ func remoteOps() []device.OpSpec {
 			Description: "Type text as key presses (all printable ASCII, Shift where the layout needs it, enter via \\n). A failure names the character and position. Uses the scan codes; what appears depends on the focused editor's input mode.",
 			Params:      []device.Param{{Name: "text", Type: "string", Required: true, Description: "text to type"}}},
 		{Name: "touch", Capability: "input",
-			Description: "Touch the screen at x,y in OS screen pixels (360x640). action = tap (default) | down | move | up.",
+			Description: "Touch the screen at x,y in screen pixels of the CURRENT orientation (portrait 360x640; landscape 640x360, mapped to the panel as wserv rotates it; raw=true = always portrait OS pixels). A blanked screen is woken first with the power key (it eats every pointer event). action = tap (default) | down | move | up.",
 			Params: []device.Param{
 				{Name: "x", Type: "int", Required: true, Description: "0..359"},
 				{Name: "y", Type: "int", Required: true, Description: "0..639"},
 				{Name: "action", Type: "string", Description: "tap | down | move | up"},
 				{Name: "hold_ms", Type: "int", Description: "tap duration (default 200 ms: a game that polls the pointer once per frame misses an 80 ms tap; >800 = long tap)"},
 				{Name: "panel", Type: "bool", Description: "x,y are panel pixels (720x1440: top bar 0-79, OS 80-1359, soft keys 1360+) -- reaches the kernel bars and the golden menu"},
+				{Name: "raw", Type: "bool", Description: "x,y are portrait OS pixels even in landscape (no orientation mapping, no screen wake)"},
 			}},
 		{Name: "swipe", Capability: "input",
-			Description: "Drag from x1,y1 to x2,y2 (OS screen pixels) over ms milliseconds.",
+			Description: "Drag from x1,y1 to x2,y2 (screen pixels of the current orientation, as for touch) over ms milliseconds.",
 			Params: []device.Param{
 				{Name: "x1", Type: "int", Required: true}, {Name: "y1", Type: "int", Required: true},
 				{Name: "x2", Type: "int", Required: true}, {Name: "y2", Type: "int", Required: true},
 				{Name: "ms", Type: "int", Description: "duration (default 300)"},
 				{Name: "steps", Type: "int", Description: "move events between down and up (default 12; a finger at 60 Hz = ms*60/1000)"},
 				{Name: "panel", Type: "bool", Description: "coordinates are panel pixels (720x1440), as for touch"},
+				{Name: "raw", Type: "bool", Description: "coordinates are portrait OS pixels even in landscape, as for touch"},
 			}},
 	}
 }
@@ -423,6 +425,34 @@ func clampXY(x, y uint64) (uint32, error) {
 	return uint32(x) | uint32(y)<<16, nil
 }
 
+// toPortrait maps screen coordinates of the current orientation to the portrait OS pixels the phone's 'T' command takes.
+// Landscape is the portrait buffer rotated: raw (x,y) shows at (y, 359-x), so landscape (lx,ly) is raw (359-ly, lx).
+// A coordinate outside the landscape 640x360 screen is passed through for clampXY to refuse.
+func (d *Driver) toPortrait(x, y uint64) (uint64, uint64) {
+	if d.scr.landscape.Load() && x < ScreenH && y < ScreenW {
+		return ScreenW - 1 - y, x
+	}
+	return x, y
+}
+
+// wake presses the power key when the log says the display is off and waits for it to come on: a blanked screen
+// eats every pointer event (the lights handler consumes the down, the app sees at most a stray up), so a tap cannot
+// wake it and a lost tap on a dark screen looks like a dropped down.
+func (d *Driver) wake(ctx context.Context, l device.Link) error {
+	if !d.scr.off.Load() {
+		return nil
+	}
+	if err := d.press(ctx, l, Keys["power"], "press", 100*time.Millisecond); err != nil {
+		return err
+	}
+	for i := 0; i < 60 && d.scr.off.Load(); i++ {
+		if err := sleep(ctx, 50*time.Millisecond); err != nil {
+			return err
+		}
+	}
+	return sleep(ctx, 700*time.Millisecond)
+}
+
 func (d *Driver) touch(ctx context.Context, l device.Link, xy uint32, action string, hold time.Duration, fl uint32) error {
 	switch action {
 	case "down":
@@ -578,6 +608,15 @@ func (d *Driver) execRemote(ctx context.Context, l device.Link, op string, a dev
 			return nil, true, err
 		}
 		panel, _ := a["panel"].(bool)
+		raw, _ := a["raw"].(bool)
+		if !panel && !raw {
+			if act := str("action"); act == "" || act == "tap" || act == "down" {
+				if err := d.wake(ctx, l); err != nil { // first: waking can rotate the screen
+					return nil, true, err
+				}
+			}
+			x, y = d.toPortrait(x, y)
+		}
 		var fl uint32
 		var xy uint32
 		if panel {
@@ -606,6 +645,13 @@ func (d *Driver) execRemote(ctx context.Context, l device.Link, op string, a dev
 			p[i] = v
 		}
 		panel, _ := a["panel"].(bool)
+		if raw, _ := a["raw"].(bool); !panel && !raw {
+			if err := d.wake(ctx, l); err != nil {
+				return nil, true, err
+			}
+			p[0], p[1] = d.toPortrait(p[0], p[1])
+			p[2], p[3] = d.toPortrait(p[2], p[3])
+		}
 		var fl uint32
 		if panel {
 			fl = 0x10
