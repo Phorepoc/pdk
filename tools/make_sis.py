@@ -23,7 +23,6 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
 from paths import BUILD, resolve  # noqa: E402
-import components as C  # noqa: E402
 import mmp as MMP  # noqa: E402
 import sis as SIS  # noqa: E402
 import e32image as E32  # noqa: E402
@@ -42,6 +41,7 @@ def component_files(keys, arm, sis=True):
     Targets are Windows paths on the install drive (!:\sys\bin\x.exe); with sis=False the ROM paths themselves (sys\bin\x.exe,
     an application registration stays in private\10003a3f\apps). Shared with tools/addon.py: an add-on archive and a SIS
     place a component's files the same way."""
+    import components as C  # the component registry (loads the toolchain tree): not needed by a --data-only package
     root = "!:\\" if sis else ""
     files = []
     uid3 = caps = None
@@ -91,7 +91,8 @@ def component_files(keys, arm, sis=True):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("keys", nargs="+", help="components; the first names the package (an app + its DLLs)")
+    ap.add_argument("keys", nargs="*", help="components; the first names the package (an app + its DLLs)")
+    ap.add_argument("--data-only", action="store_true", help="no components: a package of --file data only (a theme); needs --uid and --name")
     ap.add_argument("--uid", type=lambda x: int(x, 0), default=None, help="package UID (default: the image's UID3)")
     ap.add_argument("--name", default=None)
     ap.add_argument("--out", default=None)
@@ -105,12 +106,24 @@ def main() -> int:
                     help="the package needs an installed package of this uid, version >= x (e.g. 0x2001E61C,4.7.3,Qt)")
     ap.add_argument("--file", action="append", default=[], metavar="HOST=TARGET",
                     help="an extra data file (licence text, notices): host path = target path on the device (!:/resource/Qt/LICENSE.LGPL; / becomes a backslash)")
+    ap.add_argument("--dir", action="append", default=[], metavar="HOSTDIR=TARGETDIR",
+                    help="every file directly in a host directory, as --file HOSTDIR/f=TARGETDIR/f (a theme's images: too many for one command line)")
     ap.add_argument("--embed", action="append", default=[], metavar="UID,TYPE,MAJ.MIN.BUILD,NAME,HOST=TARGET[,HOST=TARGET...]",
                     help="an embedded package (makesis @\"x.sis\",(uid)), e.g. 0x10202BE9,sp,1.0.0,Orbit settings,a.txt=c:/private/10202be9/a.txt: a TYPE=SP "
                     "package of Central Repository files against its ROM stub (CenRepStub.sis)")
     ap.add_argument("--type", choices=["sa", "sp", "pu"], default="sa", help="SIS install type: sa (full), sp (patch), pu (partial upgrade of an installed package)")
     a = ap.parse_args()
-    files, uid3, caps = component_files(a.keys, a.arm)
+    if a.data_only:
+        if a.keys or a.uid is None or not a.name or not a.out:
+            ap.error("--data-only takes no components and needs --uid, --name and --out")
+        files, uid3, caps = [], None, 0
+    elif not a.keys:
+        ap.error("no components (--data-only for a package of data files only)")
+    else:
+        files, uid3, caps = component_files(a.keys, a.arm)
+    for spec in a.dir:
+        host, _, target = spec.partition("=")
+        a.file += [os.path.join(host, f) + "=" + target.rstrip("/") + "/" + f for f in sorted(os.listdir(host)) if os.path.isfile(os.path.join(host, f))]
     for spec in a.file:
         host, _, target = spec.partition("=")
         files.append((open(host, "rb").read(), target.replace("/", chr(92)), None))

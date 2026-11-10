@@ -14,7 +14,7 @@
 #   ARCHES="arm x32"                   the architectures it is built for (one SIS set each)
 #   IMAGE=ghcr.io/phorepoc/web         the toolchain image (default ghcr.io/phorepoc/base:latest)
 #   REPOS_x32="cxxrt"                  repositories it needs on top of core, per architecture (built at main)
-#   COMPONENTS_arm="phevdecsw pheffmpeg"  what to build, providers first (also those of REPOS the package needs)
+#   COMPONENTS_arm="phevdecsw pheffmpeg"  what to build, providers first (also those of REPOS the package needs); empty = a data-only package
 #   ENV="PHOREPOC_QT48=1"              build settings the steps see (KEY=value words; phe passes the known ones to the toolchain)
 #   ADDON=0                            no add-on archives (default: one per architecture, below)
 #
@@ -60,7 +60,7 @@ jobs:
           [ -n "$NAME" ] && [ -n "$ARCHES" ] || { echo "::error::package.conf: NAME and ARCHES are required"; exit 1; }
           m=$(for a in $ARCHES; do
                 eval "r=\${REPOS_$a:-}; c=\${COMPONENTS_$a:-}"
-                [ -n "$c" ] || { echo "::error::package.conf: no COMPONENTS_$a" >&2; exit 1; }
+                # an empty COMPONENTS_<arch> = a data-only package (a theme): no component build, no add-on archive
                 jq -nc --arg a "$a" --arg r "$r" --arg c "$c" '{arch: $a, repos: $r, components: $c}'
               done | jq -sc '{include: .}')
           echo "$m"
@@ -120,6 +120,7 @@ jobs:
           done
 
       - name: Components
+        if: matrix.components != ''
         run: |
           phe component resources ${{ matrix.components }} > resources-1.log 2>&1 || true
           phe source casefix -a
@@ -135,7 +136,7 @@ jobs:
           mkdir -p out && cp build/sis/*.sis out/
 
       - name: The add-on archive (phe image addon)
-        if: needs.conf.outputs.addon != '0'
+        if: needs.conf.outputs.addon != '0' && matrix.components != ''
         run: |
           phe image addon -arch "$PHOREPOC_ARCH" -name "${{ needs.conf.outputs.name }}" ${{ matrix.components }}
           sudo chown -R "$(id -u):$(id -g)" build
