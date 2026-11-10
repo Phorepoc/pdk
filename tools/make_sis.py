@@ -89,6 +89,16 @@ def component_files(keys, arm, sis=True):
     return files, uid3, caps
 
 
+def check_targets(files) -> None:
+    """Refuse a target that is not a device path: '<drive or !>:/...' with no second drive in it. A Windows shell (Git Bash's
+    MSYS argument conversion) rewrites '!:/resource/x' into '!;C:/Program Files/Git/resource/x', which the installer
+    answers only with KErrSISInvalidTargetFile (-10146) at install time."""
+    bad = [t for _, t, _ in files if len(t) < 3 or t[1:3] != ":" + chr(92) or ":" in t[2:] or not (t[0] == "!" or t[0].isalpha())]
+    if bad:
+        raise SystemExit("make_sis: not a device target path (a host path got into it; from Git Bash set MSYS2_ARG_CONV_EXCL='*'): "
+                         + ", ".join(bad[:5]))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("keys", nargs="*", help="components; the first names the package (an app + its DLLs)")
@@ -127,11 +137,13 @@ def main() -> int:
     for spec in a.file:
         host, _, target = spec.partition("=")
         files.append((open(host, "rb").read(), target.replace("/", chr(92)), None))
+    check_targets(files)
     uid = a.uid if a.uid is not None else uid3
     embedded = []
     for spec in a.embed:
         parts = spec.split(",")
         efiles = [(open(h, "rb").read(), t.replace("/", chr(92)), None) for h, _, t in (x.partition("=") for x in parts[4:])]
+        check_targets(efiles)
         embedded.append(dict(files=efiles, app_uid=int(parts[0], 0), app_name=parts[3], version=tuple(int(x) for x in parts[2].split(".")),
                              install_type={"sa": 0, "sp": 1, "pu": 2}[parts[1]]))
     signer = None if a.unsigned else SIS.make_dev_signer(os.path.join(BUILD, "dev-cert"))
