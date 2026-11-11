@@ -59,6 +59,9 @@ func checkBase(p *Provenance, src baseSource) error {
 	}
 	sort.Strings(repos)
 	for _, r := range repos {
+		if r == boardRepo {
+			continue // the release builds the board repository at its own commit; an old self-pin says nothing
+		}
 		pin := lock[r]
 		have, ok := p.Repos[r]
 		if !ok {

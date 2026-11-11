@@ -5,7 +5,8 @@
 # board_lock.sh <board repository> -- write <board repository>/board.lock: the commit of every repository the board's
 # release is built from (the pdk, core and its board.conf REPOS), taken from the checkouts next to this pdk. The release
 # workflow (.github/workflows/board-image.yml) builds exactly these commits. Run it before tagging a release; every
-# commit must be pushed (the workflow fetches them from GitHub).
+# commit must be pushed (the workflow fetches them from GitHub). The board repository itself gets no line: the release
+# builds it at the commit that triggered the run (board-setup), so a line for it could only go stale.
 set -eu
 dir="$(cd "${1:?usage: board_lock.sh <board repository>}" && pwd)"
 [ -f "$dir/board.conf" ] || { echo "no board.conf in $dir" >&2; exit 1; }
@@ -15,6 +16,7 @@ out="$dir/board.lock"
 {
 	echo "# repository commit -- what the $NAME release is built from (pdk tools/board_lock.sh)"
 	for r in pdk core $REPOS; do
+		[ "$r" = "$(basename "$dir")" ] && continue	# the board repository: built at its own commit
 		[ -d "$root/$r/.git" ] || { echo "no checkout $root/$r" >&2; exit 1; }
 		if [ -n "$(git -C "$root/$r" status --porcelain --untracked-files=no)" ]; then
 			echo "warning: $r has uncommitted changes (the lock pins its last commit)" >&2
