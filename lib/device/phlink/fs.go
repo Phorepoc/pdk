@@ -37,6 +37,10 @@ const (
 	ttyOpResize = 9
 	ttyOpKill   = 10
 
+	// type_chars: phfs.exe sends each character to the focused window group as a key event with its code and no scan
+	// code, so the FEP's keypad mode does not change it (the text op's scan codes go through ITU-T multitap)
+	keyOpText = 14
+
 	fsMaxChunk = 3072 // a write chunk / read length the link takes in one request
 	// fsHeaderGap: between a file request's header and its payload, for a log transfer in flight to finish (a 1 KB
 	// bulk IN takes well under a millisecond at high speed; 20 ms leaves room for a busy DFC thread)
@@ -85,6 +89,11 @@ func fsOps() []device.OpSpec {
 				{Name: "rows", Type: "int", Required: true}}},
 		{Name: "tty_kill", Capability: "tty", Description: "Close a tty and its shell.",
 			Params: []device.Param{{Name: "id", Type: "int", Required: true}}},
+		{Name: "type_chars", Capability: "files",
+			Description: "Type text as characters through the window server (key events with the character code, no scan " +
+				"code; needs phfs.exe with type support). Unlike text, the FEP's keypad mode does not change them: digits, " +
+				"'!', '#' arrive as written. A line feed = Enter. Returns {typed}.",
+			Params: []device.Param{{Name: "text", Type: "string", Required: true, Description: "text to type (max 400 bytes)"}}},
 	}
 }
 
@@ -245,6 +254,22 @@ func (d *Driver) execFS(ctx context.Context, l device.Link, op string, a device.
 		return map[string]any{"deleted": p}, true, nil
 	case "tty_list", "tty_new", "tty_read", "tty_write", "tty_resize", "tty_kill":
 		return d.execTty(ctx, l, op, a)
+	case "type_chars":
+		t, err := a.String("text")
+		if err != nil {
+			return nil, true, err
+		}
+		if len(t) > 400 {
+			return nil, true, fmt.Errorf("type_chars: %d bytes, at most 400 per call", len(t))
+		}
+		data, err := d.fsRequest(ctx, l, keyOpText, []byte(t))
+		if err != nil {
+			return nil, true, err
+		}
+		if len(data) < 4 {
+			return nil, true, fmt.Errorf("type_chars: short reply (%d bytes): phfs.exe without type support?", len(data))
+		}
+		return map[string]any{"typed": binary.LittleEndian.Uint32(data)}, true, nil
 	}
 	return nil, false, nil
 }
