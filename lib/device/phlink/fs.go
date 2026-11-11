@@ -38,7 +38,7 @@ const (
 	ttyOpKill   = 10
 
 	// type_chars: phfs.exe sends each character to the focused window group as a key event with its code and no scan
-	// code, so the FEP's keypad mode does not change it (the text op's scan codes go through ITU-T multitap)
+	// code (EModifierPureKeycode by default): the FEP passes punctuation such as ! that the text op's scan codes lose
 	keyOpText = 14
 
 	fsMaxChunk = 3072 // a write chunk / read length the link takes in one request
