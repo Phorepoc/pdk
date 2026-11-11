@@ -1,0 +1,35 @@
+# Copyright The Phorepoc Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# index-refresh -- start the Catalogue index's publish workflow (Phorepoc/index, publish.yml) after a release, so a
+# "latest" listing picks the release up at once. GitHub runs scheduled workflows best-effort (the hourly cron skipped
+# 4.5 h on 2026-11-11), so a release must not wait for it.
+#
+# Starting a workflow in another repository needs a token with Actions: write on Phorepoc/index; a run's own
+# GITHUB_TOKEN only reaches its own repository. The callers pass secrets.INDEX_DISPATCH_TOKEN: while that secret does
+# not exist the step only prints a notice (the hourly cron still runs).
+#
+#   - uses: Phorepoc/pdk/.github/actions/index-refresh@main
+#     with:
+#       token: ${{ secrets.INDEX_DISPATCH_TOKEN }}
+name: index-refresh
+description: Start the Catalogue index publish after a release
+inputs:
+  token:
+    description: a token with Actions write access to Phorepoc/index (empty = notice only)
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        REPO: ${{ github.repository_owner }}/index
+      run: |
+        if [ -z "$GH_TOKEN" ]; then
+          echo "::notice::no INDEX_DISPATCH_TOKEN: the index picks this release up on its next scheduled publish"
+          exit 0
+        fi
+        # a failed start must not fail the release that is already out
+        gh workflow run publish.yml -R "$REPO" --ref main || echo "::warning::could not start $REPO publish"
