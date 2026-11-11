@@ -99,6 +99,8 @@ runs:
     - name: The board's release files (board.conf RELEASE)
       if: inputs.images == 'true' && inputs.core_arch == ''
       shell: bash
+      # device.txt states the image: core= (phe reads core's commit time, x32_rom_args.core_version) and image= (this release)
+      env: { PHOREPOC_IMAGE_VERSION: "${{ inputs.version }}" }
       run: phe image release -b "${{ inputs.board }}" -o "$PWD/out"
 
     - name: Stub audit (every image the board ships)

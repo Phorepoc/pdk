@@ -28,7 +28,7 @@ var passThrough = []string{
 	"SECONDARY_IMAGE", "PHOREPOC_S4", "PHOREPOC_QT48", "PHETTY", "CENREP_EXTRA", "ROM_DATA_EXTRA", "ROM_ADDON", "UTC_OFFSET",
 	"WEBFONTS", "THEMES", "X32_LD", "X32_DEFS", "X32_LIBS", "X32_INCLUDE", "X32_FULLERR", "PRUNE_UNRESOLVED", "ROM_HEAP_LIMITS",
 	"TRACE", "SCREEN", "SCALE", "DBG", "KCLEAN", "ARM_VFP", "ARM_CPU_FLAGS", "ALF_TRACE", "ALF_TIMING", "ALF_LOG", "ALF_RC",
-	"PHOREPOC_PACKAGE_VERSION", "OBJCACHE_EXPLAIN",
+	"PHOREPOC_PACKAGE_VERSION", "OBJCACHE_EXPLAIN", "PHOREPOC_CORE_VERSION", "PHOREPOC_IMAGE_VERSION",
 }
 
 // Env is where the pieces live.
@@ -150,6 +150,13 @@ func (e *Env) dockerArgs(tty bool, cmd []string) ([]string, error) {
 	for _, v := range passThrough {
 		if val, ok := os.LookupEnv(v); ok {
 			args = append(args, "-e", v+"="+val)
+		}
+	}
+	// the core version an image states in device.txt (tools/x32_rom_args.py core_version): read here, where git
+	// sees the core checkout, unless PHOREPOC_CORE_VERSION already says it
+	if _, ok := os.LookupEnv("PHOREPOC_CORE_VERSION"); !ok {
+		if v := CoreVersion(e.Core); v != "" {
+			args = append(args, "-e", "PHOREPOC_CORE_VERSION="+v)
 		}
 	}
 	// ARM images use the VFP hardware (softfp ABI) for the registry's vfp=True components unless ARM_VFP=0 says otherwise (the x32 build ignores it)
@@ -432,4 +439,17 @@ func (e *Env) Release(board, out string) error {
 		"PHOREPOC_BUILD="+e.Build, "PHOREPOC_ARCH="+b.Arch, "PHOREPOC_BOARD="+b.Name, "OUT="+out,
 		"PHOREPOC_ADAPTATIONS="+strings.Join(e.Adaptations, string(os.PathListSeparator)))
 	return stdio(c).Run()
+}
+
+// CoreVersion is the core checkout's version as an image states it: the HEAD commit's committer time in UTC,
+// YYYY.MM.DD.HHMMSS (core has no tags; its main branch is linear, so the value grows with each commit and compares
+// field by field as numbers). "" when git cannot tell.
+func CoreVersion(core string) string {
+	c := exec.Command("git", "-C", core, "log", "-1", "--format=%cd", "--date=format-local:%Y.%m.%d.%H%M%S")
+	c.Env = append(os.Environ(), "TZ=UTC")
+	out, err := c.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }

@@ -23,7 +23,7 @@ import glob
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import OS_ROOT, SYMBIAN, BUILD, has_layer, resolve  # noqa: E402
+from paths import CORE, OS_ROOT, SYMBIAN, BUILD, has_layer, resolve  # noqa: E402
 import components as C  # noqa: E402
 import mmp as MMP  # noqa: E402
 
@@ -102,12 +102,56 @@ def host_path(p: str) -> str:
     return resolve(p)
 
 
+DEVICE_TXT = "resource\\phorepoc\\device.txt"
+
+
+def core_version() -> str:
+    """The core the image is built from, as a comparable version: its commit's committer time in UTC,
+    `YYYY.MM.DD.HHMMSS` (core has no tags; main is linear, so the time grows with every commit). pheget compares it
+    field by field, as numbers, with a listing's `compatibility.min_core`. PHOREPOC_CORE_VERSION overrides it;
+    "" when neither it nor git can tell (the image then states no core version and pheget checks nothing)."""
+    v = os.environ.get("PHOREPOC_CORE_VERSION", "").strip()
+    if v:
+        return v
+    import subprocess
+    try:
+        r = subprocess.run(["git", "-C", CORE, "log", "-1", "--format=%cd",
+                            "--date=format-local:%Y.%m.%d.%H%M%S"],
+                           capture_output=True, text=True, env={**os.environ, "TZ": "UTC"}, timeout=30)
+        return r.stdout.strip() if r.returncode == 0 else ""
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def device_txt(host: str) -> str:
+    """The adaptation's device.txt (board=, arch=) plus what this image is: `core=<core_version()>` and
+    `image=<PHOREPOC_IMAGE_VERSION>` (the board release, e.g. v0.5.2), written into the build tree."""
+    with open(host, "rb") as fh:
+        text = fh.read().decode("utf-8", "replace")
+    keep = [l for l in text.splitlines() if l.split("=", 1)[0].strip() not in ("core", "image")]
+    core, image = core_version(), os.environ.get("PHOREPOC_IMAGE_VERSION", "").strip()
+    if core:
+        keep.append("core=" + core)
+    if image:
+        keep.append("image=" + image)
+    out = os.path.join(BUILD, "device-version", "device.txt")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w", newline="\n") as fh:
+        fh.write("\n".join(keep) + "\n")
+    print(f"device.txt: core={core or '(unknown)'} image={image or '(unset)'}", file=sys.stderr)
+    return out
+
+
 def data_args(lines) -> list[str]:
-    """Registry `rom_data` lines (`<rom path>=<host path>`) -> --data arguments with absolute host paths."""
+    """Registry `rom_data` lines (`<rom path>=<host path>`) -> --data arguments with absolute host paths.
+    The device identity file gets the image's versions appended (device_txt)."""
     out = []
     for line in lines:
         z, _, host = line.partition("=")
-        out += ["--data", z + "=" + host_path(host)]
+        h = host_path(host)
+        if z.strip().lstrip("\\").lower() == DEVICE_TXT:
+            h = device_txt(h)
+        out += ["--data", z + "=" + h]
     return out
 
 
