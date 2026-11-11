@@ -91,10 +91,10 @@ func fsOps() []device.OpSpec {
 			Params: []device.Param{{Name: "id", Type: "int", Required: true}}},
 		{Name: "type_chars", Capability: "files",
 			Description: "Type text as characters through the window server (key events with the character code, no scan " +
-				"code; needs phfs.exe with type support). Punctuation such as '!' passes the FEP's keypad mode (the text op loses it); " +
-				"digits and '#' still go through ITU-T multitap while the phone reports no keyboard. A line feed = Enter. Returns {typed}.",
+				"code; needs phekeys.exe, the UI image). With the default modifiers (PureKeycode + Ctrl) the FEP passes every character as " +
+				"written -- digits, '#', '!' included -- while the phone reports no keyboard. A line feed = Enter. Returns {typed}.",
 			Params: []device.Param{{Name: "text", Type: "string", Required: true, Description: "text to type (max 400 bytes)"},
-				{Name: "modifiers", Type: "uint32", Description: "the key events' modifiers (default 0x100000 = EModifierPureKeycode: the FEP then passes punctuation such as ! as typed; bit 31 = keypad characters as a repeat)"}}},
+				{Name: "modifiers", Type: "uint32", Description: "the key events' modifiers (default 0x100080 = EModifierPureKeycode | EModifierCtrl: the FEP passes digits, '#' and punctuation as typed; PureKeycode alone multitaps digits; bit 31 = keypad characters as a repeat)"}}},
 	}
 }
 
@@ -263,7 +263,7 @@ func (d *Driver) execFS(ctx context.Context, l device.Link, op string, a device.
 		if len(t) > 400 {
 			return nil, true, fmt.Errorf("type_chars: %d bytes, at most 400 per call", len(t))
 		}
-		mods, _ := a.UintOr("modifiers", 32, 0x100000)
+		mods, _ := a.UintOr("modifiers", 32, 0x100080)
 		data, err := d.fsRequest(ctx, l, keyOpText, append(le32(uint32(mods)), []byte(t)...))
 		if err != nil {
 			return nil, true, err
