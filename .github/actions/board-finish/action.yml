@@ -71,7 +71,7 @@ runs:
 
     # A component that still fails after the relink passes ends the build (tools/ci/component_failures.sh: each is built once
     # more on its own and its error shown; tools/ci/component-fail.allow names any that may fail). The bulk build above goes
-    # on past one, and the image then shipped the core layer's copy without a word (the stub phgl.dll of adaptation-pc v0.5.1+)
+    # on past one, and the image then shipped the core layer's copy without a word (a 2.6 KB stub instead of the real DLL)
     - name: Failed components are fatal
       shell: bash
       run: bash pdk/tools/ci/component_failures.sh component-build.log "$(cat component-build.status 2>/dev/null || echo 0)"

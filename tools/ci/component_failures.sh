@@ -6,7 +6,7 @@
 # component that fails. Every component LOG names as FAIL is built once more on its own (the relink passes may have given it
 # the provider it lacked); one that still fails ends the build with its error text, unless tools/ci/component-fail.allow
 # lists it for this architecture. Before this check a component could fail silently and the image kept the core layer's copy
-# (adaptation-pc v0.5.1..v0.5.8 shipped the 2.6 KB stub phgl.dll: no OpenGL ES in any app).
+# (a board release once shipped the 2.6 KB stub phgl.dll: no OpenGL ES in any app).
 set -u
 log=${1:?usage: component_failures.sh component-build.log [bulk exit status]}
 status=${2:-0}
