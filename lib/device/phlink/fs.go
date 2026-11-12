@@ -150,7 +150,13 @@ func (d *Driver) fsRequest(ctx context.Context, l device.Link, op uint32, payloa
 					buf.Reset() // another blob (a profile in flight): not ours
 					continue
 				}
-				if n := int(binary.LittleEndian.Uint32(f.Payload[4:])); n != buf.Len() || n < 4 {
+				n := int(binary.LittleEndian.Uint32(f.Payload[4:]))
+				if buf.Len() == 0 && n > 0 {
+					// an end frame with none of its data: a repeat of the previous reply's end (the phone re-sends a
+					// frame whose transfer reported an error; seen as "got 0 of 8" on 20+ MB uploads, 2026-11-12)
+					continue
+				}
+				if n != buf.Len() || n < 4 {
 					return nil, fmt.Errorf("file reply: got %d of %d bytes", buf.Len(), n)
 				}
 				b := buf.Bytes()

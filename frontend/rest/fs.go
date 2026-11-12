@@ -153,8 +153,15 @@ func (s *Server) fsWrite(w http.ResponseWriter, r *http.Request) {
 	for {
 		n, rerr := io.ReadFull(r.Body, buf)
 		if n > 0 || off == 0 {
-			_, err := s.fsCall(r.Context(), ss, "fs_write", device.Args{
-				"path": p, "offset": off, "truncate": off == 0, "data_b64": base64.StdEncoding.EncodeToString(buf[:n])})
+			// a write at an offset is idempotent: retried like fs_read when a reply is lost on the link
+			var err error
+			for try := 0; try < 3; try++ {
+				if _, err = s.fsCall(r.Context(), ss, "fs_write", device.Args{
+					"path": p, "offset": off, "truncate": off == 0, "data_b64": base64.StdEncoding.EncodeToString(buf[:n])}); err == nil ||
+					r.Context().Err() != nil {
+					break
+				}
+			}
 			if err != nil {
 				writeErr(w, 422, err)
 				return
