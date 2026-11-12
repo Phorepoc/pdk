@@ -579,7 +579,7 @@ def build(key: str) -> int:
         _sn = sl.rsplit(".", 1)[0]
         a = static_archive(LIB_ALIASES.get(_sn.lower(), _sn) if os.environ.get("PHOREPOC_QT48") == "1" else _sn)   # qtmain -> qt48_main
         if not os.path.exists(a):
-            print(f"  ! STATICLIBRARY {sl}: {os.path.relpath(a, BUILD)} not built")
+            print(f"  LINK FAIL STATICLIBRARY {sl}: {os.path.relpath(a, BUILD)} not built")
             return 1
         archives.append(a)
     # `x32_archives`: PREBUILT ar archives (repo-relative), linked like STATICLIBRARYs,
@@ -587,7 +587,8 @@ def build(key: str) -> int:
     for a in comp.get("x32_archives", []):
         a = pathres(a)
         if not os.path.exists(a):
-            print(f"  ! x32_archives: {os.path.relpath(a, BUILD)} not built")
+            # a prebuilt archive a layer's prepare recipe makes: without it the component cannot be what the registry says
+            print(f"  LINK FAIL x32_archives: {os.path.relpath(a, BUILD)} not built")
             return 1
         archives.append(a)
 
@@ -604,6 +605,9 @@ def build(key: str) -> int:
         # a file-system plug-in: no .def; EFILE does Lookup(1) -> CreateFileSystem (extern "C")
         defmap = DefMap({1: "CreateFileSystem"}, 1)
     if not m.is_exe and not defmap:
+        if not objs and not archives:      # a registry entry with no sources and no .def (ssmcmdlists, foldersuite): nothing to link
+            print("  ! no sources and no .def: nothing to link (skipped)")
+            return 0
         print("  ! no .def found -- DLL would export nothing")
         return 1
     all_objs = objs + rt_objs
