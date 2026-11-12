@@ -1,0 +1,3 @@
+# component-fail.allow -- components a board build may fail to build without failing the release (tools/ci/component_failures.sh).
+# One per line: <arch | *> <component key>  # why it may fail, and what ends the entry. Keep it empty: a failure here ships the
+# core layer's copy (or nothing) silently.

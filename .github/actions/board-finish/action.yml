@@ -68,6 +68,13 @@ runs:
         done
         phe component stale | tail -n 1
 
+    # A component that still fails after the relink passes ends the build (tools/ci/component_failures.sh: each is built once
+    # more on its own and its error shown; tools/ci/component-fail.allow names any that may fail). The bulk build above goes
+    # on past one, and the image then shipped the core layer's copy without a word (the stub phgl.dll of adaptation-pc v0.5.1+)
+    - name: Failed components are fatal
+      shell: bash
+      run: bash pdk/tools/ci/component_failures.sh component-build.log
+
     # The stub ratchet (tools/stub_audit.py, docs/stub-audit.md): no new link stub in any image. A core build checks the
     # components alone (--core: the boards' own images are not there to find); a board checks everything it ships,
     # after its image recipe has built the core libraries and the kernel-side images
