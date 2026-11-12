@@ -8,12 +8,23 @@
 # lists it for this architecture. Before this check a component could fail silently and the image kept the core layer's copy
 # (adaptation-pc v0.5.1..v0.5.8 shipped the 2.6 KB stub phgl.dll: no OpenGL ES in any app).
 set -u
-log=${1:?usage: component_failures.sh component-build.log}
+log=${1:?usage: component_failures.sh component-build.log [bulk exit status]}
+status=${2:-0}
 arch=${PHOREPOC_ARCH:?}
 here=$(cd "$(dirname "$0")" && pwd)
 allow="$here/component-fail.allow"
 failed=$(awk '/^=== /{c=$2} /FAIL/{print c}' "$log" | tr -d : | sort -u)
-[ -n "$failed" ] || { echo "components failed: 0"; exit 0; }
+if [ -z "$failed" ]; then
+	# a clean bulk build exits 0; a failure that names no component (the build front end itself, a registry error before
+	# the first component) is not a pass either
+	[ "$status" = 0 ] && { echo "components failed: 0"; exit 0; }
+	echo "::group::the bulk build exited $status and names no failed component -- its last lines"
+	grep -a -n -iE "error|traceback|exception|exit status" "$log" | tail -n 20
+	tail -n 40 "$log"
+	echo "::endgroup::"
+	echo "::error::the bulk component build exited $status without naming a failed component ($arch)"
+	exit 1
+fi
 echo "components failed in the bulk build: $(echo $failed)"
 bad=
 for c in $failed; do

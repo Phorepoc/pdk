@@ -50,6 +50,7 @@ runs:
         # (a bulk build exits 1 when a component failed; the pipes below must not turn that into this step's verdict)
         set +o pipefail
         phe component build -A -arch "$PHOREPOC_ARCH" 2>&1 | tee component-build.log | tail -n 20
+        echo "${PIPESTATUS[0]}" > component-build.status		# (the guard below: a non-zero exit that names no component fails too)
         grep -h '^objcache:' component-build.log || true
         # a bulk build goes on past a component that fails (exit 1): the image steps are the verdict, so name them here
         failed=$(awk '/^=== /{c=$2} /FAIL/{print c}' component-build.log | tr -d : | sort -u)
@@ -73,7 +74,7 @@ runs:
     # on past one, and the image then shipped the core layer's copy without a word (the stub phgl.dll of adaptation-pc v0.5.1+)
     - name: Failed components are fatal
       shell: bash
-      run: bash pdk/tools/ci/component_failures.sh component-build.log
+      run: bash pdk/tools/ci/component_failures.sh component-build.log "$(cat component-build.status 2>/dev/null || echo 0)"
 
     # The stub ratchet (tools/stub_audit.py, docs/stub-audit.md): no new link stub in any image. A core build checks the
     # components alone (--core: the boards' own images are not there to find); a board checks everything it ships,
