@@ -48,6 +48,8 @@ def component_files(keys, arm, sis=True):
     for key in keys:
         comp = C.COMPONENTS[key]
         m = MMP.parse(os.path.join(MMP.BASE, comp.get("x32_mmp", comp["mmp"])))
+        if m.targettype.lower() == "lib":
+            continue    # a static library (qtmain.lib) is built for the package's executables to link: nothing to install
         rom = C.rom_name(key, m.targettype)
         # the Symbian^4 set (components_s4, Qt 4.8) builds into its own root: BUILD/qt48/x32img
         d = X32_S4 if (not arm and key in S4_KEYS) else (ARM_IMG if arm else X32)
