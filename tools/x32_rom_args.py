@@ -242,6 +242,9 @@ def phetty_cenrep() -> str:
     return rel(out)
 
 
+WFC_GPU_DEFAULT = int(os.environ.get("WFC_GPU") or ("1" if os.environ.get("ROM_ARCH") == "arm" else "0"))
+
+
 def devmenu_cenrep() -> str:
     """The developer-menu repository (KPheDevMenuRepoUid 0xE7015A01, src/phedevmenu/phedevmenu.h): key 1 = UI shell
     (0 = S^3, 1 = S^4), key 2 = Control Panel shortcut (0/1), key 3 = boot guard timeout (s; default 180 = the kernel guard's own), key 4 = UI renderer
@@ -260,8 +263,9 @@ def devmenu_cenrep() -> str:
              "0x00000007 int 0 0x00000000 cap_rd=alwayspass cap_wr=alwayspass",
              # key 8: UI GPU acceleration of the Alfred renderer (phvg), 0 off | 1 on
              "0x00000008 int 0 0x00000000 cap_rd=alwayspass cap_wr=alwayspass",
-             # key 9: GPU composition (libWFC on the GPU), 1 on | 0 the CPU composes
-             "0x00000009 int 1 0x00000000 cap_rd=alwayspass cap_wr=alwayspass"]
+             # key 9: GPU composition (libWFC on the GPU), 1 on | 0 the CPU composes. Default on where there is a GPU (ARM: lima); off on
+             # x86, where it would be Mesa's software rasteriser (softpipe), slower than the CPU pipeline. WFC_GPU=0|1 overrides.
+             "0x00000009 int %d 0x00000000 cap_rd=alwayspass cap_wr=alwayspass" % WFC_GPU_DEFAULT]
     os.makedirs(ZGEN, exist_ok=True)
     out = os.path.join(ZGEN, "e7015a01.txt")
     with open(out, "wb") as fh:

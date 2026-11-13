@@ -23,7 +23,7 @@ const DefaultImage = "ghcr.io/phorepoc/base:latest"
 
 // passThrough lists the recipe options that are handed to the container when set.
 var passThrough = []string{
-	"NET", "NET_TEST", "NTP_SERVER", "FONTS", "UI_RENDERER", "SHELLS", "ALF", "NGA", "NGA_KEEP", "FAST",
+	"NET", "NET_TEST", "NTP_SERVER", "FONTS", "UI_RENDERER", "SHELLS", "ALF", "NGA", "NGA_KEEP", "PHECOMP", "FAST",
 	"PHOREPOC_ARCH", "PHOREPOC_BOARD", "LEAVE_TRACE", "SCHED_TRACE", "MIF_ALL", "IBY_DATA", "ROM_ARCH", "ROM_TAIL", "ROM_EXCLUDE", "SSM_TEST",
 	"SECONDARY_IMAGE", "PHOREPOC_S4", "PHOREPOC_QT48", "PHETTY", "CENREP_EXTRA", "ROM_DATA_EXTRA", "ROM_ADDON", "UTC_OFFSET",
 	"WEBFONTS", "THEMES", "X32_LD", "X32_DEFS", "X32_LIBS", "X32_INCLUDE", "X32_FULLERR", "PRUNE_UNRESOLVED", "ROM_HEAP_LIMITS",
@@ -375,6 +375,7 @@ var ImageOptions = []ImageOption{
 	{"shells", "SHELLS", "s3|s4|both", "the UI shell(s): Symbian^3, the Symbian^4 home screen (Qt 4.8 + Hb), or both"},
 	{"nga", "NGA", "0|1", "the NGA window server (composition through OpenWF-C)"},
 	{"nga-keep", "NGA_KEEP", "<component>,...", "keep these non-NGA twins in an NGA image (bisecting)"},
+	{"phecomp", "PHECOMP", "0|1", "the phecomp render stage first in the NGA chain (core os/src/phecomp)"},
 	{"alf", "ALF", "<stage>", "the Alfred (ALF) set at a bring-up stage"},
 	{"phetty", "PHETTY", "on|off|exclude", "the developer terminal daemon (phettyd, pheshell, pheterm)"},
 	{"utc-offset", "UTC_OFFSET", "<minutes>", "the home time zone, minutes from UTC (180 = UTC+3)"},

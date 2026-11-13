@@ -168,6 +168,11 @@ if [ -n "${BOOT:-}" ]; then
   # offers the "flickerbuffer" + "display" render stages (display = libWFC -> the display channel); same S60 fader
   [ "${NGA:-0}" = 1 ] && [[ ",${NGA_KEEP:-}," != *,wserv,* ]] && FADER_INI=("ABSOLUTEFADING" "PLUGINS FLICKERBUFFER DISPLAY EXTENDEDFADER" "RENDERSTAGES flickerbuffer display"
                                     "FADER AknExtendedFader" "[EXTENDEDFADER]" "ID 0x2001B299")
+  # PHECOMP=1 (NGA only): core's phecomp render stage first in the chain (os/src/phecomp: the window compositor; v0 = a pass-through
+  # stage that logs the window tree and each window group's redraws)
+  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 1 ] && FADER_INI=("ABSOLUTEFADING" "PLUGINS PHECOMP FLICKERBUFFER DISPLAY EXTENDEDFADER"
+                                    "RENDERSTAGES phecomp flickerbuffer display" "FADER AknExtendedFader" "[PHECOMP]" "ID 0xE7017C01"
+                                    "[EXTENDEDFADER]" "ID 0x2001B299")
   CLASSIC_INI=("${FADER_INI[@]}")
   # ALF=... (off by default): the S^3 render-stage chain is
   #   PLUGINS sssrenderstage alf compositor platformcompositor / [alf] ID 0x200184B6 / [compositor] ID 0x2002BCF9.
@@ -501,6 +506,9 @@ mkdir -p "$BUILD/rom"
 if [ "${PHOREPOC_S4:-}" = 1 ] && [ -z "$SHELL_S4SET" ]; then echo s4; else echo phorepoc; fi > "$BUILD/rom/flavour.txt"
 UHELLO=()
 [ -f "$BUILD/uexe/uhello.imp.exe" ] && UHELLO=(--xip 'Sys\Bin\uhello.exe='"$BUILD/uexe/uhello.imp.exe")
+# NGA=1: the surface manager's LDD, built into the x86 kernel (its built-in device 9). Only an NGA
+# ROM names it: in the classic ROM RSurfaceManager::Open must keep failing, which is what sends EGL to its bitmap path.
+NGADEV=(); [ "${NGA:-0}" = 1 ] && NGADEV=(--builtin-device 'Sys\Bin\surfacemanagerdriver.ldd=ldd:9')
 python3 "$TOOLS/rombuild.py" --section 0x80400000 $SHELL_XIP $DATA \
    --xip 'Sys\Bin\euser.dll='"$BUILD/x32core/euser_x32.dll" \
    --xip 'Sys\Bin\efsrv.dll='"$BUILD/x32core/efsrv_x32.dll" \
@@ -512,5 +520,6 @@ python3 "$TOOLS/rombuild.py" --section 0x80400000 $SHELL_XIP $DATA \
    --builtin-device 'Sys\Bin\esoundsc.ldd=ldd:3' --builtin-device 'Sys\Bin\soundsc.pdd=pdd:4' \
    --builtin-device 'Sys\Bin\ecamerasc.ldd=ldd:5' --builtin-device 'Sys\Bin\camerasc.pdd=pdd:6' \
    --builtin-device 'Sys\Bin\sgdevice.ldd=ldd:7' --builtin-device 'Sys\Bin\pipelib.ldd=ldd:8' \
+   "${NGADEV[@]}" \
    --secondary-name "${SECONDARY_IMAGE:-efile.exe}" \
    "$BUILD/rom/romsect.bin"
