@@ -112,12 +112,19 @@ def main() -> None:
             os.remove(os.path.join(ICON_GEN, f))
             have.discard(f.lower())
             print(f"mif_all: removed {f} (its component's layer is not in this build)")
-    want = lambda d: "--all" in sys.argv or not dirs[d] or any(t not in have for t in dirs[d])   # noqa: E731
+    nomif = {t.lower() for comp in C.COMPONENTS.values() if isinstance(comp, dict) for t in (comp.get("no_mifs") or [])}
+    want = lambda d: "--all" in sys.argv or not dirs[d] or any(t not in have and t not in nomif for t in dirs[d])   # noqa: E731
     todo = [d for d in listed if want(d)]
     todo += sorted(d for d in dirs if d not in listed and want(d))
     print(f"mif_all: {len(dirs)} component groups declare icons, {len(todo)} to generate")
     if todo:
         subprocess.run([sys.executable, os.path.join(HERE, "mif_gen.py")] + todo, check=False)
+    # no_mifs: icon targets a registered group declares for a binary the image does not ship (satui.mif beside the
+    # SAT shell controller): never staged, removed after a run of their group
+    for t in sorted(nomif):
+        for f in [x for x in (os.listdir(ICON_GEN) if os.path.isdir(ICON_GEN) else []) if x.lower() in (t, t[:-4] + ".mbm")]:
+            os.remove(os.path.join(ICON_GEN, f))
+            print(f"mif_all: removed {f} (no_mifs: its binary is not in the image)")
 
 
 if __name__ == "__main__":
