@@ -67,7 +67,7 @@ def component_files(keys, arm, sis=True):
             E32.set_header_crc(img)
             img = bytes(img)
         img_caps = struct.unpack_from("<I", img, 0x88)[0]  # E32ImageHeaderV SSecurityInfo.iCaps, first word
-        if key == keys[0]:
+        if uid3 is None:    # the first component with an image (a leading static library has none)
             uid3, caps = struct.unpack_from("<I", img, 8)[0], img_caps
         files.append((img, root + "sys\\bin\\" + rom, img_caps))
         if m.targettype == "plugin":
