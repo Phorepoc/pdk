@@ -23,6 +23,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
+import paths  # noqa: E402,F401  (puts the registry on the path)
 import components as C  # noqa: E402
 import mmp as MMP  # noqa: E402
 import sis as SIS  # noqa: E402
