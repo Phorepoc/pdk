@@ -97,6 +97,11 @@ D1 libpthread mutex.cpp
 D1 libpthread pthread_mutex_destroy.cpp
 D1 libpthread pthread_mutex_trylock.cpp
 D1 libpthread pthread_mutex_unlock.cpp
+# libpthread: lock-free pthread_getspecific (core 5813025): getspecific and key_create are 76% the release's lines,
+# key_delete 73% (just under D1's 75%: the key node is kept on delete, so the release's free path is replaced)
+D1 libpthread pthread_getspecific.cpp
+D1 libpthread pthread_key_create.cpp
+D1 libpthread pthread_key_delete.cpp
 D1 libwfc owfnativestreamstub.cpp
 D1 libwfc owfnotifications.cpp
 D1 libwfc owfthread.c
