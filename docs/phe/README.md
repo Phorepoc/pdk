@@ -162,6 +162,9 @@ Given as -O name=value, as many as needed (phe image rom -b myboard -O net=1 -O 
   nga-keep=<component>,...
       Keep these non-NGA twins in an NGA image (bisecting).
 
+  phecomp=0|1|2
+      The phecomp render stage first in the NGA chain (core os/src/phecomp); 2 = compose (tiles).
+
   alf=<stage>
       The Alfred (ALF) set at a bring-up stage.
 
