@@ -375,7 +375,7 @@ var ImageOptions = []ImageOption{
 	{"shells", "SHELLS", "s3|s4|both", "the UI shell(s): Symbian^3, the Symbian^4 home screen (Qt 4.8 + Hb), or both"},
 	{"nga", "NGA", "0|1", "the NGA window server (composition through OpenWF-C)"},
 	{"nga-keep", "NGA_KEEP", "<component>,...", "keep these non-NGA twins in an NGA image (bisecting)"},
-	{"phecomp", "PHECOMP", "0|1", "the phecomp render stage first in the NGA chain (core os/src/phecomp)"},
+	{"phecomp", "PHECOMP", "0|1|2", "the phecomp render stage first in the NGA chain (core os/src/phecomp); 2 = compose (tiles)"},
 	{"alf", "ALF", "<stage>", "the Alfred (ALF) set at a bring-up stage"},
 	{"phetty", "PHETTY", "on|off|exclude", "the developer terminal daemon (phettyd, pheshell, pheterm)"},
 	{"utc-offset", "UTC_OFFSET", "<minutes>", "the home time zone, minutes from UTC (180 = UTC+3)"},

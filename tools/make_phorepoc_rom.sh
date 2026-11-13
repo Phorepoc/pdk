@@ -170,9 +170,12 @@ if [ -n "${BOOT:-}" ]; then
                                     "FADER AknExtendedFader" "[EXTENDEDFADER]" "ID 0x2001B299")
   # PHECOMP=1 (NGA only): core's phecomp render stage first in the chain (os/src/phecomp: the window compositor; v0 = a pass-through
   # stage that logs the window tree and each window group's redraws)
-  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 1 ] && FADER_INI=("ABSOLUTEFADING" "PLUGINS PHECOMP FLICKERBUFFER DISPLAY EXTENDEDFADER"
+  # PHECOMP=2: phecomp composes -- every window group into its own target (CHANGETRACKING: the window server draws every window
+  # whole), the PHECOMPTILE apps side by side when both run (default 10005902 10005907 = Calculator, Notes)
+  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" != 0 ] && FADER_INI=("ABSOLUTEFADING" "PLUGINS PHECOMP FLICKERBUFFER DISPLAY EXTENDEDFADER"
                                     "RENDERSTAGES phecomp flickerbuffer display" "FADER AknExtendedFader" "[PHECOMP]" "ID 0xE7017C01"
                                     "[EXTENDEDFADER]" "ID 0x2001B299")
+  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && FADER_INI=("CHANGETRACKING" "PHECOMPTILE ${PHECOMPTILE:-10005902 10005907}" "${FADER_INI[@]}")
   CLASSIC_INI=("${FADER_INI[@]}")
   # ALF=... (off by default): the S^3 render-stage chain is
   #   PLUGINS sssrenderstage alf compositor platformcompositor / [alf] ID 0x200184B6 / [compositor] ID 0x2002BCF9.
