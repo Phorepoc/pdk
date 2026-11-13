@@ -124,6 +124,7 @@ replacement, or an `#include` of the release's file):
 | D2 | the release's own alternative (CMLA stub, RealAudio-off variant: the real source was never released) | 3 |
 | D3, D4 | the sisx recogniser's ROM patch constant; ARM `.cia` assembler replaced by C++ on x32 | 3 |
 | D16, D18 | our implementation of what the release stubs (frame table, HWRM plug-ins, start-up adaptation); rasteriser tuning | 7 |
+| D19 | the release's generated sources (charconv plug-ins: cnvtool over the release's data) | 43 |
 | D10 - D15 | the work list: ALF/graphics null clients (4), C32 null on ARM (12 files), the SAT menu handler (1), the licensee TSY mock (1), the power-save and SVG-T parts never released (2), the emergency-call stem (1) | 21 |
 
 The list per component is in `stub-audit-replaced-sources.md`.
