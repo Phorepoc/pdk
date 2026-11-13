@@ -122,6 +122,9 @@ def main() -> int:
                     help="an embedded package (makesis @\"x.sis\",(uid)), e.g. 0x10202BE9,sp,1.0.0,Orbit settings,a.txt=c:/private/10202be9/a.txt: a TYPE=SP "
                     "package of Central Repository files against its ROM stub (CenRepStub.sis)")
     ap.add_argument("--type", choices=["sa", "sp", "pu"], default="sa", help="SIS install type: sa (full), sp (patch), pu (partial upgrade of an installed package)")
+    ap.add_argument("--rom-upgrade", action="store_true",
+                    help="the ROM-upgrade flag (makesis RU): the package may replace the files of an image's copy that a ROM stub of the same "
+                    "UID lists (Z:/system/install/<name>_stub.sis); a device without that copy installs it as usual")
     a = ap.parse_args()
     if a.data_only:
         if a.keys or a.uid is None or not a.name or not a.out:
@@ -152,7 +155,8 @@ def main() -> int:
                             platform_uid=0x20022E6D if a.arm else None,
                             dependencies=[(int(d.split(",")[0], 0), tuple(int(x) for x in d.split(",")[1].split(".")), d.split(",", 2)[2])
                                           for d in a.depends],
-                            install_type={"sa": 0, "sp": 1, "pu": 2}[a.type], embedded=embedded)
+                            install_type={"sa": 0, "sp": 1, "pu": 2}[a.type], embedded=embedded,
+                            install_flags=SIS.INSTALL_FLAG_ROM_UPGRADE if a.rom_upgrade else 0)
     out = a.out or os.path.join(BUILD, "sis", a.keys[0] + ".sis")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "wb").write(pkg)

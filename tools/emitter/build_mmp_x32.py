@@ -944,7 +944,7 @@ def main() -> int:
     elif keys[0] == "--all":            # every registry component, providers first 
         # (arm_only: ARM runtimes for SDK apps -- drtaeabi, scppnwdl, stdnew, libstdcppv5 -- which no x86 image imports)
         keys = closure([k for k, c in C.COMPONENTS.items()
-                        if not c.get("arm_only") and (not c.get("needs") or has_layer(c["needs"]))])
+                        if not c.get("arm_only") and not c.get("package_only") and (not c.get("needs") or has_layer(c["needs"]))])
         print(f"all: {len(keys)} components")
         prune_gated(C.COMPONENTS, [IMG] + ([IMG_OUT] if S4 else []), keys)
     if keys[:1] == ["--list-closure"]:

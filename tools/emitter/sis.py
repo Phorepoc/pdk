@@ -83,6 +83,7 @@ SISBlob = 37
 HEADER_MAGIC = 0x10201A7A
 LANG_EN = 1
 INSTALL_TYPE_INSTALLATION = 0
+INSTALL_FLAG_ROM_UPGRADE = 4   # Sis::EInstFlagROMUpgrade (sisfieldtypes.h): RU
 HASH_SHA1 = 1
 OP_INSTALL = 1
 
@@ -155,7 +156,7 @@ def _package_parts(files, *, app_uid: int, vendor: str, app_name: str, version=(
 
 
 def build_package(files, *, app_uid: int, vendor: str, app_name: str,
-                  version=(1, 0, 0), signer=None, platform_uid=None, install_type=None, dependencies=(), embedded=()) -> bytes:
+                  version=(1, 0, 0), signer=None, platform_uid=None, install_type=None, dependencies=(), embedded=(), install_flags=0) -> bytes:
     """A SISX package. `files` = [(data bytes, target path, caps or None)]; `signer` = (private key,
     certificate DER) from the `cryptography` package -> one SISSignatureCertificateChain.
 
@@ -168,7 +169,10 @@ def build_package(files, *, app_uid: int, vendor: str, app_name: str,
 
     `embedded` = packages installed with this one (makesis `@"x.sis",(uid)`): dicts with the keyword arguments of an inner
     build_package (files, app_uid, app_name, version, install_type ...; vendor defaults to this one). The inner controller goes
-    into this install block, its data unit after this package's; e.g. a TYPE=SP package of Central Repository files."""
+    into this install block, its data unit after this package's; e.g. a TYPE=SP package of Central Repository files.
+
+    `install_flags` = SISInfo's flags byte: INSTALL_FLAG_ROM_UPGRADE (makesis RU) lets an SA package replace the files a ROM stub
+    of the same package UID lists (swis installationplanner.cpp IsValidEclipsingUpgradeL / IsEclipsableL)."""
     import datetime
     import zlib
     now = datetime.datetime.now()
@@ -181,7 +185,7 @@ def build_package(files, *, app_uid: int, vendor: str, app_name: str,
                   + _field(SISDateTime,
                            _field(SISDate, struct.pack("<HBB", now.year, now.month - 1, now.day - 1))
                            + _field(SISTime, struct.pack("<BBB", now.hour, now.minute, now.second)))
-                  + struct.pack("<BB", INSTALL_TYPE_INSTALLATION if install_type is None else install_type, 0))
+                  + struct.pack("<BB", INSTALL_TYPE_INSTALLATION if install_type is None else install_type, install_flags))
     supported_options = _field(SISSupportedOptions, _array(SISSupportedOption, []))
     # SISLanguage = a 4-byte language id (real SWI reads 4)
     supported_langs = _field(SISSupportedLanguages,
@@ -249,10 +253,12 @@ def build_package(files, *, app_uid: int, vendor: str, app_name: str,
     return struct.pack("<IIII", HEADER_MAGIC, 0, app_uid, uid_checksum(HEADER_MAGIC, 0, app_uid)) + contents
 
 
-def build_rom_stub(*, pkg_uid: int, vendor: str, name: str, version) -> bytes:
+def build_rom_stub(*, pkg_uid: int, vendor: str, name: str, version, files=()) -> bytes:
     """A ROM stub SIS (makesis -s, Z:\\system\\install\\*_stub.sis): the raw, uncompressed SISController alone -- no SIS header,
     no data (as the release's stubs, e.g. aiwdialdata_stub.sis). SWI registers the package as installed in ROM at its version,
-    so a SIS that depends on it (pkg_uid, version >= x) installs. An empty install block: the files are in ROM already."""
+    so a SIS that depends on it (pkg_uid, version >= x) installs. The files are in ROM already, so no data: `files` only names them
+    (z:\\sys\\bin\\x.exe, wildcards allowed), the list SWI lets a ROM-upgrade (RU) SIS of the same UID eclipse
+    (GetFilesForRomApplicationL); empty = nothing may be replaced."""
     import datetime
     now = datetime.datetime.now()
     info = _field(SISInfo,
@@ -271,7 +277,8 @@ def build_rom_stub(*, pkg_uid: int, vendor: str, name: str, version) -> bytes:
                      _array(SISLanguage, [_field(SISLanguage, struct.pack("<I", LANG_EN), typed=False)]))
             + _field(SISPrerequisites, _array(SISDependency, []) + _array(SISDependency, []))
             + _field(SISProperties, _array(SISProperty, []))
-            + _field(SISInstallBlock, _array(SISFileDes, []) + _array(SISController, []) + _array(SISIf, []))
+            + _field(SISInstallBlock, _array(SISFileDes, [_file_des(t, b"", b"", None, 0) for t in files])
+                     + _array(SISController, []) + _array(SISIf, []))
             + _field(SISDataIndex, struct.pack("<I", 0)))
     return _field(SISController, body)
 

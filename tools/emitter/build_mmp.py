@@ -1052,8 +1052,10 @@ def main() -> int:
     args = [a for a in args if a != "--rsc"]    # bulk build so every <x.rsg> exists
     # --all on ARM: an entry that only carries x32 archives (the x32 variant of a prebuilt engine, whose ARM twin is the *_arm key
     # of the same ROM name) would build here as link stubs and overwrite its twin's image
+    # `package_only`: a package's own build of an image component (its SIS twin under the same ROM name, e.g. phebrowser_arm), built
+    # only when named (package.yml), so it never replaces the image's build
     keys = ([k for k, c in C.COMPONENTS.items() if not (c.get("x32_archives") and not c.get("arm_archives"))
-             and (not c.get("needs") or has_layer(c["needs"]))]
+             and not c.get("package_only") and (not c.get("needs") or has_layer(c["needs"]))]
             if args == ["--all"] else args)
     if args == ["--all"] and not rsc_only:
         prune_gated(C.COMPONENTS, [IMG_DIR], keys)

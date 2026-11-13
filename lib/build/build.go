@@ -236,10 +236,12 @@ func (e *Env) Rom(boot string) error {
 }
 
 // recipeScript runs recipes/<name>.sh of the first of the build's repositories that has one, searched from the top
-// (the board first: PHOREPOC_ADAPTATIONS lists the SoC first, the board after it, then the layers).
+// (the board first: PHOREPOC_ADAPTATIONS lists the SoC first, the board after it, then the layers), and core's last (core
+// releases a package of its own too, the browser frontend: package.yml runs core's recipes/sis.sh).
 const recipeScript = `name="$1"; shift; IFS=: read -r -a repos <<< "$PHOREPOC_ADAPTATIONS"
 for ((i=${#repos[@]}-1; i>=0; i--)); do r="${repos[i]}"; [ -f "$r/recipes/$name.sh" ] || continue
   cd "$r" && exec bash "recipes/$name.sh" "$@"; done
+[ -n "$PHOREPOC_CORE" ] && [ -f "$PHOREPOC_CORE/recipes/$name.sh" ] && cd "$PHOREPOC_CORE" && exec bash "recipes/$name.sh" "$@"
 echo "no recipe $name: none of the board's repositories has recipes/$name.sh (${PHOREPOC_ADAPTATIONS:-no board: give -b})" >&2; exit 1`
 
 // Recipe runs a board repository's recipes/<name>.sh in the container (docs/layering.md).
