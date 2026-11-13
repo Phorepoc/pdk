@@ -135,6 +135,75 @@ def board_zdata():
     return out
 
 
+def _reflow(text):
+    """hard-wrapped NOTICE text -> one line per paragraph (the About application wraps each line itself). A line
+    that starts indented or with a list marker starts a new paragraph, so do the first two lines (a NOTICE's title and
+    copyright); a blank line stays."""
+    out = []
+    for raw in text.replace("\r\n", "\n").split("\n"):
+        line = raw.rstrip()
+        if not line.strip():
+            if out and out[-1] != "":
+                out.append("")
+            continue
+        new = (len(out) < 2 or out[-1] == "" or raw[:1] in (" ", "\t")
+               or re.match(r"\s*([-*]|\d+[.)]|[a-z][.)]|\([a-z0-9]+\))\s", raw))
+        if new:
+            out.append(line.strip())
+        else:
+            out[-1] += " " + line.strip()
+    while out and out[-1] == "":
+        out.pop()
+    return "\n".join(out) + "\n"
+
+
+def about_notices():
+    """The About application's notices (resource/about/*.txt, read at run time after its own texts): the NOTICE of
+    core and of every repository the board is built from (PHOREPOC_ADAPTATIONS order), each naming its licences,
+    then every distinct licence text once. A LICENSE that is the EPL-1.0 is left out: the About application already
+    carries that text. Generated on every build, so a NOTICE change needs no other edit."""
+    from paths import CORE, ADAPTATIONS
+    gen = os.path.join(BUILD, "zdata-gen", "about")
+    os.makedirs(gen, exist_ok=True)
+    for f in os.listdir(gen):
+        os.remove(os.path.join(gen, f))
+    repos, seen = [], set()
+    for r in [CORE] + ADAPTATIONS:
+        if os.path.isdir(r) and os.path.realpath(r) not in seen:
+            seen.add(os.path.realpath(r))
+            repos.append(r)
+    texts, out = {}, []                     # licence text -> its title (the first file name it came from)
+    for n, r in enumerate(repos):
+        name = os.path.basename(os.path.normpath(r))
+        notice = os.path.join(r, "NOTICE")
+        if not os.path.isfile(notice):
+            continue
+        body = open(notice, encoding="utf-8", errors="replace").read()
+        ldir = os.path.join(r, "LICENSES")
+        names = []
+        for p in [os.path.join(r, "LICENSE")] + sorted(os.path.join(ldir, f) for f in (os.listdir(ldir) if os.path.isdir(ldir) else [])):
+            if not os.path.isfile(p):
+                continue
+            t = open(p, encoding="utf-8", errors="replace").read().replace("\r\n", "\n").strip() + "\n"
+            if "Eclipse Public License - v 1.0" in t[:400]:
+                continue
+            title = os.path.splitext(os.path.basename(p))[0]
+            names.append(texts.setdefault(t, name + " LICENSE" if title == "LICENSE" else title))
+        if names:
+            body = body.rstrip() + "\n\nLicence texts (at the end of this list): " + ", ".join(dict.fromkeys(names)) + ".\n"
+        path = os.path.join(gen, "%02d-%s.txt" % (n, name))
+        with open(path, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(_reflow(body))
+        out.append(("resource/about/" + os.path.basename(path), path))
+    if texts:
+        path = os.path.join(gen, "99-licences.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as fh:
+            for t, title in texts.items():
+                fh.write("Licence text: " + title + "\n\n" + _reflow(t) + "\n")
+        out.append(("resource/about/99-licences.txt", path))
+    return out
+
+
 def zdata(bldinf):
     """yield (src_abs, rom_path) for the Z:-drive exports of one bld.inf."""
     cur_dir, section = os.path.dirname(bldinf), ""
@@ -187,6 +256,8 @@ def main() -> int:
             out[rom.lower()] = (rom, resolve(rel))
         else:
             missing += 1
+    for rom, path in about_notices():
+        out[rom.lower()] = (rom, path)
     gen = os.path.join(BUILD, "zdata-gen")
     os.makedirs(gen, exist_ok=True)
     # an .rsg shipped as data ends its lines CRLF, as Nokia's rcomp wrote them on Windows: the hierarchy navigator's
