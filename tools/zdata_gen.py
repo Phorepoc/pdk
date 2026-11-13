@@ -137,19 +137,21 @@ def board_zdata():
 
 def _reflow(text):
     """hard-wrapped NOTICE text -> one line per paragraph (the About application wraps each line itself). A line
-    that starts indented or with a list marker starts a new paragraph, so do the first two lines (a NOTICE's title and
-    copyright); a blank line stays."""
-    out = []
+    that starts with a list marker starts a new paragraph, so does an indented one (except inside a list item: its
+    continuation) and the first two lines (a NOTICE's title and copyright); a blank line stays."""
+    out, item = [], False
     for raw in text.replace("\r\n", "\n").split("\n"):
         line = raw.rstrip()
         if not line.strip():
             if out and out[-1] != "":
                 out.append("")
+            item = False
             continue
-        new = (len(out) < 2 or out[-1] == "" or raw[:1] in (" ", "\t")
-               or re.match(r"\s*([-*]|\d+[.)]|[a-z][.)]|\([a-z0-9]+\))\s", raw))
+        marker = re.match(r"\s*([-*]|\d+[.)]|[a-z][.)]|\([a-z0-9]+\))\s", raw)
+        new = len(out) < 2 or out[-1] == "" or marker or (raw[:1] in (" ", "\t") and not item)
         if new:
             out.append(line.strip())
+            item = bool(marker)
         else:
             out[-1] += " " + line.strip()
     while out and out[-1] == "":
