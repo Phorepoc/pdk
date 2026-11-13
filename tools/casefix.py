@@ -96,9 +96,16 @@ def main(pkgs: list[str] | None = None) -> None:
         parts = s.lower().replace("\\", "/").split("/")
         hit = by_tail.get("/".join(parts[-2:])) if len(parts) > 1 else None
         hit = hit or by_base.get(parts[-1])
+        link = os.path.join(OUT, s) if "\\" in s else os.path.join(OUT, *s.split("/"))
+        # STLport's internal headers (stdapis/stlportv5/stl/...) are only ever included as <stl/...> by STLport itself: a
+        # bare name is never one of them. <features.h> -> stl/config/features.h hid glibc's in the x32 builds that include
+        # the host C++ headers (Qt's <exception>: __GLIBC_PREREQ undefined in bits/os_defines.h)
+        if hit is not None and len(parts) == 1 and (os.sep + "stl" + os.sep) in hit:
+            if os.path.islink(link):
+                os.remove(link)         # left by an older run
+            continue
         if hit is None:
             continue
-        link = os.path.join(OUT, s) if "\\" in s else os.path.join(OUT, *s.split("/"))
         if os.path.islink(link):
             if os.readlink(link) == hit:
                 continue
