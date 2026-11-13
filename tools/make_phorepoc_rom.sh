@@ -176,6 +176,8 @@ if [ -n "${BOOT:-}" ]; then
                                     "RENDERSTAGES phecomp flickerbuffer display" "FADER AknExtendedFader" "[PHECOMP]" "ID 0xE7017C01"
                                     "[EXTENDEDFADER]" "ID 0x2001B299")
   [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && FADER_INI=("CHANGETRACKING" "PHECOMPTILE ${PHECOMPTILE:-10005902 10005907}" "${FADER_INI[@]}")
+  # PHECOMPSCENE=1 (with PHECOMP=2): the groups are scene elements composed by OpenWF-C, not copied into the UI buffer each frame
+  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && [ "${PHECOMPSCENE:-0}" = 1 ] && FADER_INI=("PHECOMPSCENE" "${FADER_INI[@]}")
   CLASSIC_INI=("${FADER_INI[@]}")
   # ALF=... (off by default): the S^3 render-stage chain is
   #   PLUGINS sssrenderstage alf compositor platformcompositor / [alf] ID 0x200184B6 / [compositor] ID 0x2002BCF9.
