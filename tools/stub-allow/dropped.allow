@@ -124,6 +124,7 @@ D1 platformenv driveinfopatchdata.cpp
 D1 ptikeymappings_itut_01 ptikeymappings_itut_01.cpp
 D3 recsisx patchdata.cpp
 D1 scdv cdsb.cpp
+D16 schemedispatcher httphandler.cpp
 D1 screensaver screensaverappui.cpp
 D1 sflibopenvgrefimpl rieglos.cpp
 D1 sflibopenvgrefimpl riimage.cpp
