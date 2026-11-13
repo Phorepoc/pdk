@@ -7,6 +7,7 @@
     python3 tools/stub_audit.py check  [--arch x32|arm] [--rom ARGS] [--core]   # CI: fails on a new stub (exit 1)
     python3 tools/stub_audit.py allow  [--arch x32|arm] [--rom ARGS]     # prints the allowlist for what is there now
     python3 tools/stub_audit.py dropped [--arch x32|arm]                 # the sources the registry leaves out of a build
+    python3 tools/stub_audit.py package [--arch x32|arm] REPO [SINCE]    # package.yml: the images this job built (newer than SINCE)
 
 No stub has a place in an image (docs/stub-audit.md). A "link stub" is a name an image calls that no provider exports:
 the emitter (build_mmp.py / build_mmp_x32.py) links it to `__unimpl_export`, which panics the caller. Every image the
@@ -300,8 +301,65 @@ def cmd_check(arch, rom_args, core=False):
     return 1 if bad else 0
 
 
+def cmd_package(arch, repo, since):
+    """The package build's check (package.yml). Every image this job built -- a .linkstubs record newer than `since` (a file
+    package.yml touches before the component build), anywhere under the build tree (a package's builder may write elsewhere, e.g. qt48/x32img) --
+    may carry no link stub but those <repo>/stub-allow/<arch>.allow lists (the pdk's format and reasons). The
+    exception-runtime names follow the pdk's `#eh allowed` for the architecture."""
+    reasons = load_reasons()
+    _, eh_ok = load_allow(arch)
+    allow = {}
+    path = os.path.join(repo, "stub-allow", arch + ".allow")
+    if os.path.exists(path):
+        for line in open(path, encoding="utf-8"):
+            if line.strip() and not line.startswith("#"):
+                rid, image, name = line.split()
+                allow[(image, name)] = rid
+    t0 = os.path.getmtime(since) if since and os.path.exists(since) else 0
+    real, eh, nimg = set(), 0, 0
+    for root, _dirs, files in os.walk(BUILD):
+        for f in files:
+            p = os.path.join(root, f)
+            if not f.endswith(".linkstubs") or os.path.getmtime(p) <= t0:
+                continue
+            nimg += 1
+            for n in open(p).read().split():
+                if EH_RUNTIME.match(n):
+                    eh += 1
+                else:
+                    real.add((f[:-len(".linkstubs")], n))
+    bad = 0
+    new = sorted(real - set(allow))
+    if new:
+        bad = 1
+        print(f"stub_audit: {len(new)} link stub(s) in the package's {arch} images (a call to one panics EUSRNIMP):")
+        for image, n in new[:60]:
+            print(f"  {image}: {(demangle([n]) or [n])[0]}")
+        print("  Link the provider (a lost LIBRARY line, a configure step), or list it in the package repository's "
+              f"stub-allow/{arch}.allow with a reason of the pdk's stub-allow/reasons.txt.")
+    unknown = sorted({rid for rid in allow.values() if rid not in reasons})
+    if unknown:
+        bad = 1
+        print(f"stub_audit: allowlist lines with no reason in the pdk's stub-allow/reasons.txt: {', '.join(unknown)}")
+    if eh and not eh_ok:
+        bad = 1
+        print(f"stub_audit: {eh} exception-runtime link stubs, and the pdk's stub-allow/{arch}.allow has no '#eh allowed' line")
+    print(f"stub_audit package {arch}: {nimg} images built, {len(real)} link stubs ({len(allow)} allowed), {eh} EH runtime -- "
+          + ("FAILED" if bad else "ok"))
+    return bad
+
+
 def main():
     args = sys.argv[1:]
+    if args and args[0] == "package":
+        args.pop(0)
+        arch = os.environ.get("PHOREPOC_ARCH", "x32")
+        if args and args[0] == "--arch":
+            args.pop(0)
+            arch = args.pop(0)
+        if not args:
+            sys.exit(__doc__)
+        return cmd_package(arch, args[0], args[1] if len(args) > 1 else None)
     cmd = args.pop(0) if args and args[0] in ("report", "check", "allow", "dropped") else "report"
     arch = os.environ.get("PHOREPOC_ARCH", "x32")
     rom, core = None, False

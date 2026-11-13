@@ -122,10 +122,16 @@ jobs:
       - name: Components
         if: matrix.components != ''
         run: |
+          touch package-start   # the stub audit below checks the images built after this
           phe component resources ${{ matrix.components }} > resources-1.log 2>&1 || true
           phe source casefix -a
           phe component resources ${{ matrix.components }}
           phe component build -arch "$PHOREPOC_ARCH" ${{ matrix.components }}
+
+      - name: No link stubs in the package's images (tools/stub_audit.py package)
+        if: matrix.components != ''
+        run: |
+          python3 pdk/tools/stub_audit.py package --arch "$PHOREPOC_ARCH" "${{ github.event.repository.name }}" package-start
 
       - name: The SIS files (recipes/sis.sh)
         env: { RELEASE_VERSION: "${{ inputs.version }}" }
