@@ -117,6 +117,7 @@ D1 mmwidgets mmgridcontainer.cpp
 D1 mmwidgets mmlistboxcontainer.cpp
 D1 msgmedia mmsconformance.cpp
 D1 msgs msvdbadapter.cpp
+D1 orientationssy ssychannel.cpp
 D1 peninputgenericvkb peninputgenericlafdatamgr.cpp
 D1 peninputimeplugingeneric peninputimeplugingeneric.cpp
 D1 peninputlayouteng peninputimefinder.cpp
