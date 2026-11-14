@@ -183,6 +183,7 @@ D1 wserv_nga groupwin.cpp
 D1 wserv_nga inifile.cpp
 D1 wserv_nga pointer.cpp
 D1 wserv_nga redrawmsgwindow.cpp
+D1 wserv_nga scrdev.cpp
 D1 wserv_nga screen.cpp
 D1 wserv_nga winbase.cpp
 D1 wserv_nga wnredraw.cpp
