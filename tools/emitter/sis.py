@@ -86,6 +86,8 @@ INSTALL_TYPE_INSTALLATION = 0
 INSTALL_FLAG_ROM_UPGRADE = 4   # Sis::EInstFlagROMUpgrade (sisfieldtypes.h): RU
 HASH_SHA1 = 1
 OP_INSTALL = 1
+OP_RUN = 2
+RUN_AFTER_INSTALL = set()   # targets the installer also runs once the install has finished (makesis FR,RA); see make_sis --run-on-install
 
 
 def _field(ftype: int, payload: bytes, typed: bool = True) -> bytes:
@@ -121,7 +123,8 @@ def _file_des(target: str, data: bytes, deflated: bytes, caps, index: int) -> by
     if caps is not None:
         body += _field(SISCapabilities, struct.pack("<I", caps))
     body += (_field(SISHash, struct.pack("<I", HASH_SHA1) + _field(SISBlob, hashlib.sha1(data).digest()))
-             + struct.pack("<II", OP_INSTALL, 0)                       # operation, options
+             + (struct.pack("<II", OP_RUN, (1 << 7) | (1 << 4)) if target in RUN_AFTER_INSTALL   # EOpRun = install AND run; options RunAfterInstall | WaitEnd
+                else struct.pack("<II", OP_INSTALL, 0))                # operation, options
              + struct.pack("<QQ", len(deflated), len(data))            # stored, uncompressed length
              + struct.pack("<I", index))                               # file index in the data unit
     return _field(SISFileDes, body, typed=False)
