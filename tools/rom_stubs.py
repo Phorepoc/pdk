@@ -42,6 +42,14 @@ def main() -> int:
         if not re.search(r"^--(?:xip|data)\n\s*sys\\bin\\" + re.escape(rom.lower()) + "=", rom_args, re.M):
             continue
         uid = stub.get("uid") or m.uids[-1]   # UID3
+        # every listed file must be in the image at that path: a stub naming private\10003a3f\import\apps while the ROM
+        # carried the registration in private\10003a3f\apps let SWI install the update, but AppArc kept the ROM copy
+        missing = [f for f in stub["files"] if "*" not in f
+                   and not re.search(r"^" + re.escape(f.replace("/", "\\").lower()) + "=", rom_args, re.M)]
+        if missing:
+            print(f"rom_stubs: {key}: the stub lists files the image does not carry at that path: {', '.join(missing)}",
+                  file=sys.stderr)
+            return 1
         files = ["z:\\" + f.replace("/", "\\") for f in stub["files"]]
         path = os.path.join(out, key + "_stub.sis")
         open(path, "wb").write(SIS.build_rom_stub(pkg_uid=uid, vendor=stub.get("vendor", "Phorepoc"), name=stub["name"],
