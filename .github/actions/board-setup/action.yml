@@ -74,6 +74,7 @@ runs:
         lock=caller/board.lock
         : > built-from.txt
         for r in ${{ steps.repos.outputs.list }}; do
+          grep -q "^$r " built-from.txt && continue   # a repository listed twice (a package repos list naming core again) is checked out once
           if [ "${{ github.repository }}" = "${{ github.repository_owner }}/$r" ]; then
             ref="${{ github.sha }}"     # the caller's own repository builds at the commit that triggered the run
           elif [ -f "$lock" ]; then
