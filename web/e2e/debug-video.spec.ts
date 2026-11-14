@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Diagnostic: the live video element's state over time (run alone: npx playwright test debug-video).
 import { test } from '@playwright/test';

@@ -1,5 +1,5 @@
 <!-- Copyright The Phorepoc Authors
-     SPDX-License-Identifier: Apache-2.0 -->
+     SPDX-License-Identifier: AGPL-3.0-only -->
 
 <template>
   <div class="ide-tw" :class="{ focused: ide.st.focus === group.id && ide.groupCount > 1 }" @pointerdown.capture="ide.st.focus = group.id">

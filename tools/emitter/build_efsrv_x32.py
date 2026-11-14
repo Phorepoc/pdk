@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """build_efsrv_x32 -- efsrv.dll (the F32 CLIENT library) as an x32 E32Image.
 

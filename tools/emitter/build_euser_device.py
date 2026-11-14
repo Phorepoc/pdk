@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """build_euser_device -- the euser DLL of an ARM "device" image set: RAM-loaded images that run on a stock
 Symbian-style loader (the from-source kernel, or any EKA2-compatible one).

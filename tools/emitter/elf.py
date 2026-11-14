@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """Minimal ELF32 (little-endian ARM, or x86-64 in the x32 ABI) reader for the ELF -> E32Image pipeline.
 

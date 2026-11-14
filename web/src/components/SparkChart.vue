@@ -1,5 +1,5 @@
 <!-- Copyright The Phorepoc Authors
-     SPDX-License-Identifier: Apache-2.0 -->
+     SPDX-License-Identifier: AGPL-3.0-only -->
 
 <template>
   <svg :viewBox="`0 0 ${w} ${h}`" :width="width" :height="height" preserveAspectRatio="none" class="spark" role="img" :aria-label="label">

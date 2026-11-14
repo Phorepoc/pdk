@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # board-finish -- the last steps of a board-image build, once every object is compiled or can be reused: link every
 # component in provider order, publish the core layer or make the board's release files, run its boot test, write the

@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """build_hal_x32 -- hal.dll (the user-side HAL client) as an x32 E32Image.
 

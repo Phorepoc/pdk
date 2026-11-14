@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package pkgindex reads Phorepoc software indexes (the index.json the index repository publishes) and fetches the
 // approved release files they point to, checking each file's SHA-256. It is the download app's logic, used by

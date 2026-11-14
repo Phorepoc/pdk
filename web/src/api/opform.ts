@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Turns an op spec into form fields and form values into the JSON args the server wants.
 import type { OpParam, OpSpec } from './types';

@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # Linux: docker compose -f docker/compose.yaml up -d      (runs the released image, ghcr.io/phorepoc/phonelab; no clone needed:
 #        save this file and run the same command; PHONELAB_VERSION=v0.9.0 pins a release, default latest)

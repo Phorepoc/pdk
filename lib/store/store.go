@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package store keeps the history: every log line, parsed event, boot, op call (who asked, what, result) in
 // SQLite, and blobs (images, screenshots, dumps) as files under blobs/ named by sha256.

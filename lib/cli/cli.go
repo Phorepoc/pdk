@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package cli is the command framework of phe: every command is defined once (group, name, operands, summary,
 // description, options, examples), and the overview, `phe help <command>`, the Markdown manual pages (docs/phe/) and the

@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package client talks to a running PhoneLab service over its REST API. The service owns each device's link, so a
 // command-line tool (cmd/phe) runs device operations through it instead of opening the port itself.

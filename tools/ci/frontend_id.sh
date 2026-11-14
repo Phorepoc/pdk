@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # frontend_id.sh -- names the compile front end of this checkout: the trees of tools/emitter and tools/toolchain (the
 # build scripts and the compiler wrapper) and the toolchain image. A published build tree records it

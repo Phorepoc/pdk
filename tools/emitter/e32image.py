@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """E32Image writer: packs linked code, data, imports, exports and relocations into a Symbian E32Image (what
 elf2e32 does for the stock toolchain). Everything is little-endian (ARM and x86 Symbian are both LE).

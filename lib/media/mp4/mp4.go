@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package mp4 writes an H.264 elementary stream into an MP4 file (ISO/IEC 14496-12 + 14496-15): one video track with
 // variable frame timing, every sample with its own duration. Enough for a screen recording to play in a browser or

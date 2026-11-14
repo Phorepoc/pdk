@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # install-windows.ps1 -- run PhoneLab at logon and open it to the LAN (run ONCE, elevated):
 #   powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1

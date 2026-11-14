@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package lz4 decodes LZ4 *blocks* (the format the phone's phlz4.h encoder writes; no frame format, the size is
 // known from context). Pure Go, no dependency.

@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """registry_check -- every path the component registry names must exist: each component's .mmp, its added sources
 (`extra`, `x32_extra`) and the include paths / forced includes in its `flags`. A path that only worked in another

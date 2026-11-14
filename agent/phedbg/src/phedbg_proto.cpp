@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // phedbg_proto.cpp -- base64, percent-encoding and field parsing for the phedbg line protocol v1.
 #include "phedbg.h"

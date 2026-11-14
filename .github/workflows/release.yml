@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # release.yml -- automatic releases of the pdk. Every push to main is checked (Conventional Commit subjects); when the
 # commits since the last release ask for one (tools/ci/next_version.sh: feat = minor, fix/perf = patch, breaking =

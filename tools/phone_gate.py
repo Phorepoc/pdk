@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """phone_gate -- the regression gate after a push to a phone: PASS only if the running image is a recorded pipeline build
 and the UI behaves (no white frames, GPU composition up, real transition effects). Run it after every push, before

@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // phonelab: the resident phone service. One process owns each phone's debug link and exposes it over
 // REST + WebSocket (/api), MCP (/mcp) and the web UI (/). See README.md.

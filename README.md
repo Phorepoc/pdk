@@ -19,7 +19,7 @@
 
 <p align="center">
   <a href="https://github.com/Phorepoc/pdk/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/Phorepoc/pdk?color=4591FF"></a>
-  <img alt="Licence: Apache 2.0" src="https://img.shields.io/badge/licence-Apache%202.0-4591FF">
+  <img alt="Licence: AGPL-3.0-only" src="https://img.shields.io/badge/licence-AGPL--3.0--only-4591FF">
   <a href="https://github.com/Phorepoc/pdk/pkgs/container/phonelab"><img alt="Docker: ghcr.io/phorepoc/phonelab" src="https://img.shields.io/badge/docker-ghcr.io%2Fphorepoc%2Fphonelab-2496ED"></a>
   <img alt="Go" src="https://img.shields.io/badge/Go-1.27-00ADD8">
 </p>
@@ -200,11 +200,16 @@ cd web && npm ci && npm test && npx vue-tsc --noEmit
 
 </details>
 
-## Licence
+## Licensing
 
-The PDK is [Apache-2.0](LICENSE). A few files that started as Nokia's are EPL-2.0, with GPL-2.0-or-later as a Secondary
-License, and some Symbian test data is still EPL-1.0. Every file's header says which applies.
+This is Phorepoc code, licensed under the [GNU Affero General Public License, version 3 only](LICENSE) (`AGPL-3.0-only`), with the [additional terms](ADDITIONAL-TERMS.md) its section 7 allows: keep the attribution "Phorepoc, founded by Kyriakos Bompotis" and the legal notices (also where your version shows notices, such as an About screen), and no rights to the Phorepoc names and logos ([TRADEMARKS.md](TRADEMARKS.md)). If you run a modified version for users over a network, AGPL section 13 asks you to offer them its source.
 
-Contributions are welcome under the same terms. Add your name to `AUTHORS` in your first pull request.
+What you build with it is yours: the [Phorepoc Build Output Exception](LICENSES/Phorepoc-Build-Output-Exception-1.0.txt) lets you distribute the programs, libraries and packages you make with these tools, including the runtime pieces that end up in them, under any licence. `NOTICE` lists the runtime files it covers.
+
+A few files that started as Nokia's are EPL-2.0, with GPL-2.0-or-later as a Secondary License, and some Symbian test data is still EPL-1.0. Every file's header says which applies; `NOTICE` lists them.
+
+Phorepoc is dual-licensed. Commercial licences or licence exceptions (for example to ship it inside a closed product without the AGPL obligations) are available on request from the founder, Kyriakos Bompotis.
+
+Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) for the licence grant they need.
 
 <sub>Phorepoc is an independent project, not affiliated with Nokia or the Symbian Foundation.</sub>

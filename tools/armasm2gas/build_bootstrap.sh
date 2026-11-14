@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # build_bootstrap.sh -- translate + assemble + link the Symbian Syborg bootstrap (RVCT armasm -> GAS -> ELF) with the
 # GNU toolchain.

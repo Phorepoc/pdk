@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package h264 is the little H.264 (ITU-T H.264) bitstream work a live view needs: read the parameter sets, rewrite
 // a slice's frame_num, and write a P picture whose macroblocks are all skipped (it repeats the reference picture).

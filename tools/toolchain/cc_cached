@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # cc_cached -- a compile cache in front of any compiler invocation that has `-o <obj>`.
 #   tools/toolchain/cc_cached <compiler> <args...> -o out.o        (or: . toolchain/cc_cached; cc_cached_run <compiler> ...)

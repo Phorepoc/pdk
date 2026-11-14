@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 package mcp_test
 
@@ -89,7 +89,7 @@ func TestRESTSurface(t *testing.T) {
 	}
 	var res struct {
 		Result []phlink.Word `json:"result"`
-		Error  string           `json:"error"`
+		Error  string        `json:"error"`
 	}
 	if c := do(t, "POST", ts.URL+"/api/devices/phone/ops/peek", `{"addr":"0x100","count":2}`, &res); c != 200 || res.Result[0].Value != "0x00000abc" {
 		t.Fatalf("peek %d %+v", c, res)

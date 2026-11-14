@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """build_euser_x32 -- euser.dll as a real x32 E32Image (amd64 CPU / x32 ABI).
 

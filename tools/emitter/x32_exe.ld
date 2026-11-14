@@ -1,5 +1,5 @@
 /* Copyright The Phorepoc Authors
-   SPDX-License-Identifier: Apache-2.0 */
+   SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0 */
 
 /* x32_exe.ld -- link script for a Path C (amd64 CPU, x32 ABI) EXE that becomes an E32Image.
  * The amd64 sibling of efile.ld, same contract with elf.extract: ".text = code + rodata" (so

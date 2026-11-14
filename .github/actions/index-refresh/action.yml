@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # index-refresh -- start the Catalogue index's publish workflow (Phorepoc/index, publish.yml) after a release, so a
 # "latest" listing picks the release up at once. GitHub runs scheduled workflows best-effort (the hourly cron skipped

@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """theme_gen -- compile the complete 2010 SVG themes, Haze (2000B12D) and Jing (2000B12E), as skin_gen.py does the
 default skin.

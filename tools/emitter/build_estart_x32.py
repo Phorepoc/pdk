@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """build_estart_x32 -- ESTART (e32strt.exe, the base startup process) as an x32 E32Image.
 

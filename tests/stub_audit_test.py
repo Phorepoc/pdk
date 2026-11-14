@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Checks the stub ratchet (tools/stub_audit.py check): a new link stub, a stale allowlist line, an image without a
 # record and exception-runtime stubs that are not allowed each fail; the allowed state passes.

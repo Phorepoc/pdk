@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 #
 # Emits the ROM container (TRomHeader, TRomImageHeader + payload per XIP file, the directory tree)

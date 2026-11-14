@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package mock is a fake phone speaking phlink (the device side of phlink), for unit tests and
 // for running the service + web UI without hardware. It replays a recorded boot transcript (testdata/) on every

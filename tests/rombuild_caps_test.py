@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Checks the capability rule of the ROM builder (tools/rombuild.py): with <build>/rom/caps.tsv present the ROM carries the mmp
 # capabilities (core images efile.exe / e32strt.exe get the words of f32caps.mmh / estart.mmp, unlisted images the 20 defined

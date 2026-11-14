@@ -1,5 +1,5 @@
 /* Copyright The Phorepoc Authors
- * SPDX-License-Identifier: Apache-2.0 */
+ * SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0 */
 
 // ph_x32_prefix.h -- force-included first on the x32 "pure Open C" line (mk_pure_wrappers.sh ARCH=x32: FFmpeg, OpenH264 ...).
 // Open C's <stdarg.h> / <stdarg_e.h> make va_list a char* walked over the stack: right for its old ARM ABI, wrong on x32,

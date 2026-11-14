@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // End-to-end checks against a running PhoneLab with a phone attached (e2e/); unit tests stay in vitest (tests/).
 import { defineConfig } from '@playwright/test';

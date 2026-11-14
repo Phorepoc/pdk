@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # PhoneLab configuration (defaults; every key is optional). See ../README.md.
 listen = "0.0.0.0:8737"

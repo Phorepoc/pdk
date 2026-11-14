@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """build_efile_exe -- emit EFILE.EXE (the F32 file server) as an E32Image from the unmodified 2010 source.
 

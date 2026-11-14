@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Checks the stable file placement of the ROM builder (tools/rombuild.py SlotMap): a file keeps its slot while it fits,
 # an outgrown or new file goes behind everything placed before, FULL=1 repacks, a map for another region start is dropped.

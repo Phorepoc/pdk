@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """release_notes.py -- the "What changed" part of a release's notes.
 
     release_notes.py --repo <owner/name> [--version <vX.Y.Z>] --built-from <built-from.txt> [--extra notes.md] [--out notes.md]

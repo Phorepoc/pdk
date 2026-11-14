@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 /** The live view's video transport: the phone's screen encoder as fragmented MP4 (op live_video), played by the
  *  browser's own <video> through Media Source Extensions -- works on plain http (no WebCodecs, no secure context).

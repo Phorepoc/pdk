@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 r"""build_mmp -- build ANY registered component for ARM from its REAL 2010 .mmp, unmodified.
 

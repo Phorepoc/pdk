@@ -1,5 +1,5 @@
 <!-- Copyright The Phorepoc Authors
-     SPDX-License-Identifier: Apache-2.0 -->
+     SPDX-License-Identifier: AGPL-3.0-only -->
 
 <template>
   <div class="column fit no-wrap" :class="{ focused: ctx.tree.focus === group.id && many }" @pointerdown.capture="ctx.tree.focus = group.id">

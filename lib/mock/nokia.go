@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 package mock
 
@@ -62,7 +62,9 @@ func (a *NokiaAgent) Handle(line string) []string {
 		return nil
 	}
 	id, op := f[0], f[1]
-	errl := func(code, msg string) []string { return []string{fmt.Sprintf("@%s err code=%s msg=%s", id, code, enc(msg))} }
+	errl := func(code, msg string) []string {
+		return []string{fmt.Sprintf("@%s err code=%s msg=%s", id, code, enc(msg))}
+	}
 	if op == "ping" { // keep-alive: answered before the pairing code is checked, as the phone agent does
 		return []string{fmt.Sprintf("@%s ok pong=1", id)}
 	}

@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Live view against a RUNNING PhoneLab with a phone (not part of `npm test`): input-to-picture latency and the pictures
 // actually shown, for each source. Run: PHONELAB_URL=http://127.0.0.1:8737 PHONELAB_DEVICE=<device id> npx playwright test

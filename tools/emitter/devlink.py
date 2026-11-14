@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """devlink -- shared import-link machinery for DEVICE images (RAM-loaded ARM images for a stock Symbian loader).
 

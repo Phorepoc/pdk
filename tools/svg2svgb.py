@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """svg2svgb -- encode an SVG-Tiny document as SVG-T binary, the format svgtbinencode falls back to for content NVG
 cannot hold (dash arrays, text, switch, display, group opacity ...).

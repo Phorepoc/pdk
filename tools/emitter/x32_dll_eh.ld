@@ -1,5 +1,5 @@
 /* Copyright The Phorepoc Authors
-   SPDX-License-Identifier: Apache-2.0 */
+   SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0 */
 
 /* x32_dll_eh.ld -- x32_dll.ld for a DLL with C++ exceptions (component option eh=True): .eh_frame (objects carry it as
  * .ph_eh_frame, see EH_RENAME in build_mmp_x32.py) and the LSDAs stay in the code segment between __eh_frame_start and a

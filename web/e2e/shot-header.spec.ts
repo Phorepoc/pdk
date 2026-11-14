@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Diagnostic: a picture of the header bar (npx playwright test shot-header).
 import { test } from '@playwright/test';

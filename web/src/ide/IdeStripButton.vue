@@ -1,5 +1,5 @@
 <!-- Copyright The Phorepoc Authors
-     SPDX-License-Identifier: Apache-2.0 -->
+     SPDX-License-Identifier: AGPL-3.0-only -->
 
 <template>
   <q-btn flat dense round :icon="panel.icon" class="ide-stripbtn" :class="{ active, shown }" :aria-label="panel.title" :data-test="'strip-' + panel.id" @click="ide.activate(panel.id)">

@@ -1,5 +1,5 @@
 /* Copyright The Phorepoc Authors
- * SPDX-License-Identifier: Apache-2.0 */
+ * SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0 */
 
 // e32def.h -- OURS stand-in for engine code (WTF/JSC/ICU) compiled on the "pure Open C" line (browser-plan.md P1).
 // Open C's stdapis headers #include <e32def.h> only for IMPORT_C/EXPORT_C. The real e32def.h defines ASSERT / __ASSERT_DEBUG /

@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package phlink drives the phone running Phorepoc over phlink: the kernel-side CDC ACM function of
 // the device side of phlink (A/B slots). Wire protocol, host -> phone:

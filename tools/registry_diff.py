@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """registry_diff -- compare two component registries entry by entry and list every difference in the fields that change what
 gets built: defs, flags, drop, extra, x32_flags, vfp, libs, noinc, rom, rom_as, allow_wsd, static_ctors, cdriver, rtti, stack.

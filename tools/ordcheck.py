@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """ordcheck.py -- do an app's imports by ordinal land on real code in a DLL?
 
   ordcheck.py APP.exe DLLNAME DLL.dll [FROZEN.def]

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # board_lock.sh <board repository> -- write <board repository>/board.lock: the commit of every repository the board's
 # release is built from (the pdk, core and its board.conf REPOS), taken from the checkouts next to this pdk. The release

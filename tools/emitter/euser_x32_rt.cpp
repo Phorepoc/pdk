@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0
 
 // euser_x32_rt.cpp -- the two leaves the statically linked x32 C++ ABI runtime needs from euser.
 // The typeinfo classes of the distro libsupc++.a (linked by build_euser_x32.py) have deleting

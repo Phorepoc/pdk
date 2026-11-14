@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package nokia drives stock Nokia Symbian^3-family phones through an on-phone debug agent that speaks
 // the "phedbg line protocol v1" (docs/nokia.md). The agent is either phedbg (a native exe, USB CDC ACM or TCP) or

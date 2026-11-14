@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // Package device is the multi-phone seam. A Driver knows one family of devices: the operations it supports
 // (described as data, so the REST API, the MCP server and the web UI are all generated from the same list),

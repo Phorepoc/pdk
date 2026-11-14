@@ -1,5 +1,5 @@
 /* Copyright The Phorepoc Authors
- * SPDX-License-Identifier: Apache-2.0 */
+ * SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0 */
 
 /* uchar.h -- OURS: Open C has none. simdutf's C API (and others) test __has_include(<uchar.h>) and otherwise #define char16_t uint16_t,
    which breaks the C++ overloads. C++ has char16_t/char32_t built in; C gets typedefs. */

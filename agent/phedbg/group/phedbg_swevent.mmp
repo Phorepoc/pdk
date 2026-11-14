@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // phedbg_swevent.mmp -- the same app with SwEvent, for key/touch input. A self-signed SIS cannot carry SwEvent:
 // install this one only with a developer certificate or on a phone that grants it. phedbg.mmp is the self-signed build.

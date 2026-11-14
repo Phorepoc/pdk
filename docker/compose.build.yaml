@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # Builds the PhoneLab image from this checkout instead of pulling the released one:
 #   docker compose -f docker/compose.yaml -f docker/compose.build.yaml up -d --build   (from the repository root)

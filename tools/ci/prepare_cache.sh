@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # prepare_cache.sh -- what the prepare recipes (recipes/prepare.sh of the board's repositories) leave behind that a later
 # run can reuse. A repository lists it in recipes/prepare.cache:

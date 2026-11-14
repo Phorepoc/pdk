@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """openc_cflags -- print the C compile line for Open C / P.I.P.S. client code built outside the registry (ports of
 C libraries that bring their own build: Mesa's, in the mesa-symbian repository).

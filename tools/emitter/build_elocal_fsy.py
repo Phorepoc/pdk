@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """build_elocal_fsy -- the from-source ELOCAL.FSY (FAT16 file system plugin),
 

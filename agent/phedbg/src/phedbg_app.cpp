@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // phedbg_app.cpp -- the Avkon application shell for phedbg: settings list, options menu,
 // settings persistence and pairing code generation.  The protocol and transport are in

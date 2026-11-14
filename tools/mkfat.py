@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """mkfat -- build a FAT16 "superfloppy" image (no MBR) pre-populated with files.
 

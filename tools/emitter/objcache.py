@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """objcache -- is this object up to date? One rule for both builders (build_mmp.py: ARM, build_mmp_x32.py: x32).
 

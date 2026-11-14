@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # next_version.sh [<repository> [<path>...]] -- the next release version from the Conventional Commits since the last v* tag
 # (https://www.conventionalcommits.org): a breaking change ("type!:" or a "BREAKING CHANGE:" footer) bumps the major

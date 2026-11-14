@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Checks the rule that decides whether an object is rebuilt (tools/emitter/objcache.py): by content, never by time.
 # Run: python3 pdk/tests/objcache_test.py

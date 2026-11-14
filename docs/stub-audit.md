@@ -21,7 +21,7 @@ unwinds through them.
 ## The rule per item
 
 * real source in the 2010 / RCL_3 release -> build it;
-* never released -> write the real implementation (ours, Apache-2.0);
+* never released -> write the real implementation (ours, AGPL-3.0-only);
 * hardware absent on a board -> a real adaptation that reports "not present" the way the real phone does when the part
   is missing (derived from the reference device's behaviour), never a stub that pretends.
 
@@ -149,7 +149,7 @@ The list per component is in `stub-audit-replaced-sources.md`.
   hitchcock's `huim3gmesh.cpp`, `alfm3gmesh.cpp`, mesh visuals and the VG10 surface setup; nothing else uses it and the shipped apps
   load no meshes. API used: loader (`m3gCreateLoader`, `m3gDecodeData`), reference counting, scene graph (World/Group/Camera/Mesh/
   SkinnedMesh/MorphingMesh), Appearance/CompositingMode/PolygonMode, Background, transforms, animation. Plan: write `m3gcore` (ours,
-  Apache-2.0): object model + `.m3g` decoder + transforms + animation (~2k lines for the 38 names), rendering through the existing VG
+  AGPL-3.0-only): object model + `.m3g` decoder + transforms + animation (~2k lines for the 38 names), rendering through the existing VG
   surface later.
 * **R3 JRT registry client.** The real client is in the release (`oss.FCL.sf.app.JRT/javamanager/javaregistry/client`, 9 files, 2337 lines,
   API headers in `jrt_plat/java_registry_api`); the tree's `java_stubs` copy only leaves `KErrNotSupported`. It needs `javastorage`,

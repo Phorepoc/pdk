@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """unimpl_exports -- the provider side of the stub audit: exports an image serves with the unimplemented-export stub.
 

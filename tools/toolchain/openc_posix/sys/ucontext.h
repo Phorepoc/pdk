@@ -1,5 +1,5 @@
 /* Copyright The Phorepoc Authors
- * SPDX-License-Identifier: Apache-2.0 */
+ * SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0 */
 
 /* sys/ucontext.h: JSC port spike stub -- Open C has no ucontext (signal-based thread suspension / register capture is a porting item) */
 #ifndef PH_SYS_UCONTEXT_H

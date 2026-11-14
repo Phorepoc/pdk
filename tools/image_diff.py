@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """image_diff -- compare two Phorepoc ROM placement maps (the <image>.map next to an ARM/x86 image): which files one
 image has and the other lacks, and which have a different size.

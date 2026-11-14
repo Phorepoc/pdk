@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # commit_lint.sh <from> <to> [<repository>] -- every commit in from..to has a Conventional Commit subject
 # ("type(scope)!: summary"), which next_version.sh turns into the release version. Merge commits are skipped.

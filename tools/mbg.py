@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """mbg -- generate the icon-ID headers (<x>.mbg) that S60's mifconv build step emits.
 

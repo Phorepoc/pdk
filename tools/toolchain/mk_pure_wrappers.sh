@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # mk_pure_wrappers.sh -- inside the toolchain container: writes $W/bin/pp-gcc and pp-g++, the "pure Open C" compile line
 # for ported C/C++ libraries that bring their own build (FFmpeg and OpenH264 in codecpack, WebKit/ICU, OpenSSL):

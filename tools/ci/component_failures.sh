@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # component_failures.sh LOG -- the verdict on a bulk `phe component build -A` (board-finish's link step), which goes on past a
 # component that fails. Every component LOG names as FAIL is built once more on its own (the relink passes may have given it

@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // phedbg.h -- an explicit, visible on-device debug agent for stock Nokia Symbian^3-family phones.
 // Serves the "phedbg line protocol v1" (pdk/docs/nokia.md) over USB CDC ACM (RComm "ACM::n") and/or TCP, for PhoneLab.

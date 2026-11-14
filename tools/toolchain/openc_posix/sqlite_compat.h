@@ -1,5 +1,5 @@
 /* Copyright The Phorepoc Authors
- * SPDX-License-Identifier: Apache-2.0 */
+ * SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0 */
 
 /* sqlite_compat.h -- OURS (Phorepoc), force-included into the SQLite amalgamation (build_webdeps.sh). SQLite's unix VFS defines
  * HAVE_FCHOWN for every non-VxWorks system; Open C has no fchown (Symbian files have no owner): a successful no-op is the truth here. */

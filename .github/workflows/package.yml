@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # package.yml -- the reusable build of an installable package (docs/layering.md): a repository that is no board and
 # ships its own SIS files (Catalogue installs them; the index lists the releases). It starts from the published core

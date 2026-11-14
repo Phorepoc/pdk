@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """transcode_tones -- the release's AAC alarm tones as WAV, made on the BUILD HOST.
 

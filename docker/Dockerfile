@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # PhoneLab for Linux hosts (build context = the repository root):
 #   docker build -f docker/Dockerfile -t phonelab .

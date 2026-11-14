@@ -3,7 +3,7 @@ Copyright The Phorepoc Authors (see AUTHORS)
 
 Phorepoc was founded by Kyriakos Bompotis.
 
-This product includes software developed by The Phorepoc Authors, licensed under the Apache License 2.0 (LICENSE).
+This product includes software developed by The Phorepoc Authors, licensed under the GNU Affero General Public License, version 3 only (AGPL-3.0-only, LICENSE), with the additional terms in ADDITIONAL-TERMS.md (section 7(b) attributions, section 7(e) names and logos), and the Phorepoc Build Output Exception (LICENSES/Phorepoc-Build-Output-Exception-1.0.txt) as described below.
 
 The Nokia-derived source files in this repo are our updated versions, distributed under the Eclipse Public License 2.0
 (LICENSES/EPL-2.0.txt) with GNU General Public License, version 2 or later as a Secondary License (relicensed from
@@ -15,3 +15,20 @@ EPL-1.0 under its section 7); unmodified Symbian sources are fetched from upstre
 
 The test data under lib/odt/testdata/ (homescreen configuration sources and the compiled files, Nokia) is copied
 unchanged and stays under the Eclipse Public License 1.0 (LICENSES/EPL-1.0.txt).
+
+Licensing. The Phorepoc code is AGPL-3.0-only with additional terms under its section 7 (ADDITIONAL-TERMS.md):
+the attribution "Phorepoc, founded by Kyriakos Bompotis" and these notices must be kept, also where a work based on
+it shows legal notices; no rights are granted to the Phorepoc names and logos (TRADEMARKS.md). It is dual-licensed:
+commercial licences are available from the founder (see README.md, "Licensing"). Third-party code keeps its own
+licence and header.
+
+Phorepoc Build Output Exception (LICENSES/Phorepoc-Build-Output-Exception-1.0.txt) applies to the Tools:
+  the phe command (cmd/, lib/, frontend/, web/), tools/emitter/, tools/toolchain/, tools/armasm2gas/, tools/ci/ and the other build tools
+and to this Runtime Material:
+  tools/emitter/euser_rtti_rt.cpp
+  tools/emitter/euser_x32_rt.cpp
+  tools/emitter/*.ld (the link scripts)
+  tools/toolchain/openc_posix/ (the POSIX header overlay)
+  tools/toolchain/symbian_gcc_prefix.h
+  the code and data that tools/emitter/ (linkstubs.py, e32image.py, sis.py, x32_client_dll.py and the build_*.py drivers) writes into the files it produces
+What you build with the Tools, including the Runtime Material in it, is not covered by the AGPL.

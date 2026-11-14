@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # layering.sh [<repository>] -- fail if the repository names a layer above it (docs/layering.md). The repository's
 # .layering file lists what it must not name: one extended regular expression per line (case-insensitive), # comments.

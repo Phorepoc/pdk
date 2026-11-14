@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 #
 # Checks the add-on archive (tools/addon.py): the layout and manifest of an archive, that equal inputs give equal bytes, and
 # that the ROM recipe's consumer (rom-args) unpacks it to rombuild --data arguments and refuses an archive of another

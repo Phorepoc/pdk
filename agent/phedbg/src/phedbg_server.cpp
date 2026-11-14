@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only
 
 // phedbg_server.cpp -- the request handler of the phedbg line protocol v1 (pdk/docs/nokia.md), and its two channels:
 // USB CDC ACM through RComm, and TCP through RSocket. Every request is checked in this order: pairing code, the op's

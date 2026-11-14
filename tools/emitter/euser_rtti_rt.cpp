@@ -1,5 +1,5 @@
 // Copyright The Phorepoc Authors
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0
 
 // euser_rtti_rt.cpp -- the one libc leaf the statically linked C++ ABI runtime needs from euser.
 // euser carries real typeinfo objects for its classes (compiled -frtti); their vtables come from libsupc++

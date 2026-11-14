@@ -1,5 +1,5 @@
 # Copyright The Phorepoc Authors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 
 """build_mmp_x32 -- build a registered component from its REAL 2010 .mmp for the amd64 / x32 port.
 

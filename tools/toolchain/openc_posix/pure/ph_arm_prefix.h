@@ -1,5 +1,5 @@
 /* Copyright The Phorepoc Authors
- * SPDX-License-Identifier: Apache-2.0 */
+ * SPDX-License-Identifier: AGPL-3.0-only WITH LicenseRef-Phorepoc-Build-Output-Exception-1.0 */
 
 // ph_arm_prefix.h -- force-included first on the ARM "pure Open C" line (mk_pure_wrappers.sh ARCH=arm, the ARM browser).
 // The ARM line keeps -D_STDARG_H -D_STDARG_E_H -D__e32_va_list=va_list (as build_mmp.py gives a stdapis client): Open C's
