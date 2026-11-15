@@ -189,6 +189,7 @@ D1 wserv_nga winbase.cpp
 D1 wserv_nga wnredraw.cpp
 D1 wsstdplugin_nga openwfcwrapper.cpp
 D1 akncapserver aknkeyfilter.cpp
+D1 aknicon akniconsrvutils.cpp
 D1 avkon akndef.cpp
 D1 sisregistryserver sisregistrycache.cpp
 # patched copies (D1): about 90%, efat32 sl_vfat 97%, filemanager 99% the release's lines
