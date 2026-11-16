@@ -72,6 +72,10 @@ on:
         description: "Name the file that made each object rebuild (OBJCACHE_EXPLAIN=1; makes the build tree larger): for a test run"
         type: boolean
         default: false
+      build_env:
+        description: "A test variant: KEY=VALUE pairs set for the image build (MODEM=1 ...); never with a version"
+        type: string
+        default: ""
       layer_prefix:
         description: "A prefix for the layer's tags (test-<commit>, test-main): a test run reads and writes its own layers, never the ones the boards use"
         type: string
@@ -189,6 +193,7 @@ jobs:
           version: ${{ inputs.version }}
           release: ${{ inputs.release }}
           draft: ${{ inputs.draft }}
+          build_env: ${{ inputs.build_env }}
 
   compile:
     needs: prepare
@@ -271,3 +276,4 @@ jobs:
           version: ${{ inputs.version }}
           release: ${{ inputs.release }}
           draft: ${{ inputs.draft }}
+          build_env: ${{ inputs.build_env }}

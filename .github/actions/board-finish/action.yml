@@ -41,6 +41,10 @@ inputs:
   draft:
     description: make that release a draft
     required: true
+  build_env:
+    description: "a test variant: KEY=VALUE pairs (space-separated) set for the image build, e.g. MODEM=1 (never with a version)"
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -108,8 +112,16 @@ runs:
       if: inputs.images == 'true' && inputs.core_arch == ''
       shell: bash
       # device.txt states the image: core= (phe reads core's commit time, x32_rom_args.core_version) and image= (this release)
-      env: { PHOREPOC_IMAGE_VERSION: "${{ inputs.version }}" }
-      run: phe image release -b "${{ inputs.board }}" -o "$PWD/out"
+      env: { PHOREPOC_IMAGE_VERSION: "${{ inputs.version }}", BUILD_ENV: "${{ inputs.build_env }}" }
+      run: |
+        if [ -n "$BUILD_ENV" ]; then
+          [ -z "$PHOREPOC_IMAGE_VERSION" ] || { echo "::error::build_env makes a test variant: not with a release version"; exit 1; }
+          for kv in $BUILD_ENV; do
+            echo "$kv" | grep -q -E '^[A-Z][A-Z0-9_]*=[A-Za-z0-9_./:-]*$' || { echo "::error::build_env: bad pair '$kv'"; exit 1; }
+            export "$kv"; echo "variant: $kv"
+          done
+        fi
+        phe image release -b "${{ inputs.board }}" -o "$PWD/out"
 
     - name: Stub audit (every image the board ships)
       if: inputs.images == 'true' && inputs.core_arch == ''
