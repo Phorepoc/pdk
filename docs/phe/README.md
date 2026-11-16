@@ -177,6 +177,12 @@ Given as -O name=value, as many as needed (phe image rom -b myboard -O net=1 -O 
   ssm-test=<component>
       Start this test component at boot (as ssmtest.exe).
 
+  modem=0|1
+      Link the cellular modem power control (the board's modem back end) into the kernel.
+
+  modem-eg25=<dir>
+      The modem-eg25 checkout the modem back end is built from.
+
   rom-tail=<component>,...
       Put these images last in the ROM (a delta push then sends only them).
 
