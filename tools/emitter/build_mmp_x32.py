@@ -697,6 +697,11 @@ def build(key: str) -> int:
         if n.startswith("_ZTS"):
             imports.pop(n, None)
     stub_names = [n for n in missing if n not in imports and not n.startswith(("_ZTI", "_ZTS"))]
+    # an exception-handling DLL takes its RTTI runtime from pheeh.dll (it links no libsupc++): a synthesized leaf typeinfo
+    # (below) needs __class_type_info's vtable even when none of the image's own objects referenced it
+    _ctvt = "_ZTVN10__cxxabiv117__class_type_infoE"
+    if ti_names and rtti and ehdll and _ctvt not in imports and _ctvt in resolve and resolve[_ctvt][0] != rom:
+        imports[_ctvt] = resolve[_ctvt]
     data_imps = {n: imports.pop(n) for n in list(imports)
                  if n in data_names or n.startswith(("_ZTV", "_ZTI", "_ZTS"))}
 
