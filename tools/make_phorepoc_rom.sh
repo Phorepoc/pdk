@@ -236,6 +236,10 @@ if [ -n "${BOOT:-}" ]; then
     mapfile -t BOARD_WS < <(grep -v '^[[:space:]]*#' "$BOARDDIR/wsini.txt" | grep -v '^[[:space:]]*$' | tr -d '\r')
     FADER_INI=("${BOARD_WS[@]}" "${FADER_INI[@]}")
   fi
+  # LEGACY_APPMODE=<n> (NGA): per-client screen modes -- a window server client sees screen mode <n> (the legacy S60 mode) as its current mode and is
+  # told of a mode change only when it concerns that mode (etesian-port.md section 29, R1). WSINI_EXTRA="line;line": more wsini lines (a test mode).
+  if [ -n "${WSINI_EXTRA:-}" ]; then IFS=';' read -ra _WX <<< "$WSINI_EXTRA"; FADER_INI=("${_WX[@]}" "${FADER_INI[@]}"); fi
+  [ -n "${LEGACY_APPMODE:-}" ] && FADER_INI=("LEGACY_APPMODE ${LEGACY_APPMODE}" "${FADER_INI[@]}")
   # touch feedback: WSERV loads the tactile click plug-in named here (KEYCLICK.CPP CClick::InitStaticsL; S60's own
   # wsini line) -- without it the touch feedback client finds no plug-in and no tap ever reaches the vibra/audio players.
   # On by default (TACTILE=0 = off; verified on the phone 2026-10-28); the lines go FIRST: WSERV reads them only from the global section
