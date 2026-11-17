@@ -58,6 +58,8 @@ D2 drmcrypto cmlacrypto.cpp
 D2 drmcrypto omacrypto.cpp
 D1 e32strt estart.cpp
 D1 eapol eap_am_tools_symbian.cpp
+D1 ecampluginsupport ecaminfo.cpp
+D1 ecampluginsupport ecampluginsupport.cpp
 D1 eikcoctl eikcba.cpp
 D1 eiksrvui eikkeysoundserver.cpp
 D1 eposlmdbmanlib epos_hposlmdatabaseinfo.cpp
@@ -158,6 +160,7 @@ D1 svgengine svgmemorymanager.cpp
 D1 sysap sysapappui.cpp
 D1 sysap sysapdefaultkeyhandler.cpp
 D1 sysap sysaplightscontroller.cpp
+D1 sysversioninfo sysversioninfo.cpp
 D1 tactilevibraplugin tactilevibraplayer.cpp
 D1 tcpip6 iface.cpp
 D1 thumbnailserver thumbnailserver.cpp
