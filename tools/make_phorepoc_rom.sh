@@ -177,8 +177,12 @@ if [ -n "${BOOT:-}" ]; then
   [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" != 0 ] && FADER_INI=("ABSOLUTEFADING" "PLUGINS PHECOMP FLICKERBUFFER DISPLAY EXTENDEDFADER"
                                     "RENDERSTAGES phecomp flickerbuffer display" "FADER AknExtendedFader" "[PHECOMP]" "ID 0xE7017C01"
                                     "[EXTENDEDFADER]" "ID 0x2001B299")
-  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && FADER_INI=("PHECOMPTILE ${PHECOMPTILE:-10005902 10005907}" "${FADER_INI[@]}")
+  # compose mode (PHECOMPCOMPOSE); PHECOMPTILE="uid uid" adds the two tiled apps (experimental: the server-side tile regions fault WSERV, composition.md round 16)
+  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && FADER_INI=("PHECOMPCOMPOSE" "${FADER_INI[@]}")
+  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && [ -n "${PHECOMPTILE:-}" ] && FADER_INI=("PHECOMPTILE ${PHECOMPTILE}" "${FADER_INI[@]}")
   [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && [ "${CHANGETRACKING:-0}" = 1 ] && FADER_INI=("CHANGETRACKING" "${FADER_INI[@]}")
+  # PHECOMPFRAMELOG=1 (with PHECOMP=2): phecomp logs every composed frame (key-to-frame latency measurement)
+  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && [ "${PHECOMPFRAMELOG:-0}" = 1 ] && FADER_INI=("PHECOMPFRAMELOG" "${FADER_INI[@]}")
   # PHECOMPSCENE=1 (with PHECOMP=2): the groups are scene elements composed by OpenWF-C, not copied into the UI buffer each frame
   [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && [ "${PHECOMPSCENE:-0}" = 1 ] && FADER_INI=("PHECOMPSCENE" "${FADER_INI[@]}")
   CLASSIC_INI=("${FADER_INI[@]}")
