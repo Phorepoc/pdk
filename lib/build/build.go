@@ -28,7 +28,7 @@ var passThrough = []string{
 	"SECONDARY_IMAGE", "PHOREPOC_S4", "PHOREPOC_QT48", "PHETTY", "CENREP_EXTRA", "ROM_DATA_EXTRA", "ROM_ADDON", "UTC_OFFSET",
 	"WEBFONTS", "THEMES", "X32_LD", "X32_DEFS", "X32_LIBS", "X32_INCLUDE", "X32_FULLERR", "PRUNE_UNRESOLVED", "ROM_HEAP_LIMITS",
 	"TRACE", "SCREEN", "SCALE", "DBG", "KCLEAN", "ARM_VFP", "ARM_CPU_FLAGS", "ALF_TRACE", "ALF_TIMING", "ALF_LOG", "ALF_RC",
-	"MODEM", "MODEM_EG25", "PHOREPOC_PACKAGE_VERSION", "OBJCACHE_EXPLAIN", "PHOREPOC_CORE_VERSION", "PHOREPOC_IMAGE_VERSION",
+	"MODEM", "MODEM_EG25", "A64_USBHOST", "PHOREPOC_PACKAGE_VERSION", "OBJCACHE_EXPLAIN", "PHOREPOC_CORE_VERSION", "PHOREPOC_IMAGE_VERSION",
 }
 
 // Env is where the pieces live.
@@ -382,6 +382,7 @@ var ImageOptions = []ImageOption{
 	{"ssm-test", "SSM_TEST", "<component>", "start this test component at boot (as ssmtest.exe)"},
 	{"modem", "MODEM", "0|1", "link the cellular modem power control (the board's modem back end) into the kernel"},
 	{"modem-eg25", "MODEM_EG25", "<dir>", "the modem-eg25 checkout the modem back end is built from"},
+	{"a64-usbhost", "A64_USBHOST", "0|1", "link the USB host stack (FreeBSD USB on a kshim) and the USB serial ports (COMM::8..) into the A64 kernel"},
 	{"rom-tail", "ROM_TAIL", "<component>,...", "put these images last in the ROM (a delta push then sends only them)"},
 	{"rom-exclude", "ROM_EXCLUDE", "<component>,...", "leave these out of the ROM (they ship as SIS packages)"},
 	{"rom-data", "ROM_DATA_EXTRA", "<dest>=<src> ...", "extra Z: files, dest relative to Z:\\"},
