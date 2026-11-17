@@ -183,6 +183,9 @@ Given as -O name=value, as many as needed (phe image rom -b myboard -O net=1 -O 
   modem-eg25=<dir>
       The modem-eg25 checkout the modem back end is built from.
 
+  usb-host=0|1
+      Link the board's USB host stack (the pheusb layer) and its USB serial ports (COMM::8..) into the kernel.
+
   rom-tail=<component>,...
       Put these images last in the ROM (a delta push then sends only them).
 
