@@ -202,17 +202,20 @@ if [ -n "${BOOT:-}" ]; then
   # INIFILE shim (toolchain/shims/wserv_board/inifile_board.cpp) resolves from CenRep e7015a01 key 4; every other line is shared.
   # UIR_TEST=1 (mechanism test, no NGA): the same two prefixes around two harmless marker lines instead of the chains.
   if [ "$UI_RENDERER" = both ] || [ "${UIR_TEST:-0}" = 1 ]; then
-    UIR_A=(); UIR_C=(); UIR_N=()
+    UIR_A=(); UIR_C=(); UIR_N=(); UIR_G=(); UIR_S=()
     if [ "${UIR_TEST:-0}" = 1 ]; then UIR_C=("CLASSIC: PHUIRTEST 0"); UIR_A=("ALFRED: PHUIRTEST 1"); fi
     for l in "${CLASSIC_INI[@]}"; do
       [ "${UIR_TEST:-0}" = 1 ] && break
-      case "$l" in "PLUGINS "*|"RENDERSTAGES "*) UIR_C+=("CLASSIC: $l");; esac
+      case "$l" in "PLUGINS "*|"RENDERSTAGES "*) UIR_C+=("CLASSIC: $l");; "PHECOMP"*|"CHANGETRACKING"*) UIR_G+=("$l");; esac
     done
     for l in "${FADER_INI[@]}"; do
       if [ "${UIR_TEST:-0}" != 1 ]; then case "$l" in "PLUGINS "*|"RENDERSTAGES "*) UIR_A+=("ALFRED: $l"); continue;; esac; fi
       UIR_N+=("$l")
     done
-    FADER_INI=("${UIR_C[@]}" "${UIR_A[@]}" "${UIR_N[@]}")
+    # phecomp's own lines (PHECOMPTILE, CHANGETRACKING, PHECOMPSCENE and its [PHECOMP] section) belong to the CLASSIC chain only and are not in the
+    # ALF list the shared lines come from: carry them over, or the section is missing and the window server cannot find the stage (ECOM -1)
+    [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" != 0 ] && UIR_S=("[PHECOMP]" "ID 0xE7017C01")
+    FADER_INI=("${UIR_G[@]}" "${UIR_C[@]}" "${UIR_A[@]}" "${UIR_N[@]}" "${UIR_S[@]}")
   fi
   # ROM_ARCH=arm: TWO screen modes -- 1 = portrait 360x640 (the panel's own orientation), 2 = landscape 640x360
   # rotated 90 -- and the two Avkon hardware states the orientation action plug-in switches between by sending
