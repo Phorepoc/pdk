@@ -170,12 +170,15 @@ if [ -n "${BOOT:-}" ]; then
                                     "FADER AknExtendedFader" "[EXTENDEDFADER]" "ID 0x2001B299")
   # PHECOMP=1 (NGA only): core's phecomp render stage first in the chain (os/src/phecomp: the window compositor; v0 = a pass-through
   # stage that logs the window tree and each window group's redraws)
-  # PHECOMP=2: phecomp composes -- every window group into its own target (CHANGETRACKING: the window server draws every window
-  # whole), the PHECOMPTILE apps side by side when both run (default 10005902 10005907 = Calculator, Notes)
+  # PHECOMP=2: phecomp composes -- every window group into its own target, the PHECOMPTILE apps side by side when both run
+  # (default 10005902 10005907 = Calculator, Notes). No CHANGETRACKING: the window server draws each window clipped to its
+  # visible region, as on a classic screen, so windows that draw over others find the windows below them already drawn
+  # (CHANGETRACKING=1 brings the old mode back: every window drawn whole)
   [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" != 0 ] && FADER_INI=("ABSOLUTEFADING" "PLUGINS PHECOMP FLICKERBUFFER DISPLAY EXTENDEDFADER"
                                     "RENDERSTAGES phecomp flickerbuffer display" "FADER AknExtendedFader" "[PHECOMP]" "ID 0xE7017C01"
                                     "[EXTENDEDFADER]" "ID 0x2001B299")
-  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && FADER_INI=("CHANGETRACKING" "PHECOMPTILE ${PHECOMPTILE:-10005902 10005907}" "${FADER_INI[@]}")
+  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && FADER_INI=("PHECOMPTILE ${PHECOMPTILE:-10005902 10005907}" "${FADER_INI[@]}")
+  [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && [ "${CHANGETRACKING:-0}" = 1 ] && FADER_INI=("CHANGETRACKING" "${FADER_INI[@]}")
   # PHECOMPSCENE=1 (with PHECOMP=2): the groups are scene elements composed by OpenWF-C, not copied into the UI buffer each frame
   [ "${NGA:-0}" = 1 ] && [ "${PHECOMP:-0}" = 2 ] && [ "${PHECOMPSCENE:-0}" = 1 ] && FADER_INI=("PHECOMPSCENE" "${FADER_INI[@]}")
   CLASSIC_INI=("${FADER_INI[@]}")
