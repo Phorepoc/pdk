@@ -243,3 +243,8 @@ D19 win1256 g_win1256.cpp
 D19 win1257 g_win1257.cpp
 D19 win1258 g_win1258.cpp
 D19 win874 g_win874.cpp
+# RSFW trace (core feat/rsfw, diagnosis build): os/toolchain/shims/rsfw_mdebug/mdebug.cpp is the release's MDebug file with DoOutput writing to the serial port (about 90% the release's lines).
+# Delete these three lines when the trace is reverted.
+D1 remotefe mdebug.cpp
+D1 rsfwcommon mdebug.cpp
+D1 rsfwdavaccess mdebug.cpp
