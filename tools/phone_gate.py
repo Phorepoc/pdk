@@ -11,7 +11,8 @@ reporting a phone result; it drives the phone through PhoneLab's REST API.
 Checks:
   1. provenance  the last push into this boot carried a build record without local changes (PhoneLab's push result)
   2. markers     this boot reached the home screen, "wfc gpu: GPU composition up", the real transition effects
-                 (CGfxTransAdapterTfx), the display's frame log (the [mon] line's frames= counter)
+                 (CGfxTransAdapterTfx), the display's frame log (the [mon] line's frames= counter), and the SSM non-critical
+                 list ran to the board's commands (phvolume started: a list that waits for a start-up key forever fails here)
   3. scenario    menu open + scrolling + back, screen off, a tap on the dark screen, screen on; during it the display
                  driver's frame log must report no WHITE frame after a non-white one, and the frame a screen-on shows
                  must not be mostly white
@@ -124,6 +125,15 @@ def main():
         if lab.lines(any_=['white-flashes='], limit=1):
             break
         time.sleep(5)
+    # The SSM non-critical list: its first commands wait for KPSIdlePhase1Ok / KPSPhonePhase1Ok (WaitPsKeyExact, no time-out),
+    # so when one key is never published nothing after them starts (watcher, schexe, lockapp, taskswitcher, the board's
+    # commands) while the UI looks normal and every marker above is present (an intermittent stall). phvolume is one of the
+    # board's commands after that list's waits: it must start, in the minute after the home screen.
+    for _ in range(18):
+        if lab.lines(any_=['create phvolume.exe'], limit=1):
+            break
+        time.sleep(5)
+    need['start-up list completed (phvolume started)'] = 'create phvolume.exe'
     alts = {what: (v if isinstance(v, tuple) else (v,)) for what, v in need.items()}
     got = lab.lines(any_=[a for v in alts.values() for a in v], limit=5000)
     for what, v in alts.items():
