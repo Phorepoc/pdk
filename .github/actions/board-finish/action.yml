@@ -147,7 +147,10 @@ runs:
     - name: Boot test (the board's recipes/first-boot.sh)
       if: inputs.images == 'true' && inputs.core_arch == ''
       shell: bash
+      # a test variant's KEY=VALUE pairs reach the boot test too (SETTLE, BOOTS); checked by the release files step
+      env: { BUILD_ENV: "${{ inputs.build_env }}" }
       run: |
+        for kv in $BUILD_ENV; do export "$kv"; done
         r="${{ github.event.repository.name }}"
         if [ -f "$r/recipes/first-boot.sh" ]; then
           phe image recipe first-boot -b "${{ inputs.board }}"
