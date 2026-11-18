@@ -29,6 +29,7 @@ var passThrough = []string{
 	"WEBFONTS", "THEMES", "X32_LD", "X32_DEFS", "X32_LIBS", "X32_INCLUDE", "X32_FULLERR", "PRUNE_UNRESOLVED", "ROM_HEAP_LIMITS",
 	"TRACE", "SCREEN", "SCALE", "DBG", "KCLEAN", "ARM_VFP", "ARM_CPU_FLAGS", "ALF_TRACE", "ALF_TIMING", "ALF_LOG", "ALF_RC",
 	"MODEM", "MODEM_EG25", "USB_HOST", "A64_USBHOST", "PHOREPOC_PACKAGE_VERSION", "OBJCACHE_EXPLAIN", "PHOREPOC_CORE_VERSION", "PHOREPOC_IMAGE_VERSION",
+	"DUMP", "NMI", // x86 kernel debug aids (make_ekern.sh: a thread dump DUMP seconds in; the SMP watchdog NMI)
 }
 
 // Env is where the pieces live.
