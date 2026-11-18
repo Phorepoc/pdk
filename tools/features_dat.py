@@ -34,6 +34,28 @@ XML = os.path.join(MMP.BASE, "oss.FCL.sf.os.deviceplatformrelease", "foundation_
 DSR = [(0x10279806, 0x10281805)]      # the Symbian default supported range
 
 
+# Build-time EXCLUDE macros whose feature the code asks for at run time under another name: the XML gives these macros no
+# UniqueRuntimeId (they are not features of their own), but the runtime feature exists in the default supported range, so
+# without an entry it would be "supported" whatever the product excludes. Defined = the components are not in the ROM =
+# the feature is NOT supported (the XML's own default for each is "Defined").
+#   SYMBIAN_EXCLUDE_LOCATION_MANAGEMENT -> NFeature::KLocationManagement 0x10279818: the location server (eposserver) asks it
+#   at start-up and per position request; supported means the LBS root system (net gateway, registration status) runs.
+EXCLUDE_MACRO_FEATURES = {"SYMBIAN_EXCLUDE_LOCATION_MANAGEMENT": 0x10279818}
+
+
+def spec_entries(text: str, defined: set) -> dict:
+    """{feature uid: 1 supported / 0 not} from the feature XML `text` and the macros the product variant defines."""
+    entries = {}
+    for spec in re.findall(r"<FeatureSpecification>(.*?)</FeatureSpecification>", text, re.S):
+        name = re.search(r"<FeatureName>\s*([^<\s]+)", spec)
+        uid = re.search(r"<UniqueRuntimeId>\s*(\d+)", spec)
+        if name and uid:
+            entries[int(uid.group(1))] = 1 if name.group(1) in defined else 0
+    for macro, uid in EXCLUDE_MACRO_FEATURES.items():
+        entries.setdefault(uid, 0 if macro in defined else 1)
+    return entries
+
+
 def main(out: str) -> None:
     r = subprocess.run([MMP.CPP, "-undef", "-nostdinc", "-x", "c", "-w", "-dM", "-E",
                         "-I", os.path.join(MMP.EPOC32, "include"),
@@ -45,12 +67,7 @@ def main(out: str) -> None:
         sys.exit("features_dat: the variant headers do not preprocess:\n" + r.stderr[-2000:])
     defined = set(re.findall(r"^#define\s+(\w+)", r.stdout, re.M))
     text = open(XML, encoding="utf-8", errors="replace").read()
-    entries = {}
-    for spec in re.findall(r"<FeatureSpecification>(.*?)</FeatureSpecification>", text, re.S):
-        name = re.search(r"<FeatureName>\s*([^<\s]+)", spec)
-        uid = re.search(r"<UniqueRuntimeId>\s*(\d+)", spec)
-        if name and uid:
-            entries[int(uid.group(1))] = 1 if name.group(1) in defined else 0
+    entries = spec_entries(text, defined)
     # Ours, not in any 2010 header (UNRELEASED_FEATURES in emitter/components.py): the stock portrait QWERTY
     # (peninputgenericvkb impl 0x20026837). PH_PORTRAIT_QWERTY=0 leaves it off (ITU-T portrait only).
     entries[0x7FFF0001] = 0 if os.environ.get("PH_PORTRAIT_QWERTY") == "0" else 1
