@@ -27,6 +27,8 @@ D1 avkon aknadaptivesearchgrid.cpp
 D1 avkon aknappui.cpp
 D15 avkon aknecs.cpp
 D1 avkon akndiscreetpopupcontrol.cpp
+D1 avkon aknindicator.cpp
+D1 avkon aknindicatorcontainer.cpp
 D1 backend fdesc.cpp
 D1 backend ftable.cpp
 D1 backend upipedesc.cpp
