@@ -115,13 +115,18 @@ func (s *Session) Run(ctx context.Context) {
 	go s.lineWriter(ctx)
 	backoff := 250 * time.Millisecond
 	logged := false
+	attempts := 0
 	for ctx.Err() == nil {
 		p, err := s.opener.Open(ctx)
 		if err != nil {
 			s.mu.Lock()
 			s.h.LastError = err.Error()
 			s.mu.Unlock()
-			if !errors.Is(err, transport.ErrNotFound) && !logged {
+			// every failed attempt of a busy/refused port is logged (an unplugged phone, ErrNotFound, once): the reopen never gives up
+			attempts++
+			if !errors.Is(err, transport.ErrNotFound) {
+				log.Printf("[%s] open attempt %d: %v (retry in %s)", s.ID, attempts, err, backoff)
+			} else if !logged {
 				log.Printf("[%s] open: %v", s.ID, err)
 				logged = true
 			}
@@ -130,10 +135,10 @@ func (s *Session) Run(ctx context.Context) {
 				return
 			case <-time.After(backoff):
 			}
-			backoff = min(backoff*2, 2*time.Second)
+			backoff = min(backoff*2, 5*time.Second)
 			continue
 		}
-		backoff, logged = 250*time.Millisecond, false
+		backoff, logged, attempts = 250*time.Millisecond, false, 0
 		s.setConnected(p)
 		err = s.readLoop(ctx, p)
 		p.Close()
