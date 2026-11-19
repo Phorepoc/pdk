@@ -29,6 +29,7 @@ D15 avkon aknecs.cpp
 D1 avkon akndiscreetpopupcontrol.cpp
 D1 backend fdesc.cpp
 D1 backend ftable.cpp
+D1 backend upipedesc.cpp
 D11 c32 cc_utl.cpp
 D11 c32 cs_glob.cpp
 D11 c32 cs_log.cpp
