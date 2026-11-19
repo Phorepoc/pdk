@@ -166,20 +166,20 @@ def normalize_d(d: str) -> str:
     return " ".join(out)
 
 
-def shift_d(d: str, dx: float, dy: float) -> str:
-    """Translate a normalised (absolute M/L/C/Z) path by (dx, dy)."""
+def shift_d(d: str, dx: float, dy: float, scale: float = 1.0) -> str:
+    """Scale a normalised (absolute M/L/C/Z) path, then translate it by (dx, dy)."""
     out = []
     for m in re.finditer(r"([MLCZ])([^MLCZ]*)", d):
         v = [float(t) for t in m.group(2).split()]
-        out.append(m.group(1) + " ".join(_num(c + (dx if k % 2 == 0 else dy)) for k, c in enumerate(v)))
+        out.append(m.group(1) + " ".join(_num(c * scale + (dx if k % 2 == 0 else dy)) for k, c in enumerate(v)))
     return " ".join(out)
 
 
-def normalize(svg: str, shift: tuple[float, float] = (0.0, 0.0)) -> str:
-    """The SVG text with every path's d= rewritten by normalize_d (other elements untouched), translated by `shift`."""
+def normalize(svg: str, shift: tuple[float, float] = (0.0, 0.0), scale: float = 1.0) -> str:
+    """The SVG text with every path's d= rewritten by normalize_d (other elements untouched), scaled then translated."""
     def sub(m):
         d = normalize_d(m.group(2))
-        if shift != (0.0, 0.0):
-            d = shift_d(d, shift[0], shift[1])
+        if shift != (0.0, 0.0) or scale != 1.0:
+            d = shift_d(d, shift[0], shift[1], scale)
         return m.group(1) + d + m.group(3)
     return re.sub(r'(\sd=")([^"]*)(")', sub, svg)
