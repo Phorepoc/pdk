@@ -74,9 +74,44 @@ type serialPort struct {
 func (p *serialPort) Name() string { return p.name }
 
 // Read returns (0, nil) on a read timeout; callers loop.
-func (p *serialPort) Read(b []byte) (int, error)  { return p.sp.Read(b) }
-func (p *serialPort) Write(b []byte) (int, error) { return p.sp.Write(b) }
-func (p *serialPort) Close() error                { return p.sp.Close() }
+func (p *serialPort) Read(b []byte) (int, error) { return p.sp.Read(b) }
+
+// Write never waits forever: a phone whose command side stopped reading (a user-side call it was making hung) lets the
+// bulk-OUT endpoint fill, and a plain serial write then blocks until the phone is reset (2026-11-19: a push stuck 57 minutes,
+// "write COM5: A device attached to the system is not functioning" when the phone was restarted). After the deadline the port is
+// closed, which aborts the pending write and drops the link; the session reconnects and every op queued behind it runs again.
+func (p *serialPort) Write(b []byte) (int, error) {
+	return writeWithDeadline(p.sp.Write, p.sp.Close, b, WriteDeadline(len(b)))
+}
+
+// WriteDeadline is the longest a write of n bytes may take: 10 s plus n at 20 KB/s (a 64 KB push block is allowed ~13 s).
+func WriteDeadline(n int) time.Duration {
+	return 10*time.Second + time.Duration(n)*time.Second/(20<<10)
+}
+
+// writeWithDeadline runs write; if it has not returned within d it calls abort (closing the port unblocks the write) and
+// reports the stall.
+func writeWithDeadline(write func([]byte) (int, error), abort func() error, b []byte, d time.Duration) (int, error) {
+	type result struct {
+		n   int
+		err error
+	}
+	done := make(chan result, 1)
+	go func() {
+		n, err := write(b)
+		done <- result{n, err}
+	}()
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case r := <-done:
+		return r.n, r.err
+	case <-t.C:
+		_ = abort()
+		return 0, fmt.Errorf("write of %d bytes stalled for %s: the phone stopped reading; the link was closed to re-sync", len(b), d)
+	}
+}
+func (p *serialPort) Close() error { return p.sp.Close() }
 
 func (p *serialPort) Alive() bool {
 	names, err := serial.GetPortsList()
