@@ -45,8 +45,9 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import BUILD, resolve  # noqa: E402
+from paths import BUILD, OS_ROOT, resolve  # noqa: E402
 import mbg as MBG  # noqa: E402
+import svgnorm  # noqa: E402
 from mmp import _isfile_nocase  # noqa: E402
 
 BASE = MBG.BASE
@@ -68,6 +69,10 @@ DEFAULT_DIRS = [os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.classicui", "u
                 # leaves KErrNotFound in activation without it (the view never opened)
                 os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.uiresources", "uigraphics", "VariatedBitmaps", "group")]
 ART_DIRS = [
+    # OUR status-pane glyphs (core os/tools/statusicons/gen.py): searched first, named by the qgn_stat_* id avkon.rss asks for
+    os.path.join(OS_ROOT, "data", "icons", "status"),
+    os.path.join(OS_ROOT, "data", "icons", "status", "tabler"),   # Tabler Icons (MIT), only the files the status indicators use
+    os.path.join(OS_ROOT, "data", "icons", "status", "material"),   # Material Symbols (Apache-2.0), Outlined weight 500, mat_<name>.svg
     os.path.join(BASE, "oss.FCL.sftools.dev.ui", "carbideui", "Symbian3", "config", "model"),
     os.path.join(BASE, "oss.FCL.sftools.dev.ui", "carbideui", "com.nokia.tools.theme.s60.50",
                  "config", "model"),
@@ -107,7 +112,7 @@ def art_index(extra: list[str]) -> dict[str, str]:
                     idx.setdefault(stem, os.path.join(root, f))
     # artwork the release lacks under the name a bld.inf asks for, but carries under a sibling name
     for want, have in ART_ALIASES.items():
-        if want not in idx and have in idx:
+        if (want not in idx or want in STAT_ALIASES) and have in idx:
             idx[want] = idx[have]
     return idx
 
@@ -116,6 +121,46 @@ def art_index(extra: list[str]) -> dict[str, str]:
 # qgn_menu_browser (without it the "Web" grid item was an empty square)
 ART_ALIASES = {"qgn_menu_browserng": "qgn_menu_browser"}
 
+# The status pane's indicator icons (avkon.rss INDICATOR resources): each qgn_stat_* id -> the Tabler Icons outline icon that
+# draws it (MIT, pinned tag in core os/data/icons/status/README.md; 24 grid, 2 px round stroke, the Etesian line style).
+# Unlike ART_ALIASES these REPLACE the Carbide art of the same id (message_uni, message_mail_uni, cyphering_on): one style.
+# mat_*: Google Material Symbols (Apache-2.0, Outlined, wght 500 = a stem as heavy as Tabler's stroke at 15 px) where Tabler is weak.
+# Ours, in core os/data/icons/status: the three blank animation frames and the secured-WLAN glyph (no Tabler equivalent).
+# Shared glyphs: the Bluetooth visible/hidden pairs, vm0/1/2/12, usb_memc_*, divert*.
+STAT_ALIASES = {
+    "qgn_stat_bt_uni": "mat_bluetooth_connected", "qgn_stat_bt_invisible_uni": "mat_bluetooth_connected",
+    "qgn_stat_mod_bt": "mat_bluetooth_searching", "qgn_stat_mod_bt_invisible_uni": "mat_bluetooth",   # visible = discoverable
+    "qgn_stat_wlan_active_uni": "wifi", "qgn_stat_wlan_active": "wifi",
+    "qgn_stat_wlan_avail_uni": "wifi-1", "qgn_stat_wlan_avail": "wifi-1",
+    "qgn_stat_message_uni": "mail", "qgn_stat_message_data_uni": "mail", "qgn_stat_message_other_uni": "mail",
+    "qgn_stat_message_mail_uni": "at", "qgn_stat_message_remote_uni": "mailbox", "qgn_stat_message_fax_uni": "printer",
+    "qgn_stat_missed_calls_uni": "mat_phone_missed", "qgn_stat_poc_missed_uni": "mat_phone_missed",
+    "qgn_stat_outbox_uni": "send",
+    "qgn_stat_im_uni": "message-circle", "qgn_stat_joint_im_uni": "messages",
+    "qgn_stat_vm0_uni": "mat_voicemail", "qgn_stat_vm1_uni": "mat_voicemail",
+    "qgn_stat_vm2_uni": "mat_voicemail", "qgn_stat_vm12_uni": "mat_voicemail",
+    "qgn_stat_cale_uni": "calendar-exclamation", "qgn_stat_alarm": "alarm", "qgn_stat_clk_stp_watch_uni": "stopwatch",
+    "qgn_stat_cyphering_on": "shield-lock", "qgn_stat_cyphering_on_uni": "shield-lock", "qgn_stat_keyguard": "lock",
+    "qgn_stat_loc_gps_uni": "gps", "qgn_stat_loc": "map-pin", "qgn_stat_loc_on": "map-pin", "qgn_stat_loc_off": "map-pin-off",
+    "qgn_stat_memc_uni": "device-sd-card",
+    "qgn_stat_usb_uni": "usb", "qgn_stat_usb_memc_connect_uni": "usb", "qgn_stat_usb_memc_transfer_uni": "usb",
+    "qgn_stat_ihf": "volume-2",
+    "qgn_stat_divert0": "phone-outgoing", "qgn_stat_divert1": "phone-outgoing", "qgn_stat_divert12": "phone-outgoing",
+    "qgn_stat_divert2": "phone-outgoing", "qgn_stat_divert_vm": "phone-outgoing",
+    "qgn_stat_line2": "number-2", "qgn_stat_video_sharing": "video", "qgn_stat_zone_home": "home",
+    "qgn_stat_carkit": "car", "qgn_stat_headset": "headphones", "qgn_stat_headset_unavailable": "headphones-off",
+    "qgn_stat_tvout": "device-tv", "qgn_stat_indi_mtv_on": "device-tv-old", "qgn_stat_indi_mtv_rec": "player-record",
+    "qgn_stat_hdmi_connect": "plug-connected", "qgn_stat_tty": "keyboard",
+    "qgn_stat_poc_on": "microphone", "qgn_stat_poc_dnd": "microphone-off",
+    "qgn_stat_tarm": "mat_memory", "qgn_stat_mod_tarm": "mat_memory",
+    "qgn_stat_hac": "ear", "qgn_stat_loopset": "ear-scan",
+    "qgn_stat_cdma_roaming_uni": "world", "qgn_stat_sync_uni": "refresh", "qgn_stat_servtab_uni": "mat_tab",
+    "qgn_stat_fmtx_on_uni": "broadcast", "qgn_stat_fmtx_off_uni": "broadcast-off",
+    "qgn_stat_ir_uni": "mat_infrared", "qgn_stat_voip_readiness": "phone-calling",
+    "qgn_stat_wlan_active_secure": "qgn_stat_wlan_active_secure_uni",
+}
+ART_ALIASES.update(STAT_ALIASES)
+
 
 # The Carbide.ui theme-model templates draw frame slices with 1-px guide strokes (#006400 normal, #00386D
 # pressed) so a designer sees how a 9-slice frame is cut; on screen they showed as "wireframe" boxes inside every
@@ -123,10 +168,45 @@ ART_ALIASES = {"qgn_menu_browserng": "qgn_menu_browser"}
 _GUIDE = re.compile(r'\s*<(?:rect|polygon)\b[^>]*fill="#(?:006400|00386D)"[^>]*/>', re.I)
 
 
+# Tabler Icons draw in `currentColor` (a CSS keyword SVG-Tiny / the NVG encoder does not know) with the stroke set on the root;
+# the status indicators are monochrome masks, so black. STAT_STROKE: Tabler's 2 on the 24 grid is 1.25 px in the 15 px indicator
+# cell; the status glyphs use a heavier line so they stay readable there (core os/data/icons/status/README.md).
+STAT_STROKE = "2.6"
+# The 24 grid has 2 units of padding a side (stroke included); the indicator cell is 15 px tall, so the art is cropped to the
+# live area and drawn into a STAT_BOX-unit square (15 px / 21 = 0.71 px per unit instead of 0.63): bigger glyphs, a 1.9 px line.
+# The crop is done by moving the geometry (the NVG viewBox origin stays 0,0).
+STAT_CROP = 1.5
+STAT_BOX = 21
+
+
+def _tabler_style(dst: str, stem: str) -> None:
+    with open(dst, encoding="utf-8", errors="surrogateescape") as fh:
+        svg = fh.read()
+    if 'viewBox="0 -960 960 960"' in svg and stem.startswith("qgn_stat_"):
+        # Material Symbols (Outlined, weight 500, 24 px): FILLED outlines on a 960 grid with a negative origin. Same live-area crop
+        # as the stroked Tabler art (1.5 of 24 units a side), drawn into STAT_BOX units; no stroke to set.
+        k = STAT_BOX / (960.0 - 2 * STAT_CROP * 40) * (960.0 / 960.0)
+        svg = svgnorm.normalize(svg, (-STAT_CROP * 40 * k, (960 - STAT_CROP * 40) * k), k)
+        svg = re.sub(r"<svg[^>]*>", '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">'
+                     % ((STAT_BOX,) * 4), svg, count=1)
+    elif "currentColor" in svg:
+        svg = svg.replace("currentColor", "#000000")
+        if stem.startswith("qgn_stat_"):
+            svg = svgnorm.normalize(svg, (-STAT_CROP, -STAT_CROP))   # the NVG encoder drops a path with an arc: Tabler's rounded corners are all arcs
+            svg = re.sub(r'stroke-width="2"', 'stroke-width="%s"' % STAT_STROKE, svg, count=1)
+            svg = re.sub(r'width="24"\s+height="24"\s+viewBox="0 0 24 24"',
+                         'width="%d" height="%d" viewBox="0 0 %d %d"' % ((STAT_BOX,) * 4), svg, count=1)
+    else:
+        return
+    with open(dst, "w", encoding="utf-8", errors="surrogateescape", newline="") as fh:
+        fh.write(svg)
+
+
 def copy_art(src: str, dst: str, stem: str) -> bool:
     """Stage one artwork SVG; frame slices (qgn_fr_*) lose the template's guide strokes. -> stripped?"""
     shutil.copyfile(src, dst)
     if not stem.startswith("qgn_fr_"):
+        _tabler_style(dst, stem)
         return False
     with open(dst, encoding="utf-8", errors="surrogateescape") as fh:
         svg = fh.read()
