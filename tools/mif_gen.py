@@ -47,6 +47,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "emitter"))
 from paths import BUILD, OS_ROOT, resolve  # noqa: E402
 import mbg as MBG  # noqa: E402
+import svgnorm  # noqa: E402
 from mmp import _isfile_nocase  # noqa: E402
 
 BASE = MBG.BASE
@@ -132,19 +133,19 @@ STAT_ALIASES = {
     "qgn_stat_message_uni": "mail", "qgn_stat_message_data_uni": "mail", "qgn_stat_message_other_uni": "mail",
     "qgn_stat_message_mail_uni": "at", "qgn_stat_message_remote_uni": "mailbox", "qgn_stat_message_fax_uni": "printer",
     "qgn_stat_missed_calls_uni": "phone-x", "qgn_stat_poc_missed_uni": "phone-x",
-    "qgn_stat_outbox_uni": "upload",
+    "qgn_stat_outbox_uni": "send",
     "qgn_stat_im_uni": "message-circle", "qgn_stat_joint_im_uni": "messages",
     "qgn_stat_vm0_uni": "device-audio-tape", "qgn_stat_vm1_uni": "device-audio-tape",
     "qgn_stat_vm2_uni": "device-audio-tape", "qgn_stat_vm12_uni": "device-audio-tape",
     "qgn_stat_cale_uni": "calendar-exclamation", "qgn_stat_alarm": "alarm", "qgn_stat_clk_stp_watch_uni": "stopwatch",
-    "qgn_stat_cyphering_on": "lock", "qgn_stat_cyphering_on_uni": "lock", "qgn_stat_keyguard": "lock",
+    "qgn_stat_cyphering_on": "shield-lock", "qgn_stat_cyphering_on_uni": "shield-lock", "qgn_stat_keyguard": "lock",
     "qgn_stat_loc_gps_uni": "gps", "qgn_stat_loc": "map-pin", "qgn_stat_loc_on": "map-pin", "qgn_stat_loc_off": "map-pin-off",
     "qgn_stat_memc_uni": "device-sd-card",
     "qgn_stat_usb_uni": "usb", "qgn_stat_usb_memc_connect_uni": "usb", "qgn_stat_usb_memc_transfer_uni": "usb",
-    "qgn_stat_ihf": "speakerphone",
+    "qgn_stat_ihf": "volume-2",
     "qgn_stat_divert0": "phone-outgoing", "qgn_stat_divert1": "phone-outgoing", "qgn_stat_divert12": "phone-outgoing",
     "qgn_stat_divert2": "phone-outgoing", "qgn_stat_divert_vm": "phone-outgoing",
-    "qgn_stat_line2": "phone-call", "qgn_stat_video_sharing": "video", "qgn_stat_zone_home": "home",
+    "qgn_stat_line2": "number-2", "qgn_stat_video_sharing": "video", "qgn_stat_zone_home": "home",
     "qgn_stat_carkit": "car", "qgn_stat_headset": "headphones", "qgn_stat_headset_unavailable": "headphones-off",
     "qgn_stat_tvout": "device-tv", "qgn_stat_indi_mtv_on": "device-tv-old", "qgn_stat_indi_mtv_rec": "player-record",
     "qgn_stat_hdmi_connect": "plug-connected", "qgn_stat_tty": "keyboard",
@@ -153,7 +154,7 @@ STAT_ALIASES = {
     "qgn_stat_hac": "ear", "qgn_stat_loopset": "ear-scan",
     "qgn_stat_cdma_roaming_uni": "world", "qgn_stat_sync_uni": "refresh", "qgn_stat_servtab_uni": "bookmark",
     "qgn_stat_fmtx_on_uni": "broadcast", "qgn_stat_fmtx_off_uni": "broadcast-off",
-    "qgn_stat_ir_uni": "device-remote", "qgn_stat_voip_readiness": "phone-calling",
+    "qgn_stat_ir_uni": "arrows-exchange", "qgn_stat_voip_readiness": "phone-calling",
     "qgn_stat_wlan_active_secure": "qgn_stat_wlan_active_secure_uni",
 }
 ART_ALIASES.update(STAT_ALIASES)
@@ -168,7 +169,12 @@ _GUIDE = re.compile(r'\s*<(?:rect|polygon)\b[^>]*fill="#(?:006400|00386D)"[^>]*/
 # Tabler Icons draw in `currentColor` (a CSS keyword SVG-Tiny / the NVG encoder does not know) with the stroke set on the root;
 # the status indicators are monochrome masks, so black. STAT_STROKE: Tabler's 2 on the 24 grid is 1.25 px in the 15 px indicator
 # cell; the status glyphs use a heavier line so they stay readable there (core os/data/icons/status/README.md).
-STAT_STROKE = "2.5"
+STAT_STROKE = "2.6"
+# The 24 grid has 2 units of padding a side (stroke included); the indicator cell is 15 px tall, so the art is cropped to the
+# live area and drawn into a STAT_BOX-unit square (15 px / 21 = 0.71 px per unit instead of 0.63): bigger glyphs, a 1.9 px line.
+# The crop is done by moving the geometry (the NVG viewBox origin stays 0,0).
+STAT_CROP = 1.5
+STAT_BOX = 21
 
 
 def _tabler_style(dst: str, stem: str) -> None:
@@ -178,7 +184,10 @@ def _tabler_style(dst: str, stem: str) -> None:
         return
     svg = svg.replace("currentColor", "#000000")
     if stem.startswith("qgn_stat_"):
+        svg = svgnorm.normalize(svg, (-STAT_CROP, -STAT_CROP))   # the NVG encoder drops a path with an arc: Tabler's rounded corners are all arcs
         svg = re.sub(r'stroke-width="2"', 'stroke-width="%s"' % STAT_STROKE, svg, count=1)
+        svg = re.sub(r'width="24"\s+height="24"\s+viewBox="0 0 24 24"',
+                     'width="%d" height="%d" viewBox="0 0 %d %d"' % ((STAT_BOX,) * 4), svg, count=1)
     with open(dst, "w", encoding="utf-8", errors="surrogateescape", newline="") as fh:
         fh.write(svg)
 
