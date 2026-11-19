@@ -70,13 +70,12 @@ DEFAULT_DIRS = [os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.classicui", "u
 ART_DIRS = [
     # OUR status-pane glyphs (core os/tools/statusicons/gen.py): searched first, named by the qgn_stat_* id avkon.rss asks for
     os.path.join(OS_ROOT, "data", "icons", "status"),
+    os.path.join(OS_ROOT, "data", "icons", "status", "tabler"),   # Tabler Icons (MIT), only the files the status indicators use
     os.path.join(BASE, "oss.FCL.sftools.dev.ui", "carbideui", "Symbian3", "config", "model"),
     os.path.join(BASE, "oss.FCL.sftools.dev.ui", "carbideui", "com.nokia.tools.theme.s60.50",
                  "config", "model"),
     os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.uiresources", "skins", "AknSkinContent", "srcdata", "haze"),
     os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.uiresources", "skins", "AknSkinContent", "srcdata", "jing"),
-    # Hb's default theme (the Orbit status-bar and mono icons, 16 / 30 px monochrome SVG-Tiny): qtg_* names, used through STAT_ALIASES
-    os.path.join(BASE, "oss.FCL.sf.mw.hb", "src", "hbcore", "resources", "themes", "icons", "hbdefault", "scalable"),
 ]
 PLACEHOLDER = ('<?xml version="1.0" encoding="UTF-8"?>\n'
                '<!-- OURS: placeholder; this icon\'s artwork is not part of the 2010 open release -->\n'
@@ -111,7 +110,7 @@ def art_index(extra: list[str]) -> dict[str, str]:
                     idx.setdefault(stem, os.path.join(root, f))
     # artwork the release lacks under the name a bld.inf asks for, but carries under a sibling name
     for want, have in ART_ALIASES.items():
-        if want not in idx and have in idx:
+        if (want not in idx or want in STAT_ALIASES) and have in idx:
             idx[want] = idx[have]
     return idx
 
@@ -120,53 +119,42 @@ def art_index(extra: list[str]) -> dict[str, str]:
 # qgn_menu_browser (without it the "Web" grid item was an empty square)
 ART_ALIASES = {"qgn_menu_browserng": "qgn_menu_browser"}
 
-# The status pane's indicator icons (avkon.rss INDICATOR resources) the Carbide models do not carry, taken from the
-# open Hb theme under another name (the Orbit status bar: made for exactly this). Monochrome only (no gradient "small"
-# set). The ones with no open equivalent are drawn in core os/data/icons/status (os/tools/statusicons/gen.py).
-# Differences from the 2010 meaning: vm1 / vm2 / vm12 share the voice-mail glyph, usb_memc_* share the USB glyph.
+# The status pane's indicator icons (avkon.rss INDICATOR resources): each qgn_stat_* id -> the Tabler Icons outline icon that
+# draws it (MIT, pinned tag in core os/data/icons/status/README.md; 24 grid, 2 px round stroke, the Etesian line style).
+# Unlike ART_ALIASES these REPLACE the Carbide art of the same id (message_uni, message_mail_uni, cyphering_on): one style.
+# Ours, in core os/data/icons/status: the three blank animation frames and the secured-WLAN glyph (no Tabler equivalent).
+# Shared glyphs: the Bluetooth visible/hidden pairs, vm0/1/2/12, usb_memc_*, divert*.
 STAT_ALIASES = {
-    "qgn_stat_bt_uni": "qtg_status_bluetooth_connection",            # visible + connected (blinks with the blank frame)
-    "qgn_stat_bt_invisible_uni": "qtg_status_bluetooth_hide_connection",  # hidden + connected
-    "qgn_stat_mod_bt": "qtg_status_bluetooth",                       # module on, visible
-    "qgn_stat_mod_bt_invisible_uni": "qtg_status_bluetooth_hide",    # module on, hidden
-    "qgn_stat_wlan_active_uni": "qtg_status_wlan",
-    "qgn_stat_wlan_active": "qtg_status_wlan",
-    "qgn_stat_wlan_active_secure": "qgn_stat_wlan_active_secure_uni",   # the navi-pane twins of the universal ones
-    "qgn_stat_wlan_avail": "qgn_stat_wlan_avail_uni",
-    "qgn_stat_message_data_uni": "qtg_status_new_message",
-    "qgn_stat_message_other_uni": "qtg_status_new_message",
-    "qgn_stat_message_remote_uni": "qtg_status_new_email",
-    "qgn_stat_missed_calls_uni": "qtg_status_missed_call",
-    "qgn_stat_poc_missed_uni": "qtg_status_missed_call",
-    "qgn_stat_outbox_uni": "qtg_mono_outbox",
-    "qgn_stat_im_uni": "qtg_status_new_im",
-    "qgn_stat_joint_im_uni": "qtg_status_new_im",
-    "qgn_stat_vm0_uni": "qtg_mono_voice_mailbox",
-    "qgn_stat_vm1_uni": "qtg_mono_voice_mailbox",
-    "qgn_stat_vm2_uni": "qtg_mono_voice_mailbox",
-    "qgn_stat_vm12_uni": "qtg_mono_voice_mailbox",
-    "qgn_stat_cale_uni": "qtg_mono_alarm_new",
-    "qgn_stat_alarm": "qtg_mono_alarm",
-    "qgn_stat_clk_stp_watch_uni": "qtg_mono_countdown_timer",
-    "qgn_stat_cyphering_on_uni": "qgn_stat_cyphering_on",            # Carbide's padlock
-    "qgn_stat_keyguard": "qgn_stat_cyphering_on",
-    "qgn_stat_loc_gps_uni": "qtg_status_gps",
-    "qgn_stat_loc": "qtg_mono_location",
-    "qgn_stat_loc_on": "qtg_mono_location",
-    "qgn_stat_loc_off": "qtg_mono_geotag_off",
-    "qgn_stat_memc_uni": "qtg_mono_memory_in_use",
-    "qgn_stat_usb_uni": "qtg_mono_usb",
-    "qgn_stat_usb_memc_connect_uni": "qtg_mono_usb",
-    "qgn_stat_usb_memc_transfer_uni": "qtg_mono_usb",
-    "qgn_stat_ihf": "qtg_mono_speaker",
-    "qgn_stat_divert0": "qtg_mono_call_diverted",
-    "qgn_stat_divert1": "qtg_mono_call_diverted",
-    "qgn_stat_divert12": "qtg_mono_call_diverted",
-    "qgn_stat_divert2": "qtg_mono_call_diverted",
-    "qgn_stat_divert_vm": "qtg_mono_call_diverted",
-    "qgn_stat_line2": "qtg_mono_als_call_two",
-    "qgn_stat_video_sharing": "qtg_mono_video_call",
-    "qgn_stat_zone_home": "qtg_mono_home",
+    "qgn_stat_bt_uni": "bluetooth-connected", "qgn_stat_bt_invisible_uni": "bluetooth-connected",
+    "qgn_stat_mod_bt": "bluetooth", "qgn_stat_mod_bt_invisible_uni": "bluetooth",
+    "qgn_stat_wlan_active_uni": "wifi", "qgn_stat_wlan_active": "wifi",
+    "qgn_stat_wlan_avail_uni": "wifi-1", "qgn_stat_wlan_avail": "wifi-1",
+    "qgn_stat_message_uni": "mail", "qgn_stat_message_data_uni": "mail", "qgn_stat_message_other_uni": "mail",
+    "qgn_stat_message_mail_uni": "at", "qgn_stat_message_remote_uni": "mailbox", "qgn_stat_message_fax_uni": "printer",
+    "qgn_stat_missed_calls_uni": "phone-x", "qgn_stat_poc_missed_uni": "phone-x",
+    "qgn_stat_outbox_uni": "upload",
+    "qgn_stat_im_uni": "message-circle", "qgn_stat_joint_im_uni": "messages",
+    "qgn_stat_vm0_uni": "device-audio-tape", "qgn_stat_vm1_uni": "device-audio-tape",
+    "qgn_stat_vm2_uni": "device-audio-tape", "qgn_stat_vm12_uni": "device-audio-tape",
+    "qgn_stat_cale_uni": "calendar-exclamation", "qgn_stat_alarm": "alarm", "qgn_stat_clk_stp_watch_uni": "stopwatch",
+    "qgn_stat_cyphering_on": "lock", "qgn_stat_cyphering_on_uni": "lock", "qgn_stat_keyguard": "lock",
+    "qgn_stat_loc_gps_uni": "gps", "qgn_stat_loc": "map-pin", "qgn_stat_loc_on": "map-pin", "qgn_stat_loc_off": "map-pin-off",
+    "qgn_stat_memc_uni": "device-sd-card",
+    "qgn_stat_usb_uni": "usb", "qgn_stat_usb_memc_connect_uni": "usb", "qgn_stat_usb_memc_transfer_uni": "usb",
+    "qgn_stat_ihf": "speakerphone",
+    "qgn_stat_divert0": "phone-outgoing", "qgn_stat_divert1": "phone-outgoing", "qgn_stat_divert12": "phone-outgoing",
+    "qgn_stat_divert2": "phone-outgoing", "qgn_stat_divert_vm": "phone-outgoing",
+    "qgn_stat_line2": "phone-call", "qgn_stat_video_sharing": "video", "qgn_stat_zone_home": "home",
+    "qgn_stat_carkit": "car", "qgn_stat_headset": "headphones", "qgn_stat_headset_unavailable": "headphones-off",
+    "qgn_stat_tvout": "device-tv", "qgn_stat_indi_mtv_on": "device-tv-old", "qgn_stat_indi_mtv_rec": "player-record",
+    "qgn_stat_hdmi_connect": "plug-connected", "qgn_stat_tty": "keyboard",
+    "qgn_stat_poc_on": "microphone", "qgn_stat_poc_dnd": "microphone-off",
+    "qgn_stat_tarm": "cpu", "qgn_stat_mod_tarm": "cpu-2",
+    "qgn_stat_hac": "ear", "qgn_stat_loopset": "ear-scan",
+    "qgn_stat_cdma_roaming_uni": "world", "qgn_stat_sync_uni": "refresh", "qgn_stat_servtab_uni": "bookmark",
+    "qgn_stat_fmtx_on_uni": "broadcast", "qgn_stat_fmtx_off_uni": "broadcast-off",
+    "qgn_stat_ir_uni": "device-remote", "qgn_stat_voip_readiness": "phone-calling",
+    "qgn_stat_wlan_active_secure": "qgn_stat_wlan_active_secure_uni",
 }
 ART_ALIASES.update(STAT_ALIASES)
 
@@ -177,10 +165,29 @@ ART_ALIASES.update(STAT_ALIASES)
 _GUIDE = re.compile(r'\s*<(?:rect|polygon)\b[^>]*fill="#(?:006400|00386D)"[^>]*/>', re.I)
 
 
+# Tabler Icons draw in `currentColor` (a CSS keyword SVG-Tiny / the NVG encoder does not know) with the stroke set on the root;
+# the status indicators are monochrome masks, so black. STAT_STROKE: Tabler's 2 on the 24 grid is 1.25 px in the 15 px indicator
+# cell; the status glyphs use a heavier line so they stay readable there (core os/data/icons/status/README.md).
+STAT_STROKE = "2.5"
+
+
+def _tabler_style(dst: str, stem: str) -> None:
+    with open(dst, encoding="utf-8", errors="surrogateescape") as fh:
+        svg = fh.read()
+    if "currentColor" not in svg:
+        return
+    svg = svg.replace("currentColor", "#000000")
+    if stem.startswith("qgn_stat_"):
+        svg = re.sub(r'stroke-width="2"', 'stroke-width="%s"' % STAT_STROKE, svg, count=1)
+    with open(dst, "w", encoding="utf-8", errors="surrogateescape", newline="") as fh:
+        fh.write(svg)
+
+
 def copy_art(src: str, dst: str, stem: str) -> bool:
     """Stage one artwork SVG; frame slices (qgn_fr_*) lose the template's guide strokes. -> stripped?"""
     shutil.copyfile(src, dst)
     if not stem.startswith("qgn_fr_"):
+        _tabler_style(dst, stem)
         return False
     with open(dst, encoding="utf-8", errors="surrogateescape") as fh:
         svg = fh.read()
