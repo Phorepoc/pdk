@@ -45,7 +45,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import BUILD, resolve  # noqa: E402
+from paths import BUILD, OS_ROOT, resolve  # noqa: E402
 import mbg as MBG  # noqa: E402
 from mmp import _isfile_nocase  # noqa: E402
 
@@ -68,11 +68,15 @@ DEFAULT_DIRS = [os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.classicui", "u
                 # leaves KErrNotFound in activation without it (the view never opened)
                 os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.uiresources", "uigraphics", "VariatedBitmaps", "group")]
 ART_DIRS = [
+    # OUR status-pane glyphs (core os/tools/statusicons/gen.py): searched first, named by the qgn_stat_* id avkon.rss asks for
+    os.path.join(OS_ROOT, "data", "icons", "status"),
     os.path.join(BASE, "oss.FCL.sftools.dev.ui", "carbideui", "Symbian3", "config", "model"),
     os.path.join(BASE, "oss.FCL.sftools.dev.ui", "carbideui", "com.nokia.tools.theme.s60.50",
                  "config", "model"),
     os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.uiresources", "skins", "AknSkinContent", "srcdata", "haze"),
     os.path.join(BASE, "../symbian-rcl3/oss.FCL.sf.mw.uiresources", "skins", "AknSkinContent", "srcdata", "jing"),
+    # Hb's default theme (the Orbit status-bar and mono icons, 16 / 30 px monochrome SVG-Tiny): qtg_* names, used through STAT_ALIASES
+    os.path.join(BASE, "oss.FCL.sf.mw.hb", "src", "hbcore", "resources", "themes", "icons", "hbdefault", "scalable"),
 ]
 PLACEHOLDER = ('<?xml version="1.0" encoding="UTF-8"?>\n'
                '<!-- OURS: placeholder; this icon\'s artwork is not part of the 2010 open release -->\n'
@@ -115,6 +119,56 @@ def art_index(extra: list[str]) -> dict[str, str]:
 # the browser's app icon (browserng_aif.mif: "-c8,8 qgn_menu_browserng") -> Carbide's
 # qgn_menu_browser (without it the "Web" grid item was an empty square)
 ART_ALIASES = {"qgn_menu_browserng": "qgn_menu_browser"}
+
+# The status pane's indicator icons (avkon.rss INDICATOR resources) the Carbide models do not carry, taken from the
+# open Hb theme under another name (the Orbit status bar: made for exactly this). Monochrome only (no gradient "small"
+# set). The ones with no open equivalent are drawn in core os/data/icons/status (os/tools/statusicons/gen.py).
+# Differences from the 2010 meaning: vm1 / vm2 / vm12 share the voice-mail glyph, usb_memc_* share the USB glyph.
+STAT_ALIASES = {
+    "qgn_stat_bt_uni": "qtg_status_bluetooth_connection",            # visible + connected (blinks with the blank frame)
+    "qgn_stat_bt_invisible_uni": "qtg_status_bluetooth_hide_connection",  # hidden + connected
+    "qgn_stat_mod_bt": "qtg_status_bluetooth",                       # module on, visible
+    "qgn_stat_mod_bt_invisible_uni": "qtg_status_bluetooth_hide",    # module on, hidden
+    "qgn_stat_wlan_active_uni": "qtg_status_wlan",
+    "qgn_stat_wlan_active": "qtg_status_wlan",
+    "qgn_stat_wlan_active_secure": "qgn_stat_wlan_active_secure_uni",   # the navi-pane twins of the universal ones
+    "qgn_stat_wlan_avail": "qgn_stat_wlan_avail_uni",
+    "qgn_stat_message_data_uni": "qtg_status_new_message",
+    "qgn_stat_message_other_uni": "qtg_status_new_message",
+    "qgn_stat_message_remote_uni": "qtg_status_new_email",
+    "qgn_stat_missed_calls_uni": "qtg_status_missed_call",
+    "qgn_stat_poc_missed_uni": "qtg_status_missed_call",
+    "qgn_stat_outbox_uni": "qtg_mono_outbox",
+    "qgn_stat_im_uni": "qtg_status_new_im",
+    "qgn_stat_joint_im_uni": "qtg_status_new_im",
+    "qgn_stat_vm0_uni": "qtg_mono_voice_mailbox",
+    "qgn_stat_vm1_uni": "qtg_mono_voice_mailbox",
+    "qgn_stat_vm2_uni": "qtg_mono_voice_mailbox",
+    "qgn_stat_vm12_uni": "qtg_mono_voice_mailbox",
+    "qgn_stat_cale_uni": "qtg_mono_alarm_new",
+    "qgn_stat_alarm": "qtg_mono_alarm",
+    "qgn_stat_clk_stp_watch_uni": "qtg_mono_countdown_timer",
+    "qgn_stat_cyphering_on_uni": "qgn_stat_cyphering_on",            # Carbide's padlock
+    "qgn_stat_keyguard": "qgn_stat_cyphering_on",
+    "qgn_stat_loc_gps_uni": "qtg_status_gps",
+    "qgn_stat_loc": "qtg_mono_location",
+    "qgn_stat_loc_on": "qtg_mono_location",
+    "qgn_stat_loc_off": "qtg_mono_geotag_off",
+    "qgn_stat_memc_uni": "qtg_mono_memory_in_use",
+    "qgn_stat_usb_uni": "qtg_mono_usb",
+    "qgn_stat_usb_memc_connect_uni": "qtg_mono_usb",
+    "qgn_stat_usb_memc_transfer_uni": "qtg_mono_usb",
+    "qgn_stat_ihf": "qtg_mono_speaker",
+    "qgn_stat_divert0": "qtg_mono_call_diverted",
+    "qgn_stat_divert1": "qtg_mono_call_diverted",
+    "qgn_stat_divert12": "qtg_mono_call_diverted",
+    "qgn_stat_divert2": "qtg_mono_call_diverted",
+    "qgn_stat_divert_vm": "qtg_mono_call_diverted",
+    "qgn_stat_line2": "qtg_mono_als_call_two",
+    "qgn_stat_video_sharing": "qtg_mono_video_call",
+    "qgn_stat_zone_home": "qtg_mono_home",
+}
+ART_ALIASES.update(STAT_ALIASES)
 
 
 # The Carbide.ui theme-model templates draw frame slices with 1-px guide strokes (#006400 normal, #00386D
