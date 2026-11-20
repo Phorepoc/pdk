@@ -170,8 +170,7 @@ def mk_mifconv(path: str) -> list[tuple[str, str, list[str]]]:
                     rest += open(rf, errors="replace").read().split()
                     continue
             rest.append(t)
-        if hdr:
-            out.append((mif, hdr, rest))
+        out.append((mif, hdr, rest))      # (a makefile without /h makes no .mbg header; its .mif is still wanted: Photo Browser's)
     return out
 
 
@@ -183,7 +182,7 @@ def run(pkgs: list[str]) -> None:
             for f in files:
                 if f.lower().endswith(".mk"):
                     for _mif, hdr, toks in mk_mifconv(os.path.join(root, f)):
-                        if write_mbg(hdr, parse_items(toks)):
+                        if hdr and write_mbg(hdr, parse_items(toks)):
                             n += 1
     for pkg in pkgs:                       # bmconv headers from mmp START BITMAP blocks
         for root, _dirs, files in os.walk(os.path.join(BASE, pkg)):
