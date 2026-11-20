@@ -12,6 +12,7 @@ symbols (arm-none-eabi-nm, $NM). Writes the format PhoneLab reads (lib/device/ph
 sidecar (the core images built by other emitters) gets its I line only. Exit 0 even when nothing could be mapped.
 """
 import argparse
+import glob
 import os
 import subprocess
 import sys
@@ -53,31 +54,48 @@ def main():
     a = ap.parse_args()
     nm = os.environ.get("NM") or next((t for t in ("arm-none-eabi-nm", "nm")
                                        if subprocess.run(["sh", "-c", "command -v " + t], capture_output=True).returncode == 0), "nm")
-    rmap = os.path.join(a.build, "rom", "romsect.bin.map")
-    if not os.path.exists(rmap):
-        print("rom_syms: no %s: nothing to export" % rmap)
+    # the maps rombuild writes: the section ROM's (<build>/rom/romsect.bin.map: "<zname> <run> <size> <source image>") and the
+    # whole kernel ROM's (.bootstrap-build/ekern.rom.map, the ARM boards: "<name> <run> <size> <link base>")
+    maps = [os.path.join(a.build, "rom", "romsect.bin.map")]
+    maps += sorted(glob.glob(".bootstrap-build/ekern.rom.map") + glob.glob("*/.bootstrap-build/ekern.rom.map")
+                   + glob.glob(os.path.join(a.build, "**", "ekern.rom.map"), recursive=True))
+    maps = [m for m in dict.fromkeys(maps) if os.path.exists(m)]
+    if not maps:
+        print("rom_syms: no ROM map (romsect.bin.map / ekern.rom.map): nothing to export")
         return 0
+    # every image's sidecar under the build tree, by image name (the whole-ROM map names images, not their files)
+    sides = {}
+    for f in glob.glob(os.path.join(a.build, "**", "*.sym"), recursive=True):
+        sides.setdefault(os.path.basename(f)[:-4].lower(), f)
     imgs = fns = 0
-    with open(rmap) as fh, open(a.out, "w", newline="\n") as out:
-        for ln in fh:
-            g = ln.split(None, 3)
-            if len(g) < 3:
-                continue
-            zname, run, size = g[0], int(g[1], 16), int(g[2], 16)
-            src = g[3].strip() if len(g) > 3 else ""
-            out.write("I %x %x %s\n" % (run, size, zname.replace("\\", "/").rsplit("/", 1)[-1]))
-            imgs += 1
-            src = here(a.build, src)
-            side = src + ".sym"
-            if not src or not os.path.exists(side):
-                continue
-            elf, base = open(side).read().split()[:2]
-            base = int(base, 16)
-            elf = here(a.build, elf)
-            for addr, name in functions(nm, elf):
-                if base <= addr < base + size:
-                    out.write("F %x %s\n" % (addr - base + run, name))
-                    fns += 1
+    seen = set()
+    with open(a.out, "w", newline="\n") as out:
+        for rmap in maps:
+            print("rom_syms: map %s" % rmap)
+            for ln in open(rmap):
+                g = ln.split(None, 3)
+                if len(g) < 3:
+                    continue
+                zname, run, size = g[0], int(g[1], 16), int(g[2], 16)
+                name = zname.replace("\\", "/").rsplit("/", 1)[-1]
+                if (run, name) in seen:
+                    continue
+                seen.add((run, name))
+                out.write("I %x %x %s\n" % (run, size, name))
+                imgs += 1
+                src = g[3].strip() if len(g) > 3 else ""
+                side = here(a.build, src) + ".sym" if src and not src.startswith("0x") else ""
+                if not side or not os.path.exists(side):
+                    side = sides.get(name.lower()) or sides.get(name.lower().replace(".dll", "_x32.dll").replace(".exe", "_x32.exe"))
+                if not side:
+                    continue
+                elf, base = open(side).read().split()[:2]
+                base = int(base, 16)
+                elf = here(a.build, elf)
+                for addr, fn in functions(nm, elf):
+                    if base <= addr < base + size:
+                        out.write("F %x %s\n" % (addr - base + run, fn))
+                        fns += 1
     print("rom_syms: %d images, %d functions -> %s" % (imgs, fns, a.out))
     return 0
 

@@ -406,7 +406,10 @@ def _preprocess(path: str, extra_defs=(), markers: bool = False) -> str:
         mapped = map_sf_path(full, mdir) if not os.path.exists(full) else full
         if mapped == full and not os.path.exists(full) and "/" in inc:
             mapped = _package_unique(full, mdir) or full
-        return m.group(1) + mapped.replace("\\", "/") + m.group(3) if mapped != full else m.group(0)
+        if mapped != full:
+            return m.group(1) + mapped.replace("\\", "/") + m.group(3)
+        # a Windows separator in a path that resolves as written (podcatcher: #include "..\..\group\defines.h"): cpp on Linux needs '/'
+        return m.group(1) + inc + m.group(3) if inc != m.group(2) else m.group(0)
     fixed = _REL_INCLUDE.sub(fix, text)
     # `#include <vg\openvguids.hrh>` (sfopenvg): a Windows separator in a system include
     fixed = re.sub(r'^(\s*#\s*include\s*<)([^>]*\\[^>]*)(>)', lambda m: m.group(1) + m.group(2).replace("\\", "/") + m.group(3),
