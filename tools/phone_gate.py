@@ -111,9 +111,30 @@ def main():
                                                                   (ch.get(r) or {}).get('diff', '?'))
                                        for r in prov['dirty']))
 
+    # 1b. the slot: PhoneLab's boot record (its "slot" comes from the kernel's [slot] line). A re-armed trial boot prints no
+    # such line, and a boot whose early log was lost on the link has none either, so an unknown slot passes when the boot
+    # started after the newest push/rearm and shows no "running slot A" (the golden fallback always says so); A fails.
+    try:
+        rec = next((b for b in lab.get('boots', limit=20) if b.get('id') == boot), None)
+    except Exception:  # noqa: BLE001
+        rec = None
+    slot = (rec or {}).get('slot', '')
+    if slot == 'A':
+        fails.append('slot: this boot runs the golden slot A, not the pushed image')
+    elif slot != 'B':
+        hist = lab.get('history', limit=2000)
+        hist = hist.get('items', hist) if isinstance(hist, dict) else hist
+        armed = [h for h in hist if h.get('op') in ('push', 'rearm') and not h.get('error')]
+        started = (rec or {}).get('started', 0)
+        if lab.lines(any_=['running slot A'], limit=1):
+            fails.append('slot: "running slot A" in this boot (the golden fallback)')
+        elif not rec or not armed or max(h.get('ts', 0) for h in armed) > started:
+            fails.append('slot: unknown, and no push/rearm before this boot')
+        else:
+            print('  slot: not in the log (re-armed trial or early log lost); boot %s follows a push/rearm, no slot A line' % boot)
+
     # 2. markers of this boot
     need = {
-        'the pushed image (slot B)': 'running slot B',
         'home screen': 'homescreen=1',
         # (either line: the start-up line or the composer's per-frame report -- a serial line can arrive garbled)
         'GPU composition': ('wfc gpu: GPU composition up', 'wfc gpu: composition '),
