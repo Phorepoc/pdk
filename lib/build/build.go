@@ -29,6 +29,7 @@ var passThrough = []string{
 	"WEBFONTS", "THEMES", "X32_LD", "X32_DEFS", "X32_LIBS", "X32_INCLUDE", "X32_FULLERR", "PRUNE_UNRESOLVED", "ROM_HEAP_LIMITS",
 	"TRACE", "SCREEN", "SCALE", "DBG", "KCLEAN", "ARM_VFP", "ARM_CPU_FLAGS", "ALF_TRACE", "ALF_TIMING", "ALF_LOG", "ALF_RC",
 	"MODEM", "MODEM_EG25", "USB_HOST", "A64_USBHOST", "USBHOST_NET", "PHOREPOC_PACKAGE_VERSION", "OBJCACHE_EXPLAIN", "PHOREPOC_CORE_VERSION", "PHOREPOC_IMAGE_VERSION",
+	"PHOREPOC_NATIVE", "LEGACY_APPMODE", "PHECOMPFRAMELOG", // the native-size image (kernel SCREEN, wsini per-client mode), phecomp per-frame log
 	"DUMP", "NMI", // x86 kernel debug aids (make_ekern.sh: a thread dump DUMP seconds in; the SMP watchdog NMI)
 	"SETTLE", "BOOTS", // the board boot test (recipes/first-boot.sh): seconds after the home screen, number of boots
 }

@@ -236,7 +236,9 @@ def build(target: str, tokens: list[str], comp_dir: str) -> bool:
         if not t:
             continue
         if MBG.DEPTH.match(t):
-            depth = t
+            # a 1-bit mask (podcatcher: -c16,1 *.svg) has no meaning for vector art, which carries its own alpha: mifconv
+            # refuses it; every other list uses a ",8" mask
+            depth = re.sub(r"c\d+,1$", "c8,8", t, flags=re.I) if VECTOR else t
             continue
         if t.startswith(("-", "/")) and not re.search(r"\.(svg|bmp)$", t, re.I):
             continue
@@ -277,6 +279,33 @@ def build(target: str, tokens: list[str], comp_dir: str) -> bool:
                         "-P" + os.path.join(tmp, "palette.pal"), "-F" + pfile],
                        cwd=stage, capture_output=True, text=True, errors="replace")
     ok = r.returncode == 0 and os.path.isfile(mif)
+    if not ok and VECTOR:
+        # one SVG the encoder cannot take (podcatcher's Illustrator exports) stops the whole file, and with it every icon id the
+        # app names: find the ones that fail alone, give those OUR placeholder, and run the list again
+        bad = []
+        for pl in params:
+            parts = pl.split()
+            if len(parts) != 2 or not parts[1].endswith(".svg"):
+                continue
+            one = os.path.join(tmp, "one.mif")
+            if os.path.isfile(one):
+                os.remove(one)
+            r1 = subprocess.run([MIFCONV, one, "-E", "-I.", "-T.", "-S" + os.path.dirname(SVGTENC),
+                                 "-P" + os.path.join(tmp, "palette.pal")] + parts,
+                                cwd=stage, capture_output=True, text=True, errors="replace")
+            if r1.returncode != 0 or not os.path.isfile(one):
+                bad.append(parts[1])
+        if bad:
+            for b in bad:
+                with open(os.path.join(stage, b), "w", encoding="utf-8", newline=None) as fh:
+                    fh.write(PLACEHOLDER)
+            real -= len(bad)
+            fake += len(bad)
+            print(f"  ! {target}: {len(bad)} SVG(s) the encoder rejects, placeholders: {' '.join(bad)}")
+            r = subprocess.run([MIFCONV, mif, "-E", "-I.", "-T.", "-S" + os.path.dirname(SVGTENC),
+                                "-P" + os.path.join(tmp, "palette.pal"), "-F" + pfile],
+                               cwd=stage, capture_output=True, text=True, errors="replace")
+            ok = r.returncode == 0 and os.path.isfile(mif)
     size = os.path.getsize(mif) if ok else 0
     if ok:
         for ext in (".mif", ".mbm"):
