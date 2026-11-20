@@ -5,7 +5,8 @@
 # next_version.sh [<repository> [<path>...]] -- the next release version from the Conventional Commits since the last v* tag
 # (https://www.conventionalcommits.org): a breaking change ("type!:" or a "BREAKING CHANGE:" footer) bumps the major
 # version (the minor one while below 1.0), "feat" the minor one, "fix" and "perf" the patch one; anything else
-# releases nothing. Prints the version (v1.2.3), or nothing when there is nothing to release. No tag yet = v0.1.0.
+# releases nothing -- except that a commit which changes a pin in board.lock (judged on the lock's diff, not the subject)
+# is a patch release at least: the image is built from those commits. Prints the version (v1.2.3), or nothing when there is nothing to release. No tag yet = v0.1.0.
 # With paths, only the commits that change them count (a repository that releases one package of a larger tree: core's
 # browser frontend).
 set -eu
@@ -29,6 +30,10 @@ for h in $(git rev-list --no-merges "$range" -- "$@"); do
 	git log -1 --format=%b "$h" | grep -q -E '^BREAKING[ -]CHANGE:' && b=3
 	# only a well-formed Conventional Commit subject counts for feat/fix/perf
 	[ "$b" -lt 3 ] && ! echo "$subj" | grep -q -E '^(feat|fix|perf)(\([^)]*\))?: ' && b=0
+	# a changed pin in board.lock (a +/- line that is not a comment): the image is rebuilt from other code, a patch at least
+	if [ "$b" -lt 1 ] && [ -n "$(git show --format= -p "$h" -- board.lock | grep -E '^[+-][^+-]' | grep -v -E '^[+-][[:space:]]*#' || true)" ]; then
+		b=1
+	fi
 	[ "$b" -gt "$bump" ] && bump=$b
 done
 [ "$bump" -eq 0 ] && exit 0

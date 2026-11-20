@@ -179,6 +179,8 @@ Releases are automatic. Every commit follows [Conventional Commits](https://www.
 push to `main` is checked: when the commits since the last release include a `feat`, a `fix` or a breaking change, the
 pdk tags the next version and publishes the binaries and the PhoneLab image. The board repositories build their images
 the same way, from the exact commits their `board.lock` pins, and release them once the image has passed its boot test.
+A commit that changes a pin in a board's `board.lock` counts as a `fix` (a patch release at least), judged on the lock's diff
+rather than the subject: the image is built from other code.
 
 <details>
 <summary>Working on the PDK</summary>
