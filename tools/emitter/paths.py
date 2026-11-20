@@ -66,7 +66,7 @@ def prune_gated(components, img_dirs, keys) -> None:
                 continue
             for d in img_dirs:
                 hit = False
-                for suf in ("", ".meta", ".linkstubs", ".map"):
+                for suf in ("", ".meta", ".linkstubs", ".map", ".sym"):
                     f = os.path.join(d, n + suf)
                     if os.path.exists(f):
                         os.remove(f)
