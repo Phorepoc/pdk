@@ -23,7 +23,7 @@ import glob
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import CORE, OS_ROOT, SYMBIAN, BUILD, has_layer, resolve  # noqa: E402
+from paths import CORE, OS_ROOT, SYMBIAN, BUILD, has_layer, layer_dir, resolve  # noqa: E402
 import components as C  # noqa: E402
 import mmp as MMP  # noqa: E402
 
@@ -433,7 +433,23 @@ def main() -> None:
                 out += ["--data", "private\\10207114\\import\\" + uid + "\\" + tn + ".skn=" + rel(os.path.join(td, tn + ".skn"))]
                 for ext in (".mif", ".mbm"):
                     out += ["--data", "resource\\skins\\" + uid + "\\" + tn + ext + "=" + rel(os.path.join(td, tn + ext))]
-    stubs = os.path.join(SYMBIAN, "symbian-2010", "oss.FCL.sf.adapt.stubs", "systemswstubs", "hwrmstubplugins", "data")
+    # the Etesian theme (the etesian-theme layer, UID E7016B31: theme_gen.py builds it): selectable in Themes next to Haze, with its
+    # typeface (Fira Sans, SIL OFL, unmodified: Z:\resource\fonts) and the licence texts of what it carries. A build without the layer
+    # has none of this. THEMES=0 leaves the theme out too.
+    et = layer_dir("etesian-theme")
+    etd = os.path.join(SKINGEN, "etesian", "data")
+    if et and os.environ.get("THEMES", "1") != "0" and os.path.isfile(os.path.join(etd, "etesian-dark.skn")):
+        out += ["--data", "private\\10207114\\import\\E7016B31\\etesian-dark.skn=" + rel(os.path.join(etd, "etesian-dark.skn"))]
+        for ext in (".mif", ".mbm"):
+            if os.path.isfile(os.path.join(etd, "etesian-dark" + ext)):
+                out += ["--data", "resource\\skins\\E7016B31\\etesian-dark" + ext + "=" + rel(os.path.join(etd, "etesian-dark" + ext))]
+        for fn in sorted(os.listdir(os.path.join(et, "fonts"))):
+            if fn.lower().endswith(".ttf"):
+                out += ["--data", "resource\\fonts\\" + fn + "=" + rel(os.path.join(et, "fonts", fn))]
+        for lic in sorted(os.listdir(os.path.join(et, "LICENSES"))) + ["NOTICE"]:
+            src = os.path.join(et, "LICENSES", lic) if lic != "NOTICE" else os.path.join(et, "NOTICE")
+            out += ["--data", "resource\\etesian\\licences\\" + lic + ("" if lic.endswith(".txt") or lic == "NOTICE" else ".txt") + "=" + rel(src)]
+    stubs =os.path.join(SYMBIAN, "symbian-2010", "oss.FCL.sf.adapt.stubs", "systemswstubs", "hwrmstubplugins", "data")
     for f in ("HWRMLightsPolicy.ini", "HWRMVibraPolicy.ini"):
         if os.path.isfile(os.path.join(stubs, f)):
             out += ["--data", "private\\101f7a02\\" + f + "=" + rel(os.path.join(stubs, f))]
