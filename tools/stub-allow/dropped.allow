@@ -130,6 +130,7 @@ D1 photobrowser textureloader.cpp
 D1 iebgps ietngenerator.cpp
 D1 ieengine iebitmaploader.cpp
 D1 ieengine ieimagefinder.cpp
+D1 ieutils ieengineutils.cpp
 D1 phoneengine cpeparsermanufacturerhandler.cpp
 D1 phoneparser phonegsmparser.cpp
 D1 phoneuicontrol cphonestate.cpp
