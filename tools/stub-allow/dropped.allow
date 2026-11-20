@@ -124,6 +124,8 @@ D1 orientationssy ssychannel.cpp
 D1 peninputgenericvkb peninputgenericlafdatamgr.cpp
 D1 peninputimeplugingeneric peninputimeplugingeneric.cpp
 D1 peninputlayouteng peninputimefinder.cpp
+D1 photobrowser drawutility.cpp
+D1 photobrowser imagiccontainerbrowser.cpp
 D1 phoneengine cpeparsermanufacturerhandler.cpp
 D1 phoneparser phonegsmparser.cpp
 D1 phoneuicontrol cphonestate.cpp
