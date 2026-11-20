@@ -179,7 +179,7 @@ jobs:
           docker build -q -f Dockerfile.layer -t "$img" .
           docker push -q "$img"
 
-      - uses: Phorepoc/pdk/.github/actions/board-finish@main
+      - uses: Phorepoc/pdk/.github/actions/board-finish@test/rom-syms-wf
         if: steps.mode.outputs.shards == '0'
         with:
           arch: ${{ steps.setup.outputs.arch }}
@@ -263,7 +263,7 @@ jobs:
       - name: "Unpack the shards (the link pass reuses their objects: same content, same key)"
         run: for f in shards/*/*.tar.zst; do tar --zstd -xf "$f"; done; rm -rf shards
 
-      - uses: Phorepoc/pdk/.github/actions/board-finish@main
+      - uses: Phorepoc/pdk/.github/actions/board-finish@test/rom-syms-wf
         with:
           arch: ${{ steps.setup.outputs.arch }}
           board: ${{ steps.setup.outputs.board }}
