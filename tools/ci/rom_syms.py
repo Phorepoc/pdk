@@ -17,6 +17,19 @@ import subprocess
 import sys
 
 
+def here(build, p):
+    """A path written inside the build container: the same file under this build tree (the part after a build/)."""
+    if not p or os.path.exists(p):
+        return p
+    q = p.replace("\\", "/")
+    for cut in ("/build/", "/arm/"):
+        if cut in q:
+            r = os.path.join(build, q.rsplit(cut, 1)[1]) if cut == "/build/" else os.path.join(build, "arm", q.rsplit(cut, 1)[1])
+            if os.path.exists(r):
+                return r
+    return p
+
+
 def functions(nm, elf):
     try:
         out = subprocess.run([nm, "-n", "-C", elf], capture_output=True, text=True, check=False).stdout
@@ -54,15 +67,13 @@ def main():
             src = g[3].strip() if len(g) > 3 else ""
             out.write("I %x %x %s\n" % (run, size, zname.replace("\\", "/").rsplit("/", 1)[-1]))
             imgs += 1
-            if src and not os.path.exists(src) and "/arm/" in src:
-                src = os.path.join(a.build, "arm", src.split("/arm/", 1)[1])
+            src = here(a.build, src)
             side = src + ".sym"
             if not src or not os.path.exists(side):
                 continue
             elf, base = open(side).read().split()[:2]
             base = int(base, 16)
-            if not os.path.exists(elf) and "/arm/" in elf:		# written inside the build container: the same tree here
-                elf = os.path.join(a.build, "arm", elf.split("/arm/", 1)[1])
+            elf = here(a.build, elf)
             for addr, name in functions(nm, elf):
                 if base <= addr < base + size:
                     out.write("F %x %s\n" % (addr - base + run, name))
