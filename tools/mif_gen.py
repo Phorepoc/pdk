@@ -236,7 +236,9 @@ def build(target: str, tokens: list[str], comp_dir: str) -> bool:
         if not t:
             continue
         if MBG.DEPTH.match(t):
-            depth = t
+            # a 1-bit mask (podcatcher: -c16,1 *.svg) has no meaning for vector art, which carries its own alpha: mifconv
+            # refuses it; every other list uses a ",8" mask
+            depth = re.sub(r"c\d+,1$", "c8,8", t, flags=re.I) if VECTOR else t
             continue
         if t.startswith(("-", "/")) and not re.search(r"\.(svg|bmp)$", t, re.I):
             continue
