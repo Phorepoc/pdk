@@ -126,11 +126,8 @@ D1 peninputimeplugingeneric peninputimeplugingeneric.cpp
 D1 peninputlayouteng peninputimefinder.cpp
 D1 photobrowser drawutility.cpp
 D1 photobrowser imagiccontainerbrowser.cpp
-D1 photobrowser textureloader.cpp
 D1 photobrowser imagicappui.cpp
 D1 iebgps ietngenerator.cpp
-D1 ieengine iebitmaploader.cpp
-D1 ieengine ieimagefinder.cpp
 D1 ieutils ieengineutils.cpp
 D1 phoneengine cpeparsermanufacturerhandler.cpp
 D1 phoneparser phonegsmparser.cpp
