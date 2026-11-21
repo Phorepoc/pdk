@@ -127,6 +127,7 @@ D1 peninputlayouteng peninputimefinder.cpp
 D1 photobrowser drawutility.cpp
 D1 photobrowser imagiccontainerbrowser.cpp
 D1 photobrowser imagicappui.cpp
+D1 photobrowser imagic.cpp
 D1 iebgps ietngenerator.cpp
 D1 iebgpclient ieimagicgbpsao.cpp
 D1 ieengine iebgpscontroller.cpp
