@@ -129,6 +129,7 @@ D1 photobrowser imagiccontainerbrowser.cpp
 D1 photobrowser imagicappui.cpp
 D1 iebgps ietngenerator.cpp
 D1 iebgpclient ieimagicgbpsao.cpp
+D1 ieengine iebgpscontroller.cpp
 D1 ieutils ieengineutils.cpp
 D1 phoneengine cpeparsermanufacturerhandler.cpp
 D1 phoneparser phonegsmparser.cpp
