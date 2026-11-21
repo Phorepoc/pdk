@@ -82,8 +82,10 @@ The pdk's reusable workflow, `board-image.yml`, builds in one of two ways:
   build tree as `ghcr.io/<owner>/core-<arch>:<core commit>` (and `:main`). Core's own workflow calls it once per
   architecture.
 - **A board**: without `arch`, it reads the calling repository's `board.conf` and `board.lock`, starts from the
-  `core-<arch>` layer at the pinned core commit, runs the prepare recipes, builds every component, then runs the
-  board's `RELEASE` recipe. A board's release workflow is only this:
+  board's own layer (`board-<board>:main`) when one exists, else the `core-<arch>` layer at the pinned core commit,
+  runs the prepare recipes, builds every component, then runs the board's `RELEASE` recipe. A board build that passed
+  on `main` (a release, or a variant run from `main`) publishes the tree after the link pass, before the image recipes,
+  as `ghcr.io/<owner>/board-<board>:<board commit>` and `:main`. A board's release workflow is only this:
 
 ```yaml
 on: { push: { tags: ["v*"] }, workflow_dispatch: }
@@ -99,6 +101,13 @@ jobs:
 A build is incremental at every level, and every reuse is decided by **content**, never by a time (a fresh checkout dates
 every file now, an unpacked layer dates every object when it was unpacked):
 
+- **The board's layer.** `board-<board>:main` holds the core objects and the board's own, so a variant or release only
+  compiles what its inputs changed (a trivial change to one core file: 24 objects of ~28,000 on the PinePhone image, 1
+  on the PC image). Every object is still reused only by content (below), so a layer made from other inputs costs a
+  rebuild and nothing else. `board_layer: false` starts from the core layer alone. `tools/ci/image_manifest.py` writes
+  what a build tree ships (every E32 image's hash without its header time, and the ROM maps' file lists and sizes);
+  workflow input `manifest` uploads it, and `image_manifest.py diff A B` proves two builds, one from the board's layer
+  and one from the core layer alone, made the same image.
 - **Objects.** `tools/emitter/objcache.py` stores next to each object a key (the compiler's own bytes and the command
   line, with the mount points written as what they are, so the core layer and a board build name things alike) and a
   digest of the content of every file the compiler read (the `-MMD` depfile). The object is reused when both are
@@ -113,15 +122,18 @@ every file now, an unpacked layer dates every object when it was unpacked):
   `actions/cache` entry keyed by their content. What the cached files are compiled against is still checked by content
   when they are used.
 - **The Symbian source** (`core/fetch.sh`'s output) is cached by the content of `sources.lock` and `fetch.sh`.
-- **Jobs.** When the published layer was made by the same compile front end (`tools/ci/frontend_id.sh`: the trees of
-  `tools/emitter` and `tools/toolchain`, the toolchain image), little is left to compile, so the job that prepared the
+- **Jobs.** When the published layer was made by the same compile front end (`tools/ci/frontend_id.sh`: the toolchain image,
+  `tools/toolchain` and the scripts that build the compile command line and the object key, not the pdk commit), little is left to compile, so the job that prepared the
   tree also links and releases (`.github/actions/board-finish`). Otherwise (no layer, a changed compiler or flag set) the
   compile is split over shards as before. The split only decides how fast it goes, not what is reused.
+
+A board's variant workflow uses `concurrency: {group: "variant-${{ github.ref }}", cancel-in-progress: false}`: variants
+of different branches build in parallel, a second run of one branch waits for the first.
 
 A board's release workflow keeps `concurrency: {group: release, cancel-in-progress: false}`: GitHub keeps one running and
 one pending run and cancels an older *pending* one when a newer is queued, which is safe because each run works out its
 version from the tags and the commits since the last release. A running release is never cancelled (it may be
-publishing). `layer_prefix` lets a test run read and write its own layers (`test-<commit>`) instead of the boards'.
+publishing). `layer_prefix` lets a test run read and write its own layers (`test-<commit>`) instead of the boards' (a board test run still reads the real core layers, so it starts warm).
 
 ## Keeping it this way
 
