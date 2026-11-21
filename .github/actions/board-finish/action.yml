@@ -146,6 +146,22 @@ runs:
         fi
         phe image release -b "${{ inputs.board }}" -o "$PWD/out"
 
+    # The ROM's symbol export for PhoneLab (fault addresses, hotspots): its own artifact, never in out/ (release uploads out/*)
+    - name: ROM symbols (artifact phorepoc-<board>-syms)
+      if: inputs.images == 'true' && inputs.core_arch == ''
+      shell: bash
+      run: |
+        sudo chown -R "$(id -u):$(id -g)" build 2>/dev/null || true
+        mkdir -p syms
+        python3 pdk/tools/ci/rom_syms.py --build build --out "syms/phorepoc-${{ inputs.board }}.syms" || true
+
+    - uses: actions/upload-artifact@v4
+      if: inputs.images == 'true' && inputs.core_arch == ''
+      with:
+        name: phorepoc-${{ inputs.board }}-syms
+        path: syms/
+        if-no-files-found: warn
+
     - name: Stub audit (every image the board ships)
       if: inputs.images == 'true' && inputs.core_arch == ''
       shell: bash

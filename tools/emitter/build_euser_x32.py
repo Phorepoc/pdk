@@ -412,6 +412,9 @@ def main() -> int:
         fh.write(img)
     e32image.write_pcrel_sidecar(out_path, ext)
     LS.write_linkstubs(out_path, missing)
+    # for the ROM symbol export (tools/ci/rom_syms.py): the link ELF and the address its code was linked at
+    with open(out_path + ".sym", "w", newline="\n") as fh:
+        fh.write("%s 0x%X\n" % (os.path.join(OUT, "euser.elf"), ext.code_base))
 
     # --- self-checks -------------------------------------------------------------------------
     bad_reloc, folded = check_relocs(ext)
