@@ -23,7 +23,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "emitter"))
-from paths import BUILD, SYMBIAN  # noqa: E402
+from paths import BUILD, SYMBIAN, layer_dir  # noqa: E402
 import mif_gen  # noqa: E402
 from skin_gen import COMPILER  # noqa: E402
 
@@ -86,9 +86,28 @@ def gen(name: str) -> int:
     return 0
 
 
+def gen_etesian() -> int:
+    """The Etesian theme (UID E7016B31), from the etesian-theme layer's own tools/build_skin.py (the same compiler and mifconv):
+    BUILD/skin-gen/etesian/data/etesian-dark.{skn,mif,mbm}. A build without that layer has no Etesian theme (0)."""
+    layer = layer_dir("etesian-theme")
+    if not layer:
+        print("etesian: no etesian-theme layer in this build, skipped")
+        return 0
+    out = os.path.join(BUILD, "skin-gen", "etesian", "data")
+    shutil.rmtree(os.path.dirname(out), ignore_errors=True)
+    env = dict(os.environ, PHE_PALETTE=mif_gen.PALETTE, PHE_SVGTENC=mif_gen.SVGTENC)
+    r = subprocess.run([sys.executable, os.path.join(layer, "tools", "build_skin.py"), "etesian-dark", out], env=env,
+                       capture_output=True, text=True, errors="replace")
+    ok = r.returncode == 0 and all(os.path.isfile(os.path.join(out, "etesian-dark" + e)) for e in (".skn", ".mif"))
+    print(f"etesian: {'built' if ok else 'FAILED'} (etesian-theme layer {layer})")
+    if not ok:
+        print((r.stdout + r.stderr)[-800:])
+    return 0 if ok else 1
+
+
 def main() -> int:
-    names = sys.argv[1:] or sorted(THEMES)
-    return max((gen(n) for n in names), default=0)
+    names = sys.argv[1:] or sorted(THEMES) + ["etesian"]
+    return max((gen_etesian() if n == "etesian" else gen(n) for n in names), default=0)
 
 
 if __name__ == "__main__":

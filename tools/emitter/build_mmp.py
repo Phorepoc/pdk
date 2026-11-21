@@ -1008,6 +1008,9 @@ def build(key: str, rsc_only: bool = False) -> int:
     out_path = os.path.join(IMG_DIR, rom)
     with open(out_path, "wb") as fh:
         fh.write(img)
+    # for the ROM symbol export (tools/ci/rom_syms.py): the link ELF and the address its code was linked at
+    with open(out_path + ".sym", "w", newline="\n") as fh:
+        fh.write("%s 0x%X\n" % (elf2, ext.code_base))
     # sidecar for tools/romgate.py: where this image's unimpl stub lives
     with open(out_path + ".meta", "w") as fh:
         fh.write(f"stub=0x{ext.symbols[STUB]:X}")

@@ -349,6 +349,12 @@ def main() -> int:
                     data_reloc_types=ext.data_reloc_types)
     with open(out_path, "wb") as fh:
         fh.write(img)
+    # for the ROM symbol export (tools/ci/rom_syms.py): the link ELF (kept next to the image: this builder links in memory)
+    # and the address its code was linked at -- the same sidecar build_mmp.py / build_euser_x32.py write
+    with open(out_path + ".elf", "wb") as fh:
+        fh.write(elf_blob)
+    with open(out_path + ".sym", "w", newline="\n") as fh:
+        fh.write("%s 0x%X\n" % (out_path + ".elf", ext.code_base))
 
     LS.write_linkstubs(out_path, stubbed)
     print(f"\nWrote {out_path} ({len(img)} bytes)")
