@@ -51,6 +51,16 @@ def has_layer(name: str) -> bool:
     return name in names or any(os.path.basename(a) == name for a in ADAPTATIONS)
 
 
+def layer_dir(name: str) -> str:
+    """The checkout of the repository `name` among this build's adaptations ('' when the build lacks it). A data-only layer (a theme)
+    has no os/ or registry/: the tools read its files from here (theme_gen.py, x32_rom_args.py)."""
+    names = [n for n in os.environ.get("PHOREPOC_ADAPTATION_NAMES", "").split(":") if n]
+    for i, a in enumerate(ADAPTATIONS):
+        if (names[i] if i < len(names) else os.path.basename(a)) == name:
+            return a
+    return ""
+
+
 def prune_gated(components, img_dirs, keys) -> None:
     """--all: delete the images left in the build tree of the components whose layer this build lacks (needs=) and that
     `keys` does not build. A restored build cache keeps them, and the ROM lists and the stub audit would see them as built.
