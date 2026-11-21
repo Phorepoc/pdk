@@ -58,7 +58,9 @@ def main():
     # whole kernel ROM's (.bootstrap-build/ekern.rom.map, the ARM boards: "<name> <run> <size> <link base>")
     maps = [os.path.join(a.build, "rom", "romsect.bin.map")]
     maps += sorted(glob.glob(".bootstrap-build/ekern.rom.map") + glob.glob("*/.bootstrap-build/ekern.rom.map")
-                   + glob.glob(os.path.join(a.build, "**", "ekern.rom.map"), recursive=True))
+                   + glob.glob(os.path.join(a.build, "**", "ekern.rom.map"), recursive=True)
+                   # the board recipe's copy of the whole-ROM map (adaptation-pinephone recipes/image.sh: <build>/<board>/symbian.img.map)
+                   + glob.glob(os.path.join(a.build, "*", "symbian.img.map")))
     maps = [m for m in dict.fromkeys(maps) if os.path.exists(m)]
     if not maps:
         print("rom_syms: no ROM map (romsect.bin.map / ekern.rom.map): nothing to export")
