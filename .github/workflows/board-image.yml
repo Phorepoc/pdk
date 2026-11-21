@@ -114,7 +114,7 @@ jobs:
         run: echo "now=$(date +%s)" >> "$GITHUB_OUTPUT"
 
       - id: setup
-        uses: Phorepoc/pdk/.github/actions/board-setup@ci/board-layer
+        uses: Phorepoc/pdk/.github/actions/board-setup@main
         with: { arch: "${{ inputs.arch }}" }
 
       # The best starting tree that exists: the board's own layer (board-<board>:main, made by an earlier main build of this
@@ -203,7 +203,7 @@ jobs:
           docker build -q -f Dockerfile.layer -t "$img" .
           docker push -q "$img"
 
-      - uses: Phorepoc/pdk/.github/actions/board-finish@ci/board-layer
+      - uses: Phorepoc/pdk/.github/actions/board-finish@main
         if: steps.mode.outputs.shards == '0'
         with:
           arch: ${{ steps.setup.outputs.arch }}
@@ -233,7 +233,7 @@ jobs:
         shard: [0, 1, 2, 3]   # = SHARDS
     steps:
       - id: setup
-        uses: Phorepoc/pdk/.github/actions/board-setup@ci/board-layer
+        uses: Phorepoc/pdk/.github/actions/board-setup@main
         with: { arch: "${{ inputs.arch }}" }
 
       - name: The prepared tree
@@ -271,7 +271,7 @@ jobs:
     timeout-minutes: 350
     steps:
       - id: setup
-        uses: Phorepoc/pdk/.github/actions/board-setup@ci/board-layer
+        uses: Phorepoc/pdk/.github/actions/board-setup@main
         with: { arch: "${{ inputs.arch }}" }
 
       - name: The prepared tree + every shard's objects
@@ -289,7 +289,7 @@ jobs:
       - name: "Unpack the shards (the link pass reuses their objects: same content, same key)"
         run: for f in shards/*/*.tar.zst; do tar --zstd -xf "$f"; done; rm -rf shards
 
-      - uses: Phorepoc/pdk/.github/actions/board-finish@ci/board-layer
+      - uses: Phorepoc/pdk/.github/actions/board-finish@main
         with:
           arch: ${{ steps.setup.outputs.arch }}
           board: ${{ steps.setup.outputs.board }}
