@@ -26,6 +26,10 @@
 # read; tools/emitter/objcache.py), never by a time, so the published layer and any earlier run's objects are reused
 # wherever they are still right, and nowhere else. Splitting into shards is only a speed choice.
 #
+# Layers: a core build publishes core-<arch>; a board build that passed on main publishes board-<board>:<board commit> and
+# :main (the tree once every component is linked, board-finish), and the next build of that board starts from it: its own
+# objects are reused too, so only what changed is compiled. `board_layer: false` starts from the core layer alone.
+#
 # Concurrency: the callers' release workflows serialize with `concurrency: {group: release, cancel-in-progress: false}`.
 # GitHub keeps one running and one pending run per group and cancels an older *pending* one when a newer is queued; a
 # running release is never cancelled (it may be publishing). That is already the safe form for versions: each run
@@ -80,6 +84,14 @@ on:
         description: "A prefix for the layer's tags (test-<commit>, test-main): a test run reads and writes its own layers, never the ones the boards use"
         type: string
         default: ""
+      board_layer:
+        description: "A board build: start from the board's own layer (board-<board>:main) when there is one, and publish it after a passing main build; false = the core layer alone, nothing published"
+        type: boolean
+        default: true
+      manifest:
+        description: "Upload image-manifest.txt (E32 images + ROM maps, no times) to compare two builds with tools/ci/image_manifest.py"
+        type: boolean
+        default: false
 
 env:
   PHOREPOC_IMAGE: ghcr.io/phorepoc/base:latest
@@ -102,20 +114,32 @@ jobs:
         run: echo "now=$(date +%s)" >> "$GITHUB_OUTPUT"
 
       - id: setup
-        uses: Phorepoc/pdk/.github/actions/board-setup@main
+        uses: Phorepoc/pdk/.github/actions/board-setup@ci/board-layer
         with: { arch: "${{ inputs.arch }}" }
 
-      - name: Start from the published core layer (core-<arch> at the pinned core commit, else :main)
+      # The best starting tree that exists: the board's own layer (board-<board>:main, made by an earlier main build of this
+      # board: its objects too), else core-<arch> at the pinned core commit, else :main, else nothing (a cold build). What
+      # is reused from it is decided by content (objcache.py), so a layer made from other inputs only costs a rebuild.
+      - name: Start from the published layer (the board's, else core-<arch> at the pinned core commit, else :main)
         id: layer
         run: |
-          for tag in "${{ inputs.layer_prefix }}${{ steps.setup.outputs.core }}" "${{ inputs.layer_prefix }}main"; do
-            img="ghcr.io/$OWNER/core-${{ steps.setup.outputs.arch }}:$tag"
+          pre="${{ inputs.layer_prefix }}"; board="${{ steps.setup.outputs.board }}"; arch="${{ steps.setup.outputs.arch }}"
+          cands=""
+          [ -n "$board" ] && [ "${{ inputs.board_layer }}" = true ] && cands="board-$board:${pre}main"
+          cands="$cands core-$arch:$pre${{ steps.setup.outputs.core }} core-$arch:${pre}main"
+          # a test prefix keeps a board's OWN layer apart; the real core layers are only read, so a test still starts warm
+          [ -n "$board" ] && [ -n "$pre" ] && cands="$cands core-$arch:${{ steps.setup.outputs.core }} core-$arch:main"
+          for c in $cands; do
+            img="ghcr.io/$OWNER/$c"
             if docker pull -q "$img" 2>/dev/null; then
               id=$(docker create "$img" true); docker cp "$id:/build/." build/; docker rm "$id" >/dev/null
               docker rmi "$img" >/dev/null; echo "started from $img"; du -sh build; break
             fi
           done
-          [ -d build/epoc32 ] || echo "no published core layer: a full (cold) build"
+          [ -d build/epoc32 ] || echo "no published layer: a full (cold) build"
+          # as a cold build leaves it: owned by root, the user the toolchain container runs as. (The layer was packed owned by the
+          # runner; a prepare recipe's git clone in it, run as root in the container, is then 'dubious ownership'.)
+          sudo chown -R 0:0 build
 
       # One job compiles when little is left to compile: the tree started from a layer that the same compile front end
       # made (tools/ci/frontend_id.sh), so what differs is the board's own components and whatever changed since. The
@@ -179,7 +203,7 @@ jobs:
           docker build -q -f Dockerfile.layer -t "$img" .
           docker push -q "$img"
 
-      - uses: Phorepoc/pdk/.github/actions/board-finish@main
+      - uses: Phorepoc/pdk/.github/actions/board-finish@ci/board-layer
         if: steps.mode.outputs.shards == '0'
         with:
           arch: ${{ steps.setup.outputs.arch }}
@@ -194,6 +218,8 @@ jobs:
           release: ${{ inputs.release }}
           draft: ${{ inputs.draft }}
           build_env: ${{ inputs.build_env }}
+          board_layer: ${{ inputs.board_layer }}
+          manifest: ${{ inputs.manifest }}
 
   compile:
     needs: prepare
@@ -207,7 +233,7 @@ jobs:
         shard: [0, 1, 2, 3]   # = SHARDS
     steps:
       - id: setup
-        uses: Phorepoc/pdk/.github/actions/board-setup@main
+        uses: Phorepoc/pdk/.github/actions/board-setup@ci/board-layer
         with: { arch: "${{ inputs.arch }}" }
 
       - name: The prepared tree
@@ -245,7 +271,7 @@ jobs:
     timeout-minutes: 350
     steps:
       - id: setup
-        uses: Phorepoc/pdk/.github/actions/board-setup@main
+        uses: Phorepoc/pdk/.github/actions/board-setup@ci/board-layer
         with: { arch: "${{ inputs.arch }}" }
 
       - name: The prepared tree + every shard's objects
@@ -263,7 +289,7 @@ jobs:
       - name: "Unpack the shards (the link pass reuses their objects: same content, same key)"
         run: for f in shards/*/*.tar.zst; do tar --zstd -xf "$f"; done; rm -rf shards
 
-      - uses: Phorepoc/pdk/.github/actions/board-finish@main
+      - uses: Phorepoc/pdk/.github/actions/board-finish@ci/board-layer
         with:
           arch: ${{ steps.setup.outputs.arch }}
           board: ${{ steps.setup.outputs.board }}
@@ -277,3 +303,5 @@ jobs:
           release: ${{ inputs.release }}
           draft: ${{ inputs.draft }}
           build_env: ${{ inputs.build_env }}
+          board_layer: ${{ inputs.board_layer }}
+          manifest: ${{ inputs.manifest }}
