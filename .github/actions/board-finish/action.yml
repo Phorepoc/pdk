@@ -45,6 +45,14 @@ inputs:
     description: "a test variant: KEY=VALUE pairs (space-separated) set for the image build, e.g. MODEM=1 (never with a version)"
     required: false
     default: ""
+  board_layer:
+    description: "a board build: publish its build tree as board-<board>:<commit> + :main when it ran on main (or with a layer prefix) and passed"
+    required: false
+    default: "true"
+  manifest:
+    description: "write image-manifest.txt (tools/ci/image_manifest.py) from the finished build tree and upload it"
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -107,6 +115,21 @@ runs:
           --label org.opencontainers.image.source="https://github.com/${{ github.repository }}" .
         docker push -q "$img:$pre$core"; docker push -q "$img:${pre}main"
         docker rmi "$img:$pre$core" "$img:${pre}main" >/dev/null
+
+    # The board's own layer (docs/layering.md): the tree as it is once every component is linked, before the image recipes
+    # (their outputs are not worth carrying), built here and pushed at the end, when the boot test passed. A later build of
+    # this board starts from it and reuses every object whose inputs are unchanged (tools/emitter/objcache.py: by content).
+    - name: Snapshot the build tree as the board layer
+      id: snap
+      if: inputs.core_arch == '' && inputs.board != '' && inputs.board_layer == 'true' && (github.ref == 'refs/heads/main' || inputs.layer_prefix != '')
+      shell: bash
+      run: |
+        img="ghcr.io/$OWNER/board-${{ inputs.board }}"
+        pre="${{ inputs.layer_prefix }}"
+        [ -f pdk/tools/ci/frontend_id.sh ] && sh pdk/tools/ci/frontend_id.sh > build/.compile-frontend || rm -f build/.compile-frontend
+        printf 'FROM busybox:1.36\nCOPY build /build\n' > Dockerfile.layer; printf '*\n!build\n' > .dockerignore
+        docker build -q -f Dockerfile.layer -t "$img:${pre}${{ github.sha }}" -t "$img:${pre}main"           --label org.opencontainers.image.source="https://github.com/${{ github.repository }}" .
+        echo "img=$img" >> "$GITHUB_OUTPUT"; echo "tags=${pre}${{ github.sha }} ${pre}main" >> "$GITHUB_OUTPUT"
 
     - name: The board's release files (board.conf RELEASE)
       if: inputs.images == 'true' && inputs.core_arch == ''
@@ -173,6 +196,24 @@ runs:
         else
           echo "the board has no recipes/first-boot.sh: no boot test in CI"
         fi
+
+    - name: Publish the board layer (board-<board>:<board commit> + :main)
+      if: steps.snap.outputs.img != ''
+      shell: bash
+      run: |
+        for t in ${{ steps.snap.outputs.tags }}; do docker push -q "${{ steps.snap.outputs.img }}:$t"; done
+        for t in ${{ steps.snap.outputs.tags }}; do docker rmi "${{ steps.snap.outputs.img }}:$t" >/dev/null || true; done
+
+    - name: Image manifest (E32 images + ROM maps, no times)
+      if: inputs.manifest == 'true'
+      shell: bash
+      run: python3 pdk/tools/ci/image_manifest.py write build image-manifest.txt
+
+    - uses: actions/upload-artifact@v4
+      if: inputs.manifest == 'true'
+      with:
+        name: image-manifest
+        path: image-manifest.txt
 
     - uses: actions/upload-artifact@v4
       if: always() && inputs.images == 'true' && inputs.core_arch == ''
