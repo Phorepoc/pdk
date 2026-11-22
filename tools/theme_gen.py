@@ -31,6 +31,52 @@ SRCDATA = os.path.join(SYMBIAN, "symbian-rcl3", "oss.FCL.sf.mw.uiresources", "sk
 THEMES = {"haze": "2000B12D", "jing": "2000B12E"}
 
 
+_SHAPE = re.compile(r"<(rect|path|polygon|polyline|circle|ellipse)\b([^>]*?)(/?)>")
+
+
+def fill_unfilled(stage: str, prefix: str) -> int:
+    """Give the shapes of one frame's SVGs (prefix = the frame's file-name stem) that have no fill the fill the frame's
+    own pieces use. In the staged copy only: the source tree stays as released.
+
+    Why: Haze's calculator paper (qsn_fr_calc_paper_center/corner_*/side_*) draws each piece as a <rect> with no fill
+    attribute plus a 1-px highlight with fill="#ffffff" fill-opacity="0.6". SVG's default fill is black, so the paper
+    rendered as a black box. The fill is taken from the frame's own explicit (non-gradient) fills, so it matches its
+    frame; no colour is invented. Returns the number of shapes changed."""
+    files = sorted(f for f in os.listdir(stage) if f.startswith(prefix) and f.endswith(".svg"))
+    fill = None
+    for f in files:
+        with open(os.path.join(stage, f), encoding="utf-8", errors="replace") as fh:
+            for m in _SHAPE.finditer(fh.read()):
+                c = re.search(r'\sfill="(#[0-9a-fA-F]{3,6})"', m.group(2))
+                if c:
+                    o = re.search(r'\sfill-opacity="([0-9.]+)"', m.group(2))
+                    fill = (c.group(1), o.group(1) if o else None)
+                    break
+        if fill:
+            break
+    if not fill:
+        return 0
+    attrs = ' fill="%s"' % fill[0] + (' fill-opacity="%s"' % fill[1] if fill[1] else "")
+    changed = 0
+    for f in files:
+        p = os.path.join(stage, f)
+        with open(p, encoding="utf-8", errors="replace") as fh:
+            svg = fh.read()
+
+        def add(m):
+            nonlocal changed
+            if re.search(r"\sfill=|fill\s*:", m.group(2)):
+                return m.group(0)
+            changed += 1
+            return "<%s%s%s%s>" % (m.group(1), m.group(2), attrs, m.group(3))
+        new = _SHAPE.sub(add, svg)
+        if new != svg:
+            with open(p, "w", encoding="utf-8", newline="") as fh:
+                fh.write(new)
+    print("theme_gen: %s*: %d unfilled shapes -> fill %s" % (prefix, changed, attrs.strip()))
+    return changed
+
+
 def gen(name: str) -> int:
     base = os.path.join(BUILD, "skin-gen", name)
     out = os.path.join(base, "data")
@@ -54,6 +100,7 @@ def gen(name: str) -> int:
             if fn != fn.lower():
                 os.rename(os.path.join(dp, fn), os.path.join(dp, fn.lower()))
     text = re.sub(r"[\w\-]+\.(?:svg|bmp)\b", lambda m: m.group(0).lower(), text, flags=re.I)
+    fill_unfilled(stage, "qsn_fr_calc_paper_")
     desc = os.path.join(stage, name + ".txt")
     with open(desc, "wb") as fh:
         fh.write(text.encode(enc))
