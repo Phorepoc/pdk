@@ -437,19 +437,23 @@ def main() -> None:
     # typeface (Fira Sans, SIL OFL, unmodified: Z:\resource\fonts) and the licence texts of what it carries. A build without the layer
     # has none of this. THEMES=0 leaves the theme out too.
     et = layer_dir("etesian-theme")
-    etd = os.path.join(SKINGEN, "etesian", "data")
-    if et and os.environ.get("THEMES", "1") != "0" and os.path.isfile(os.path.join(etd, "etesian-dark.skn")):
-        out += ["--data", "private\\10207114\\import\\E7016B31\\etesian-dark.skn=" + rel(os.path.join(etd, "etesian-dark.skn"))]
-        for ext in (".mif", ".mbm"):
-            if os.path.isfile(os.path.join(etd, "etesian-dark" + ext)):
-                out += ["--data", "resource\\skins\\E7016B31\\etesian-dark" + ext + "=" + rel(os.path.join(etd, "etesian-dark" + ext))]
+    if et and os.environ.get("THEMES", "1") != "0":
+        for sn, suid in (("etesian", "E7016B33"), ("etesian-dark", "E7016B31")):
+            etd = os.path.join(SKINGEN, sn, "data")
+            if not os.path.isfile(os.path.join(etd, sn + ".skn")):
+                continue
+            out += ["--data", "private\\10207114\\import\\" + suid + "\\" + sn + ".skn=" + rel(os.path.join(etd, sn + ".skn"))]
+            for ext in (".mif", ".mbm"):
+                if os.path.isfile(os.path.join(etd, sn + ext)):
+                    out += ["--data", "resource\\skins\\" + suid + "\\" + sn + ext + "=" + rel(os.path.join(etd, sn + ext))]
+    if et and os.environ.get("THEMES", "1") != "0":
         for fn in sorted(os.listdir(os.path.join(et, "fonts"))):
             if fn.lower().endswith(".ttf"):
                 out += ["--data", "resource\\fonts\\" + fn + "=" + rel(os.path.join(et, "fonts", fn))]
         for lic in sorted(os.listdir(os.path.join(et, "LICENSES"))) + ["NOTICE"]:
             src = os.path.join(et, "LICENSES", lic) if lic != "NOTICE" else os.path.join(et, "NOTICE")
             out += ["--data", "resource\\etesian\\licences\\" + lic + ("" if lic.endswith(".txt") or lic == "NOTICE" else ".txt") + "=" + rel(src)]
-    stubs =os.path.join(SYMBIAN, "symbian-2010", "oss.FCL.sf.adapt.stubs", "systemswstubs", "hwrmstubplugins", "data")
+    stubs = os.path.join(SYMBIAN, "symbian-2010", "oss.FCL.sf.adapt.stubs", "systemswstubs", "hwrmstubplugins", "data")
     for f in ("HWRMLightsPolicy.ini", "HWRMVibraPolicy.ini"):
         if os.path.isfile(os.path.join(stubs, f)):
             out += ["--data", "private\\101f7a02\\" + f + "=" + rel(os.path.join(stubs, f))]

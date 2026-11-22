@@ -87,22 +87,27 @@ def gen(name: str) -> int:
 
 
 def gen_etesian() -> int:
-    """The Etesian theme (UID E7016B31), from the etesian-theme layer's own tools/build_skin.py (the same compiler and mifconv):
-    BUILD/skin-gen/etesian/data/etesian-dark.{skn,mif,mbm}. A build without that layer has no Etesian theme (0)."""
+    """The Etesian themes from the etesian-theme layer's own tools/build_skin.py (the same compiler and mifconv): "etesian" (the Hybrid colour
+    mode, UID E7016B33) and "etesian-dark" (E7016B31), each into BUILD/skin-gen/<name>/data/<name>.{skn,mif,mbm}. A build without that layer has none."""
     layer = layer_dir("etesian-theme")
     if not layer:
         print("etesian: no etesian-theme layer in this build, skipped")
         return 0
-    out = os.path.join(BUILD, "skin-gen", "etesian", "data")
-    shutil.rmtree(os.path.dirname(out), ignore_errors=True)
     env = dict(os.environ, PHE_PALETTE=mif_gen.PALETTE, PHE_SVGTENC=mif_gen.SVGTENC)
-    r = subprocess.run([sys.executable, os.path.join(layer, "tools", "build_skin.py"), "etesian-dark", out], env=env,
-                       capture_output=True, text=True, errors="replace")
-    ok = r.returncode == 0 and all(os.path.isfile(os.path.join(out, "etesian-dark" + e)) for e in (".skn", ".mif"))
-    print(f"etesian: {'built' if ok else 'FAILED'} (etesian-theme layer {layer})")
-    if not ok:
-        print((r.stdout + r.stderr)[-800:])
-    return 0 if ok else 1
+    rc = 0
+    for name in ("etesian", "etesian-dark"):
+        if not os.path.isfile(os.path.join(layer, "skin", name + ".txt")):
+            continue
+        out = os.path.join(BUILD, "skin-gen", name, "data")
+        shutil.rmtree(os.path.dirname(out), ignore_errors=True)
+        r = subprocess.run([sys.executable, os.path.join(layer, "tools", "build_skin.py"), name, out], env=env,
+                           capture_output=True, text=True, errors="replace")
+        ok = r.returncode == 0 and all(os.path.isfile(os.path.join(out, name + e)) for e in (".skn", ".mif"))
+        print(f"{name}: {'built' if ok else 'FAILED'} (etesian-theme layer {layer})")
+        if not ok:
+            print((r.stdout + r.stderr)[-800:])
+            rc = 1
+    return rc
 
 
 def main() -> int:
