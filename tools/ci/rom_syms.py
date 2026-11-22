@@ -47,6 +47,22 @@ def functions(nm, elf):
     return res
 
 
+def kernel_elf(build):
+    """The ekern.elf link_ekern.sh wrote (.ekern-build/, .ekern-flex-build/, .ekernsmp-flex-build/, here or one level down):
+    the newest one, as the ROM was built from the last link."""
+    c = []
+    for root in (".", build):
+        for pat in (".ekern*-build/ekern.elf", "*/.ekern*-build/ekern.elf", "**/ekern.elf"):
+            c += glob.glob(os.path.join(root, pat), recursive=True)
+    c = [f for f in dict.fromkeys(c) if os.path.isfile(f)]
+    if not c:
+        print("rom_syms: no ekern.elf found: the kernel gets its I line only")
+        return None
+    f = max(c, key=os.path.getmtime)
+    print("rom_syms: kernel symbols from %s" % f)
+    return f
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--build", default=os.environ.get("PHOREPOC_BUILD", "build"))
@@ -98,6 +114,17 @@ def main():
                     if base <= addr < base + size:
                         out.write("F %x %s\n" % (addr - base + run, fn))
                         fns += 1
+        # the kernel: the ROM primary (rombuild --primary), in no placement map; link_ekern.sh links ekern.elf at its run
+        # address, so its symbols go out as they are (faults in ekern, e.g. boot 2992's undef at 0x8008ee50, had no name)
+        kelf = None if any(n.lower() == "ekern.exe" for _, n in seen) else kernel_elf(a.build)
+        kf = functions(nm, kelf) if kelf else []
+        if kf:
+            lo, hi = kf[0][0], kf[-1][0] + 4
+            out.write("I %x %x ekern.exe\n" % (lo, hi - lo))
+            imgs += 1
+            for addr, fn in kf:
+                out.write("F %x %s\n" % (addr, fn))
+                fns += 1
     print("rom_syms: %d images, %d functions -> %s" % (imgs, fns, a.out))
     return 0
 
