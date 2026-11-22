@@ -48,12 +48,14 @@ type Driver struct {
 type screenState struct {
 	off       atomic.Bool
 	landscape atomic.Bool
+	locked    atomic.Bool // SysAp's keylock (KeylockStateChangedL): the short power key toggles it
 }
 
 var (
 	reScreenOff  = regexp.MustCompile(`\[EKERN\]\[power\] screen OFF done`)
 	reScreenOn   = regexp.MustCompile(`\[EKERN\]\[disp\] HAL display state ON`)
 	reLayoutRect = regexp.MustCompile(`layout switch\): application rect (\d+)x(\d+)`)
+	reKeylock    = regexp.MustCompile(`KeylockStateChangedL\(\): aEnabled=([01])`)
 )
 
 func (d *Driver) noteScreen(line string) {
@@ -61,10 +63,14 @@ func (d *Driver) noteScreen(line string) {
 	case reBoot.MatchString(line):
 		d.scr.off.Store(false)
 		d.scr.landscape.Store(false)
+		d.scr.locked.Store(false)
 	case reScreenOff.MatchString(line):
 		d.scr.off.Store(true)
 	case reScreenOn.MatchString(line):
 		d.scr.off.Store(false)
+	}
+	if m := reKeylock.FindStringSubmatch(line); m != nil {
+		d.scr.locked.Store(m[1] == "1")
 	}
 	if m := reLayoutRect.FindStringSubmatch(line); m != nil {
 		w, _ := strconv.Atoi(m[1])

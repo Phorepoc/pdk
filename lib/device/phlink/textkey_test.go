@@ -37,6 +37,14 @@ func TestToPortraitFollowsTheLayoutLog(t *testing.T) {
 	if d.scr.off.Load() {
 		t.Fatal("screen on not noted")
 	}
+	d.Classify("[user] CSysApLightsController::KeylockStateChangedL(): aEnabled=1")
+	if !d.scr.locked.Load() {
+		t.Fatal("keylock on not noted")
+	}
+	d.Classify("[user] CSysApLightsController::KeylockStateChangedL(): aEnabled=0")
+	if d.scr.locked.Load() {
+		t.Fatal("keylock off not noted")
+	}
 	d.Classify("application rect 360x640") // not a layout line: no change
 	d.Classify("[user] PH: avkon HandleResourceChangeL(layout switch): application rect 360x640, appui 1")
 	if d.scr.landscape.Load() {
