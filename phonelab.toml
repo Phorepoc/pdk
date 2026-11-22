@@ -26,3 +26,16 @@ pid = "0666"
 # [device.opts]
 # token = "123456"
 # transport = "serial"
+
+# The GPD Win 2 test rig (docs/gpd.md): netboots phorepoc.elf over HTTP from /gpd/ and talks back over UDP
+# (log broadcasts in on :6666, commands out on :6667). Windows: allow UDP 6666 inbound (Private profile).
+# [[device]]
+# id = "gpd-win2"
+# driver = "gpd"
+# [device.opts]
+# lab = "192.168.2.50:8737"   # this host's LAN address as baked into grubx64.efi (GRUB_LAB): push warns if it is missing
+# # to = "192.168.2.255"      # command target (default 255.255.255.255); use the LAN's directed broadcast if the host is multi-homed
+# # ip = "169.254.x.y"        # accept packets only from the rig; mac = its adapter's MAC (compared with the ping reply)
+# # token = 0                 # u32 command token (NETLOG_TOKEN on the rig)
+# # slot_dir = ""             # default <data_dir>/gpd
+# # listen_log = "0.0.0.0:6666"  cmd_port = 6667  ping_s = 5  link_timeout_s = 20  wd_min_s = 15  wd_max_s = 300

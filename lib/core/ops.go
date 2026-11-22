@@ -108,6 +108,10 @@ func (s *Session) Exec(ctx context.Context, caller, op string, args device.Args)
 	case "record_start", "record_stop", "record_status", "live_video":
 		res, err = s.record(ctx, op, args)
 	default:
+		if oo, ok := s.Driver.(device.OfflineOps); ok && oo.WorksOffline(op) {
+			res, err = s.Driver.Exec(ctx, &link{s: s, op: op}, op, args)
+			break
+		}
 		wc, cancel := context.WithTimeout(ctx, 30*time.Second)
 		err = s.WaitConnected(wc)
 		cancel()

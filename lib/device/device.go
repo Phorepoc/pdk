@@ -97,6 +97,12 @@ type KeepAliver interface {
 	KeepAlive() (every time.Duration, line func() []byte)
 }
 
+// OfflineOps is optionally implemented by a driver with ops that must run while its link is down (the GPD rig's push
+// writes an image into the HTTP slot whether or not the rig is talking). The Session then skips the wait for a connection.
+type OfflineOps interface {
+	WorksOffline(op string) bool
+}
+
 // Recorder is optionally implemented by a driver whose device records its screen: ops rec_start {fps, qp}, rec_read
 // {from} -> {state (1 = recording), seq, bytes} and rec_stop -> {stats}. The core's record_start / record_stop poll it
 // and hand the collected bytes to FinishRecording, which returns the video (an MP4), a per-frame index and a summary.

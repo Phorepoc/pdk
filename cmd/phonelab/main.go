@@ -21,6 +21,7 @@ import (
 	"github.com/Phorepoc/pdk/lib/config"
 	"github.com/Phorepoc/pdk/lib/core"
 	"github.com/Phorepoc/pdk/lib/device"
+	_ "github.com/Phorepoc/pdk/lib/device/gpd"
 	_ "github.com/Phorepoc/pdk/lib/device/nokia"
 	_ "github.com/Phorepoc/pdk/lib/device/phlink"
 	"github.com/Phorepoc/pdk/lib/mock"
@@ -68,11 +69,22 @@ func main() {
 	log.Printf("phonelab %s: data %s, workspace %s", version, cfg.DataDir, cfg.Workspace)
 
 	m := core.NewManager(st)
+	var slotHandler http.Handler // /gpd/: the GPD rig's netboot files (the first gpd device owns it)
 	m.Root, m.Version, m.Started = cfg.Workspace, version, time.Now()
 	for _, d := range cfg.Devices {
 		drv, err := device.New(d.Driver, d.Opts)
 		if err != nil {
 			log.Fatalf("device %s: %v", d.ID, err)
+		}
+		if sd, ok := drv.(interface{ SetDataDir(string) }); ok {
+			sd.SetDataDir(cfg.DataDir)
+		}
+		if sh, ok := drv.(interface{ SlotHandler() http.Handler }); ok {
+			if slotHandler == nil {
+				slotHandler = sh.SlotHandler()
+			} else {
+				log.Printf("device %s: /gpd/ is already served for another gpd device", d.ID)
+			}
 		}
 		var op transport.Opener = &transport.SerialOpener{Cfg: transport.SerialConfig{Port: d.Port, VID: d.VID, PID: d.PID}}
 		if po, ok := drv.(interface{ Opener() transport.Opener }); ok && po.Opener() != nil {
@@ -98,10 +110,14 @@ func main() {
 
 	a := &rest.Server{M: m, Token: cfg.Token}
 	spa, _ := fs.Sub(webui.Dist, "dist")
-	h := a.Handler(map[string]http.Handler{
+	routes := map[string]http.Handler{
 		"/mcp": mcp.Handler(m, version),
 		"/":    spaHandler(spa),
-	})
+	}
+	if slotHandler != nil {
+		routes["/gpd/"] = slotHandler
+	}
+	h := a.Handler(routes)
 	srv := &http.Server{Addr: cfg.Listen, Handler: h, ReadHeaderTimeout: 10 * time.Second}
 
 	go m.Run(ctx)
