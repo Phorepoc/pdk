@@ -48,12 +48,19 @@ def functions(nm, elf):
 
 
 def kernel_elf(build):
-    """The ekern.elf link_ekern.sh wrote (.ekern-build/, .ekern-flex-build/, .ekernsmp-flex-build/, here or one level down):
+    """The ekern.elf link_ekern.sh wrote (.ekern-build/, .ekern-flex-build/, .ekernsmp-flex-build/; here, one level down or under the build tree):
     the newest one, as the ROM was built from the last link."""
     c = []
+    # (glob skips dot directories, and the board recipes link in <build>/arm/kview: walk with them, a bounded depth)
     for root in (".", build):
-        for pat in (".ekern*-build/ekern.elf", "*/.ekern*-build/ekern.elf", "**/ekern.elf"):
-            c += glob.glob(os.path.join(root, pat), recursive=True)
+        for pat in (".ekern*-build/ekern.elf", "*/.ekern*-build/ekern.elf", "arm/kview/.ekern*-build/ekern.elf"):
+            c += glob.glob(os.path.join(root, pat))
+    if not c:
+        for d, subs, files in os.walk(build):
+            if d[len(build):].count(os.sep) >= 4:
+                subs[:] = []
+            if "ekern.elf" in files:
+                c.append(os.path.join(d, "ekern.elf"))
     c = [f for f in dict.fromkeys(c) if os.path.isfile(f)]
     if not c:
         print("rom_syms: no ekern.elf found: the kernel gets its I line only")
