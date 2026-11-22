@@ -34,6 +34,11 @@ func TestToPortraitFollowsTheLayoutLog(t *testing.T) {
 		t.Fatal("screen off not noted")
 	}
 	d.Classify("[EKERN][disp] HAL display state ON")
+	d.Classify("[EKERN][disp] HAL display state OFF")
+	if !d.scr.off.Load() {
+		t.Fatal("HAL display off not noted")
+	}
+	d.Classify("[EKERN][disp] HAL display state ON")
 	if d.scr.off.Load() {
 		t.Fatal("screen on not noted")
 	}

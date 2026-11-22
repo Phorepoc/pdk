@@ -52,7 +52,7 @@ type screenState struct {
 }
 
 var (
-	reScreenOff  = regexp.MustCompile(`\[EKERN\]\[power\] screen OFF done`)
+	reScreenOff  = regexp.MustCompile(`\[EKERN\]\[power\] screen OFF done|\[EKERN\]\[disp\] HAL display state OFF`)
 	reScreenOn   = regexp.MustCompile(`\[EKERN\]\[disp\] HAL display state ON`)
 	reLayoutRect = regexp.MustCompile(`layout switch\): application rect (\d+)x(\d+)`)
 	reKeylock    = regexp.MustCompile(`KeylockStateChangedL\(\): aEnabled=([01])`)

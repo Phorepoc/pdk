@@ -437,26 +437,41 @@ func (d *Driver) toPortrait(x, y uint64) (uint64, uint64) {
 
 // wake brings a blanked screen back before a tap and waits for the display to come on: a blanked screen eats every
 // pointer event (the lights handler consumes the down, the app sees at most a stray up), so the caller's own tap cannot
-// be the waking one. The short power key TOGGLES SysAp's keylock (and the lights): it is the right wake only while the keys
-// are locked (it unlocks them, as a user would). An unlocked screen that only timed out is woken by a tap the lights
-// handler consumes -- a power press there would lock the keys instead.
+// be the waking one. The short power key TOGGLES SysAp's keylock as well as the lights, so it is used only when it is
+// right: while the keys are locked (it unlocks them, as a user would), or when a consumed tap did not light the screen
+// (the keylock state is unknown, e.g. the service started mid-boot). An unlocked screen that only timed out is woken by
+// the tap -- a power press there would lock the keys instead.
 func (d *Driver) wake(ctx context.Context, l device.Link) error {
 	if !d.scr.off.Load() {
 		return nil
 	}
-	if d.scr.locked.Load() {
+	if !d.scr.locked.Load() {
+		if err := d.touch(ctx, l, uint32(ScreenW/2)|uint32(ScreenH/2)<<16, "tap", 50*time.Millisecond, 0); err != nil {
+			return err
+		}
+		if err := d.waitOn(ctx, 20); err != nil {
+			return err
+		}
+	}
+	if d.scr.off.Load() {
 		if err := d.press(ctx, l, Keys["power"], "press", 100*time.Millisecond); err != nil {
 			return err
 		}
-	} else if err := d.touch(ctx, l, uint32(ScreenW/2)|uint32(ScreenH/2)<<16, "tap", 50*time.Millisecond, 0); err != nil {
-		return err
-	}
-	for i := 0; i < 60 && d.scr.off.Load(); i++ {
-		if err := sleep(ctx, 50*time.Millisecond); err != nil {
+		if err := d.waitOn(ctx, 60); err != nil {
 			return err
 		}
 	}
 	return sleep(ctx, 700*time.Millisecond)
+}
+
+// waitOn polls the display state for up to n*50 ms.
+func (d *Driver) waitOn(ctx context.Context, n int) error {
+	for i := 0; i < n && d.scr.off.Load(); i++ {
+		if err := sleep(ctx, 50*time.Millisecond); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (d *Driver) touch(ctx context.Context, l device.Link, xy uint32, action string, hold time.Duration, fl uint32) error {
