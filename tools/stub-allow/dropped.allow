@@ -46,6 +46,7 @@ D1 cconndlgplugin activeselectconnectionplugin.cpp
 D1 commsdat commsdatsessionimpl.cpp
 D1 cone coepriv.cpp
 D1 connmon connmonbearerlan.cpp
+D1 connuiutilsnotif confirmationquery.cpp
 D1 cookiemanager cookiearray.cpp
 D1 cookiemanager cookieclientdata.cpp
 D1 cshelp csxhhtmltopiccontainer.cpp
