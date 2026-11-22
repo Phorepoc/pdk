@@ -558,3 +558,28 @@ func TestWireFormat(t *testing.T) {
 		t.Fatalf("% x", fr)
 	}
 }
+
+func TestRigReport(t *testing.T) {
+	d, err := New(map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ev := d.Classify("[rig] report kind=fault boot=614d069d bytes=4382 log=/var/log/phorepoc/boot-3.log")
+	if len(ev) != 1 || ev[0].Kind != "rig.report" || ev[0].Data["kind"] != "fault" || ev[0].Data["boot_id"] != "614d069d" ||
+		ev[0].Data["bytes"] != 4382 {
+		t.Fatalf("report: %+v", ev)
+	}
+	ev = d.Classify("[rig] report kind=no-log boot=- bytes=0 log=/var/log/phorepoc/boot-4.log")
+	if len(ev) != 1 || ev[0].Data["kind"] != "no-log" {
+		t.Fatalf("no-log: %+v", ev)
+	}
+	if ev = d.Classify("[rig] fault 0:FAULT: RIGTEST 0x00000001 (1)"); len(ev) != 1 || ev[0].Kind != "rig.fault" {
+		t.Fatalf("fault: %+v", ev)
+	}
+	if ev = d.Classify("[rig] | 0:FATAL: something"); len(ev) != 0 {
+		t.Fatalf("replayed line made events: %+v", ev)
+	}
+	if ev = d.Classify("[disklog] phorepoc-log at LBA 1"); len(ev) != 1 || ev[0].Kind != "disklog" {
+		t.Fatalf("disklog tag: %+v", ev)
+	}
+}
