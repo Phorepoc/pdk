@@ -140,5 +140,5 @@ publishing). `layer_prefix` lets a test run read and write its own layers (`test
 Every repository's lint checks for names from the layers above it (`tools/ci/layering.sh` in the pdk, given that
 repository's own list). A pull request that makes core mention a device fails.
 
-A line `!<path>` in `.layering` leaves vendored upstream files out (they stay unmodified); a line of ours may end in
+A line `!<path>` in `.layering` leaves vendored upstream files out (they stay unmodified); a line of Phorepoc's may end in
 `layering: ok` when it quotes an upstream name on purpose.

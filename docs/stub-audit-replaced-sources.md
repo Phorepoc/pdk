@@ -1,8 +1,8 @@
 # Sources left out of a build (stub audit, kind 5)
 
 The registry's `drop=[...]` leaves source files of the real mmp out of a component's build and `extra=[...]` puts a file of
-ours in their place (or `nosrc` replaces the whole component). Each line is a place where the image does not run the
-release's code for that file; the replacement is ours, so none is a link stub, but each is a candidate to be audited
+Phorepoc's in their place (or `nosrc` replaces the whole component). Each line is a place where the image does not run the
+release's code for that file; the replacement is Phorepoc's, so none is a link stub, but each is a candidate to be audited
 against "does it do what the real file does". Generated from the registry (`phe component list`, core at the time of
 writing: `drop` 87 components, `nosrc` 4); see `stub-audit.md`.
 

@@ -21,7 +21,7 @@ unwinds through them.
 ## The rule per item
 
 * real source in the 2010 / RCL_3 release -> build it;
-* never released -> write the real implementation (ours, AGPL-3.0-only);
+* never released -> write the real implementation (Phorepoc's, AGPL-3.0-only);
 * hardware absent on a board -> a real adaptation that reports "not present" the way the real phone does when the part
   is missing (derived from the reference device's behaviour), never a stub that pretends.
 
@@ -93,8 +93,8 @@ in 27 images (arm) / 8312 in 36 (x32). Most are four stand-ins: `hbcore` 5697 (n
 
 ### Kind 4: named stand-ins (status)
 
-Already the real thing or our implementation: `frametable` (`src/frametable`), `startupadaptationstub` (our
-`StartupAdaptationStub.cpp`: the board's power and reset), `hwrmstubplugins` (our light and vibra plug-ins),
+Already the real thing or Phorepoc's implementation: `frametable` (`src/frametable`), `startupadaptationstub` (Phorepoc's
+`StartupAdaptationStub.cpp`: the board's power and reset), `hwrmstubplugins` (Phorepoc's light and vibra plug-ins),
 `messagehandlerfactory` and `custominterfaceproxyfactory` (the reference factories are real code; the message handlers
 they link were the missing part, now built), `wifiprotclient` / `wifiprotplugin` (the real client and plug-in),
 `gfxtransadapter`, `alfclient`/`alfdecoderserverclient`/`goommonitor` (`*_real` on the GPU boards),
@@ -123,7 +123,7 @@ replacement, or an `#include` of the release's file):
 | D1 | a patched copy of the release's file (port, board adaptation, fix, trace) or a wrapper that includes it, >= 75% the release's lines: the release's code runs | 141 |
 | D2 | the release's own alternative (CMLA stub, RealAudio-off variant: the real source was never released) | 3 |
 | D3, D4 | the sisx recogniser's ROM patch constant; ARM `.cia` assembler replaced by C++ on x32 | 3 |
-| D16, D18 | our implementation of what the release stubs (frame table, HWRM plug-ins, start-up adaptation); rasteriser tuning | 7 |
+| D16, D18 | Phorepoc's implementation of what the release stubs (frame table, HWRM plug-ins, start-up adaptation); rasteriser tuning | 7 |
 | D19 | the release's generated sources (charconv plug-ins: cnvtool over the release's data) | 43 |
 | D10 - D15 | the work list: ALF/graphics null clients (4), C32 null on ARM (12 files), the SAT menu handler (1), the licensee TSY mock (1), the power-save and SVG-T parts never released (2), the emergency-call stem (1) | 21 |
 
@@ -148,7 +148,7 @@ The list per component is in `stub-audit-replaced-sources.md`.
 * **R1 M3G (`hitchcock`, 38 names).** No `m3g*.h` or engine source in any release tree; only the Java glue (`javauis/m3g_qt`). Callers:
   hitchcock's `huim3gmesh.cpp`, `alfm3gmesh.cpp`, mesh visuals and the VG10 surface setup; nothing else uses it and the shipped apps
   load no meshes. API used: loader (`m3gCreateLoader`, `m3gDecodeData`), reference counting, scene graph (World/Group/Camera/Mesh/
-  SkinnedMesh/MorphingMesh), Appearance/CompositingMode/PolygonMode, Background, transforms, animation. Plan: write `m3gcore` (ours,
+  SkinnedMesh/MorphingMesh), Appearance/CompositingMode/PolygonMode, Background, transforms, animation. Plan: write `m3gcore` (Phorepoc's,
   AGPL-3.0-only): object model + `.m3g` decoder + transforms + animation (~2k lines for the 38 names), rendering through the existing VG
   surface later.
 * **R3 JRT registry client.** The real client is in the release (`oss.FCL.sf.app.JRT/javamanager/javaregistry/client`, 9 files, 2337 lines,
