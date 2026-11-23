@@ -5,7 +5,7 @@ Phorepoc was founded by Kyriakos Bompotis.
 
 This product includes software developed by The Phorepoc Authors, licensed under the GNU Affero General Public License, version 3 only (AGPL-3.0-only, LICENSE), with the additional terms in ADDITIONAL-TERMS.md (section 7(b) attributions, section 7(e) names and logos), and the Phorepoc Build Output Exception (LICENSES/Phorepoc-Build-Output-Exception-1.0.txt) as described below.
 
-The Nokia-derived source files in this repo are our updated versions, distributed under the Eclipse Public License 2.0
+The Nokia-derived source files in this repo are Phorepoc's updated versions, distributed under the Eclipse Public License 2.0
 (LICENSES/EPL-2.0.txt) with GNU General Public License, version 2 or later as a Secondary License (relicensed from
 EPL-1.0 under its section 7); unmodified Symbian sources are fetched from upstream and remain EPL-1.0. They are:
   tools/toolchain/genexec.pl
