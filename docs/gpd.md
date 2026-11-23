@@ -17,6 +17,6 @@ other PhoneLab tool (`log_lines`, `wait_for`, `boots`, `boot_report`, `screensho
 - Health: `connected` = a log packet or ping reply within `link_timeout_s` (the lab pings every `ping_s`).
 - Rig reports: at each Linux boot the rig's collector (adaptation-pc `tools/gpd-rig/linux/phorepoc-collect`) reads the
   last Phorepoc boot's log from the SSD's phorepoc-log partition and sends `[rig] report kind=<clean|fault|watchdog|no-log>
-  boot=<id> bytes=<n> log=<path>`, `[rig] fault <line>`, the last 20 lines as `[rig] | ...` and `[rig] report end` as
+  boot=<id> bytes=<n> log=<path> stage=<last boot stage>`, `[rig] fault <line>`, the last 20 lines as `[rig] | ...` and `[rig] report end` as
   PHL1 lines under their own boot id. They become `rig.report` and `rig.fault` events (the replayed lines make none);
   `[disklog]` lines are tagged like `[tco]`.

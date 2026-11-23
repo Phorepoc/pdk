@@ -569,8 +569,8 @@ func TestRigReport(t *testing.T) {
 		ev[0].Data["bytes"] != 4382 {
 		t.Fatalf("report: %+v", ev)
 	}
-	ev = d.Classify("[rig] report kind=no-log boot=- bytes=0 log=/var/log/phorepoc/boot-4.log")
-	if len(ev) != 1 || ev[0].Data["kind"] != "no-log" {
+	ev = d.Classify("[rig] report kind=no-log boot=- bytes=0 log=/var/log/phorepoc/boot-4.log stage=disp-mapped(0x20),crash")
+	if len(ev) != 1 || ev[0].Data["kind"] != "no-log" || ev[0].Data["stage"] != "disp-mapped(0x20),crash" {
 		t.Fatalf("no-log: %+v", ev)
 	}
 	if ev = d.Classify("[rig] fault 0:FAULT: RIGTEST 0x00000001 (1)"); len(ev) != 1 || ev[0].Kind != "rig.fault" {

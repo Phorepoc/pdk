@@ -178,7 +178,7 @@ var (
 	reCommanded = regexp.MustCompile(`^===== rig: commanded reset =====$`)
 	reTag       = regexp.MustCompile(`^\[(tco|netlog|ure|disklog)\]`)
 	// the rig's Linux side (adaptation-pc tools/gpd-rig/linux/phorepoc-collect): how the last Phorepoc boot ended
-	reReport    = regexp.MustCompile(`^\[rig\] report kind=(\S+) boot=(\S+)(?: bytes=(\d+))?(?: log=(\S+))?`)
+	reReport    = regexp.MustCompile(`^\[rig\] report kind=(\S+) boot=(\S+)(?: bytes=(\d+))?(?: log=(\S+))?(?: stage=(\S+))?`)
 	reRigFault  = regexp.MustCompile(`^\[rig\] fault (.*)$`)
 	reFatal     = regexp.MustCompile(`FATAL|\*\*\* ExcFault|kernel panic`)
 	reThreads   = regexp.MustCompile(`(?i)thread dump`)
@@ -193,7 +193,7 @@ func (d *Driver) Classify(line string) []device.Event {
 		if m := reReport.FindStringSubmatch(line); m != nil {
 			n, _ := strconv.Atoi(m[3])
 			return []device.Event{{Kind: "rig.report", Data: map[string]any{"kind": m[1], "boot_id": m[2], "bytes": n,
-				"log": m[4], "text": line}}}
+				"log": m[4], "stage": m[5], "text": line}}}
 		}
 		if m := reRigFault.FindStringSubmatch(line); m != nil {
 			return []device.Event{{Kind: "rig.fault", Data: map[string]any{"text": m[1]}}}
