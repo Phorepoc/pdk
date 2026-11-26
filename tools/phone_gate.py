@@ -137,7 +137,8 @@ def main():
     need = {
         'home screen': 'homescreen=1',
         # (either line: the start-up line or the composer's per-frame report -- a serial line can arrive garbled)
-        'GPU composition': ('wfc gpu: GPU composition up', 'wfc gpu: composition '),
+        # (or the fastpath: a lone UI layer -- the Classic home screen -- is posted as is and never starts the GPU composer)
+        'GPU composition': ('wfc gpu: GPU composition up', 'wfc gpu: composition ', 'wfc: fastpath'),
         'transition effects (real gfxtransadapter)': 'CGfxTransAdapterTfx',
         'display frame log': 'white-flashes=',
     }
