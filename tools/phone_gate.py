@@ -138,7 +138,9 @@ def main():
         'home screen': 'homescreen=1',
         # (either line: the start-up line or the composer's per-frame report -- a serial line can arrive garbled)
         # (or the fastpath: a lone UI layer -- the Classic home screen -- is posted as is and never starts the GPU composer)
-        'GPU composition': ('wfc gpu: GPU composition up', 'wfc gpu: composition ', 'wfc: fastpath'),
+        # (or the CPU path: with the GPU renderer off (Classic) a scene of several layers -- Etesian's Home -- is composed
+        # by the CPU, which libwfc says once)
+        'GPU composition': ('wfc gpu: GPU composition up', 'wfc gpu: composition ', 'wfc: fastpath', 'wfc: CPU composition'),
         'transition effects (real gfxtransadapter)': 'CGfxTransAdapterTfx',
         'display frame log': 'white-flashes=',
     }
@@ -196,6 +198,7 @@ def main():
         time.sleep(6)                                               # the next [mon] line
         # (the kernel prints every hex value on a line of its own: a record = its header line + the value lines after it)
         frame = lab.lines(after=m, any_=['[EKERN][frame]', 'frames=', ' white%=', ' black%='], limit=1000)
+        etesian = bool(lab.lines(any_=['chosen etesian'], limit=1))
         counts, woke, rec = [], 0, None
         for l in frame:
             t = l['text']
@@ -211,7 +214,9 @@ def main():
                 if len(rec) == 2:
                     if rec['white'] >= 85:
                         fails.append('the screen came on showing a white frame (white %d%%)' % rec['white'])
-                    if rec['black'] >= 98:
+                    # (Etesian's lock screen is black by design -- clock, date and a hint line: ~99 %; only a screen
+                    # with nothing on it fails there)
+                    if rec['black'] >= (100 if etesian else 98):
                         fails.append('the screen came on BLACK (black %d%%): the UI is not drawing' % rec['black'])
                     rec = None
                 continue
